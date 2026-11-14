@@ -2,7 +2,7 @@
 // En-tête (photo, nom, couleur, modifier), chiffres clés, records par circuit
 // avec détail des secteurs, records de secteurs et tour idéal.
 
-import { esc, $, $$, modal, fmtDate } from '../ui.js';
+import { esc, $, $$, modal, fmtDate, confirmBox, toast } from '../ui.js';
 import { fmtTime, TYPES } from '../race.js';
 import { avatar, editDriver } from './drivers.js';
 
@@ -106,6 +106,7 @@ async function render(d) {
         <div class="row" style="gap:8px">
           <span class="sheet-color" style="background:${esc(d.color)}"></span>
           <button class="btn small" id="edit">✎ Modifier</button>
+          <button class="btn small ghost danger" id="del">🗑 Supprimer</button>
         </div>
       </div>
     </header>
@@ -153,6 +154,13 @@ async function render(d) {
 
   $('#back', root).onclick = () => app.go('drivers');
   $('#edit', root).onclick = () => editDriver(d, () => refresh());
+  $('#del', root).onclick = async () => {
+    if (!(await confirmBox(`Supprimer ${d.name} ? Ses tours déjà enregistrés restent dans les statistiques.`))) return;
+    await app.db.remove('drivers', d.id);
+    await app.loadData();
+    toast(`${d.name} supprimé`);
+    app.go('drivers');
+  };
   $$('[data-rec]', root).forEach((b) => (b.onclick = () => showLap(d, st.records[+b.dataset.rec])));
   const sel = $('#progTrack', root);
   if (sel) sel.onchange = () => { progTrack = sel.value; drawProgress(d, st); };

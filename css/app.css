@@ -298,16 +298,8 @@ input[type=checkbox] { accent-color: var(--accent); width: 18px; height: 18px; }
 .driver-photo .avatar { border-bottom: 4px solid var(--dc); }
 .driver-photo.big { width: 150px; }
 
-.drivers.list { display: grid; }
-.drivers.list .driver-row { display: flex; align-items: center; gap: 18px; padding: 12px 4px; border-bottom: 1px solid var(--line); }
 .driver-label { flex: 1; font-size: 1.25rem; font-weight: 800; text-transform: uppercase; letter-spacing: .02em; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
-.driver-actions { display: flex; gap: 10px; }
 
-.drivers.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; }
-.drivers.grid .driver-row { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 10px; display: grid; gap: 8px; justify-items: center; }
-.drivers.grid .driver-photo { width: 100%; }
-.drivers.grid .driver-label { font-size: 1rem; text-align: center; }
-.drivers.grid .btn.icon { width: 42px; min-height: 36px; }
 
 .driver-edit { display: grid; grid-template-columns: auto 1fr; gap: 18px; }
 @media (max-width: 480px) { .driver-edit { grid-template-columns: 1fr; justify-items: center; } .driver-edit > div:last-child { width: 100%; } }
@@ -319,7 +311,6 @@ input[type=checkbox] { accent-color: var(--accent); width: 18px; height: 18px; }
   .drivers-toolbar { top: 56px; }
   .driver-photo { width: 92px; }
   .driver-label { font-size: 1.05rem; }
-  .drivers.list .driver-row { gap: 12px; }
 }
 
 /* ---------- Changement pilote / voiture en session ---------- */
@@ -688,3 +679,12 @@ body.session-lock #tabs button:not([data-view="race"]):not([data-view="garage"])
 .btn.icon-sq { width: 52px; height: 52px; min-width: 52px; font-size: 1.5rem; }
 .btn.yellow.icon-sq, .btn.go.icon-sq { font-size: 1.7rem; font-weight: 900; }
 .btn.icon-sq:disabled { opacity: .35; }
+/* Onglet Pilotes : tuiles comme le menu */
+.driver-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; }
+.driver-tile { display: grid; gap: 8px; justify-items: center; padding: 10px; cursor: pointer; color: inherit; font: inherit;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 14px; box-shadow: inset 0 -3px 0 var(--dc); }
+.driver-tile:hover { border-color: var(--muted); }
+.driver-tile:active { transform: scale(.98); }
+.driver-tile .driver-photo { width: 100%; }
+.driver-tile .driver-label { font-size: 1rem; text-align: center; width: 100%; }
+@media (max-width: 420px) { .driver-tiles { grid-template-columns: 1fr 1fr; gap: 10px; } }

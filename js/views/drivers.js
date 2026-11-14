@@ -1,11 +1,11 @@
-// Onglet Pilotes : liste éditable avec photo, nom et couleur.
-// Ajouter, modifier, supprimer, trier/filtrer, affichage liste ou grille.
+// Onglet Pilotes : tuiles (photo + nom), comme le menu. Une tuile ouvre la fiche du pilote,
+// où l'on modifie ou supprime. Ici : ajouter, importer, trier / filtrer.
 
 import { esc, $, $$, modal, confirmBox, toast } from '../ui.js';
 
 let app;
 let root;
-const ui = { layout: 'list', sort: 'name', query: '', filterOpen: false };
+const ui = { sort: 'name', query: '', filterOpen: false };
 
 export function mount(main, a) {
   app = a;
@@ -52,10 +52,6 @@ function render() {
       </div>
       <div class="row" style="gap:8px;margin-top:8px">
         <button class="btn" id="dFilter" style="flex:1">⚲ Trier et filtrer</button>
-        <div class="seg">
-          <button data-layout="list" class="${ui.layout === 'list' ? 'on' : ''}" title="Liste">☰</button>
-          <button data-layout="grid" class="${ui.layout === 'grid' ? 'on' : ''}" title="Grille">▦</button>
-        </div>
       </div>
       ${ui.filterOpen ? `
       <div class="row" style="gap:8px;margin-top:8px">
@@ -69,16 +65,12 @@ function render() {
       <div class="drivers-count">${list.length === total ? total : `${list.length} / ${total}`} pilote${total > 1 ? 's' : ''}</div>
     </div>
 
-    <div class="drivers ${ui.layout}">
+    <div class="driver-tiles">
       ${list.map((d) => `
-      <div class="driver-row" data-id="${esc(d.id)}">
-        <div class="driver-photo" style="--dc:${esc(d.color)}">${avatar(d)}</div>
+      <button class="driver-tile" data-id="${esc(d.id)}" style="--dc:${esc(d.color)}" title="Ouvrir la fiche de ${esc(d.name)}">
+        <div class="driver-photo">${avatar(d)}</div>
         <div class="driver-label">${esc(d.name)}</div>
-        <div class="driver-actions">
-          <button class="btn icon" data-edit title="Modifier">✎</button>
-          <button class="btn icon danger" data-del title="Supprimer">⊖</button>
-        </div>
-      </div>`).join('') || '<p class="empty">Aucun pilote ne correspond.</p>'}
+      </button>`).join('') || '<p class="empty">Aucun pilote ne correspond.</p>'}
     </div>
   </div>`;
   bind();
@@ -87,7 +79,6 @@ function render() {
 function bind() {
   $('#dAdd', root).onclick = () => editDriver(null);
   $('#dFilter', root).onclick = () => { ui.filterOpen = !ui.filterOpen; render(); if (ui.filterOpen) $('#dSearch', root)?.focus(); };
-  $$('[data-layout]', root).forEach((b) => (b.onclick = () => { ui.layout = b.dataset.layout; render(); }));
   const search = $('#dSearch', root);
   if (search) {
     search.oninput = () => {
@@ -100,20 +91,9 @@ function bind() {
     };
     $('#dSort', root).onchange = (e) => { ui.sort = e.target.value; render(); };
   }
-  $$('.driver-row', root).forEach((row) => {
-    const d = app.driver(row.dataset.id);
-    row.querySelector('[data-edit]').onclick = () => editDriver(d);
-    const open = () => { app.driverId = d.id; app.go('driver'); };
-    // toute la ligne (photo, nom) ouvre la fiche ; les boutons de droite gardent leur rôle
-    row.style.cursor = 'pointer';
-    row.onclick = (e) => { if (!e.target.closest('.driver-actions')) open(); };
-    row.querySelector('[data-del]').onclick = async () => {
-      if (!(await confirmBox(`Supprimer ${d.name} ? Ses tours déjà enregistrés restent dans les statistiques.`))) return;
-      await app.db.remove('drivers', d.id);
-      await app.loadData();
-      toast(`${d.name} supprimé`);
-      render();
-    };
+  // une tuile ouvre la fiche du pilote (modifier / supprimer se font là-bas)
+  $$('.driver-tile', root).forEach((tile) => {
+    tile.onclick = () => { app.driverId = tile.dataset.id; app.go('driver'); };
   });
 
   const file = $('#dImportFile', root);
