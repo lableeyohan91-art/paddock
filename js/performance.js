@@ -110,16 +110,23 @@ export function yellowFlagModifier(getFlag, factor = 0.55) {
   };
 }
 
+/** Vitesse imposée sous VSC (0..15) pour un pourcentage de la vitesse max du circuit. */
+export const vscSpeed = (pct) => Math.max(0, Math.min(15, Math.round((15 * pct) / 100)));
+
 /**
- * Virtual Safety Car : chaque voiture est bridée à un pourcentage fixe
- * de sa vitesse max (son réglage garage). Ex. 20 % : réglage 15 → 3.
+ * Virtual Safety Car : toutes les voitures roulent à la MÊME vitesse fixe,
+ * quel que soit leur réglage garage (comme la panne sèche en vitesse fixe).
+ * Ex. 20 % → vitesse 3/15 pour tout le monde. Une voiture déjà plus lente n'est pas accélérée.
  */
-export function vscModifier(getFlag, getPct) {
+export function vscModifier(getFlag, getPct, getBase) {
   return {
     id: 'vsc',
     label: 'Virtual Safety Car',
-    compute() {
-      return getFlag() === 'vsc' ? { speed: getPct() / 100, brake: 1, note: 'VSC' } : null;
+    compute(address) {
+      if (getFlag() !== 'vsc') return null;
+      const target = vscSpeed(getPct());
+      const base = getBase(address) || 15;
+      return { speed: Math.min(1, target / base), brake: 1, note: `VSC (vitesse ${target}/15)` };
     },
   };
 }

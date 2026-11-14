@@ -47,7 +47,7 @@ function defaultSetup(a) {
 const VIEWS = { race: raceView, garage: garageView, drivers: driversView, driver: driverView, ghost: ghostView, quick: quickView, stats: statsView, settings: settingsView };
 
 const cu = new ControlUnit();
-const DEFAULT_VSC = { speedPct: 20 }; // vitesse imposée sous VSC : % de la vitesse max de chaque voiture
+const DEFAULT_VSC = { speedPct: 20 }; // vitesse fixe imposée à toutes les voitures sous VSC, en % de la vitesse max
 export const GHOST = 6; // adresse de la voiture autonome (fantôme) ; 7 = pace car
 const perf = new PerformanceEngine(cu);
 const weather = new Weather();
@@ -584,7 +584,7 @@ export const app = {
     if (!s.quick) perf.addModifier(weather.modifier()); // pas de météo en course rapide
     perf.addModifier(yellowFlagModifier(() => this.session?.flag));
     perf.removeModifier('vsc');
-    perf.addModifier(vscModifier(() => this.session?.flag, () => this.vscCfg.speedPct));
+    perf.addModifier(vscModifier(() => this.session?.flag, () => this.vscCfg.speedPct, (a) => perf.bases.get(a)?.speed));
     perf.removeModifier('fuel');
     perf.addModifier(this.emptyTankModifier());
     entries.forEach((e) => perf.setBase(e.address, e.car.speed, e.car.brake));

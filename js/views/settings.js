@@ -4,6 +4,7 @@ import { esc, $, toast, download, confirmBox } from '../ui.js';
 import { audio, say } from '../audio.js';
 import { MODE } from '../cu/protocol.js';
 import { renderFuel } from './fuel-settings.js';
+import { vscSpeed } from '../performance.js';
 import { openImport, importDone, removeImport } from './import-records.js';
 
 let app;
@@ -75,7 +76,7 @@ function renderVsc() {
   root.innerHTML = sectionHead() + `
   <section class="panel">
     <h2>Virtual Safety Car</h2>
-    <p class="muted" style="margin-top:-4px">En course, le bouton <b>VSC</b> bride immédiatement toutes les voitures à un pourcentage fixe de <b>leur vitesse max</b> (leur réglage du garage). Un second appui rend la course.</p>
+    <p class="muted" style="margin-top:-4px">En course, le bouton <b>VSC</b> met immédiatement <b>toutes les voitures à la même vitesse fixe</b>, quel que soit leur réglage du garage (comme la panne sèche en vitesse fixe). Un second appui rend la course.</p>
     <div class="row" style="gap:14px;margin-top:14px">
       <label class="field" style="flex:1">Vitesse sous VSC
         <input type="range" id="vscPct" min="5" max="100" step="5" value="${pct}"></label>
@@ -87,7 +88,7 @@ function renderVsc() {
   const r = $('#vscPct', root);
   const show = (v) => {
     $('#vscPctV', root).textContent = v + ' %';
-    $('#vscEx', root).textContent = `Exemple : une voiture réglée à 100 % roulera à ${v} %, une voiture réglée à 80 % roulera à ${Math.round(0.8 * v)} %.`;
+    $('#vscEx', root).textContent = `${v} % de la vitesse max = vitesse ${vscSpeed(v)}/15 pour toutes les voitures (une voiture réglée plus lentement garde son allure).`;
   };
   show(pct);
   r.oninput = () => show(+r.value);

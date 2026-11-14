@@ -148,7 +148,7 @@ function renderControls() {
       : `<button class="btn yellow icon-sq" id="bYellow" title="Drapeau jaune : ralentissement" aria-label="Drapeau jaune" ${s.flag === 'red' ? 'disabled' : ''}>⚑</button>`;
     html += s.flag === 'vsc'
       ? `<button class="btn go icon-sq vsc-btn" id="bVsc" title="Fin du VSC : la course reprend" aria-label="Fin du VSC">VSC</button>`
-      : `<button class="btn icon-sq vsc-btn" id="bVsc" title="Virtual Safety Car : vitesse limitée à ${app.vscCfg.speedPct} %" aria-label="Virtual Safety Car" ${s.flag === 'red' ? 'disabled' : ''}>VSC</button>`;
+      : `<button class="btn icon-sq vsc-btn" id="bVsc" title="Virtual Safety Car : toutes les voitures à ${app.vscCfg.speedPct} % de la vitesse max" aria-label="Virtual Safety Car" ${s.flag === 'red' ? 'disabled' : ''}>VSC</button>`;
     if (s.flag !== 'red') html += `<button class="btn red icon-sq" id="bRed" title="Drapeau rouge : arrête toutes les voitures" aria-label="Drapeau rouge">🚩</button>`;
     html += `<button class="btn icon-sq" id="bStop" title="Terminer la session" aria-label="Terminer la session">🏁</button>`;
     html += `<button class="btn icon-sq" id="bGarage" title="Garage : régler les voitures sans arrêter la session" aria-label="Garage">🔧</button>`;
