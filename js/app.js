@@ -374,7 +374,7 @@ export const app = {
     this.seen[address] = performance.now();
     const slot = this.setup?.slots?.[address];
     // essais libres / qualification : un participant retiré à la main n'est jamais rajouté
-    const noAuto = ['practice', 'qualifying'].includes(this.quickMode);
+    const noAuto = ['practice', 'qualifying'].includes(this.setup?.prepMode || this.quickMode);
     if (slot && !slot.active && !noAuto) {
       slot.active = true;
       this.saveSetup();

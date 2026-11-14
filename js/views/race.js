@@ -99,7 +99,10 @@ function renderMenu() {
   root.querySelectorAll('[data-go]').forEach((b) => (b.onclick = () => {
     const t = b.dataset.go;
     // les 4 modes partagent le même écran de préparation pour l'instant
+    // mode mémorisé dans le setup (synchronisé) : tous les appareils connectés le respectent
     app.quickMode = t;
+    app.setup.prepMode = t;
+    app.saveSetup();
     app.go('quick');
   }));
   const l = $('#mLast', root);

@@ -20,7 +20,7 @@ export async function mount(main, a) {
   app = a;
   root = main;
   // participants affichés par défaut : 2 en course, 1 en essais libres et qualification
-  const min = MODES[app.quickMode]?.type === 'race' || !MODES[app.quickMode] ? 2 : 1;
+  const min = mode().type === 'race' ? 2 : 1;
   if (app.setup.slots.filter((s) => s.active).length < min) {
     app.setup.slots.slice(0, min).forEach((s) => (s.active = true));
     app.saveSetup();
@@ -45,7 +45,7 @@ const MODES = {
   practice: { title: '🛞 Essais libres', type: 'practice' },
   qualifying: { title: '⏱️ Qualification', type: 'qualifying' },
 };
-const mode = () => MODES[app.quickMode] || MODES.quick;
+const mode = () => MODES[app.quickMode || app.setup?.prepMode] || MODES.quick;
 const title = () => mode().title;
 const savePrefs = () => app.db.setSetting('quickRace', prefs);
 const pct15 = (v) => Math.round((v / 15) * 100);
