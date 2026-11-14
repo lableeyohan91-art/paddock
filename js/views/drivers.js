@@ -1,4 +1,4 @@
-// Onglet Pilotes : tuiles (photo + nom), comme le menu. Une tuile ouvre la fiche du pilote,
+// Onglet Pilotes : tuiles (nom seul, sans photo), comme le menu. Une tuile ouvre la fiche du pilote,
 // où l'on modifie ou supprime. Ici : ajouter, importer, trier / filtrer.
 
 import { esc, $, $$, modal, confirmBox, toast } from '../ui.js';
@@ -68,7 +68,6 @@ function render() {
     <div class="driver-tiles">
       ${list.map((d) => `
       <button class="driver-tile" data-id="${esc(d.id)}" style="--dc:${esc(d.color)}" title="Ouvrir la fiche de ${esc(d.name)}">
-        <div class="driver-photo">${avatar(d)}</div>
         <div class="driver-label">${esc(d.name)}</div>
       </button>`).join('') || '<p class="empty">Aucun pilote ne correspond.</p>'}
     </div>

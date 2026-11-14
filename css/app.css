@@ -679,12 +679,11 @@ body.session-lock #tabs button:not([data-view="race"]):not([data-view="garage"])
 .btn.icon-sq { width: 52px; height: 52px; min-width: 52px; font-size: 1.5rem; }
 .btn.yellow.icon-sq, .btn.go.icon-sq { font-size: 1.7rem; font-weight: 900; }
 .btn.icon-sq:disabled { opacity: .35; }
-/* Onglet Pilotes : tuiles comme le menu */
-.driver-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; }
-.driver-tile { display: grid; gap: 8px; justify-items: center; padding: 10px; cursor: pointer; color: inherit; font: inherit;
-  background: var(--panel); border: 1px solid var(--line); border-radius: 14px; box-shadow: inset 0 -3px 0 var(--dc); }
-.driver-tile:hover { border-color: var(--muted); }
+/* Onglet Pilotes : tuiles comme le menu (nom seul, liseré à la couleur du pilote) */
+.driver-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; }
+.driver-tile { display: flex; align-items: center; justify-content: center; min-height: 64px; padding: 10px 12px; cursor: pointer;
+  color: inherit; font: inherit; background: var(--panel-2); border: 1px solid var(--line); border-left: 6px solid var(--dc); border-radius: 14px; }
+.driver-tile:hover { border-color: var(--muted); border-left-color: var(--dc); }
 .driver-tile:active { transform: scale(.98); }
-.driver-tile .driver-photo { width: 100%; }
-.driver-tile .driver-label { font-size: 1rem; text-align: center; width: 100%; }
+.driver-tile .driver-label { font-size: 1.05rem; text-align: center; width: 100%; }
 @media (max-width: 420px) { .driver-tiles { grid-template-columns: 1fr 1fr; gap: 10px; } }
