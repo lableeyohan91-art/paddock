@@ -373,7 +373,9 @@ export const app = {
     const first = !this.seen[address];
     this.seen[address] = performance.now();
     const slot = this.setup?.slots?.[address];
-    if (slot && !slot.active) {
+    // essais libres / qualification : un participant retiré à la main n'est jamais rajouté
+    const noAuto = ['practice', 'qualifying'].includes(this.quickMode);
+    if (slot && !slot.active && !noAuto) {
       slot.active = true;
       this.saveSetup();
       this.applyTune(address);
