@@ -13,7 +13,7 @@ let setups = [];
 let activeSetup = null;
 
 const LAP_CHIPS = [10, 20, 30, 50, 100];
-export const START_MSG = "* Il peut être nécessaire d'appuyer sur le bouton START de votre Control Unit.";
+export const START_MSG = "* Il peut être nécessaire d'appuyer sur le bouton START de votre Control Unit pour lancer la course.";
 export const PLACE_CARS_MSG = "* Les réglages doivent s'effectuer avec l'ensemble des voitures déjà posées sur votre piste.";
 
 export async function mount(main, a) {
@@ -115,8 +115,8 @@ function render() {
         <span class="depart-txt">DÉPART</span>
         <span class="depart-sub">${prefs.laps} tours · ${n} pilote${n > 1 ? 's' : ''} · ${prefs.fuelOn ? `essence ${pct15(prefs.tank15)} %` : 'sans essence'}</span>
       </button>
-      <p class="warn-note">${START_MSG}</p>
     </div>
+    <p class="warn-note q-start-note">${START_MSG}</p>
   </div>`;
   bind();
   tick();
