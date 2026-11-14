@@ -5,6 +5,7 @@ import { TYPES, fmtTime, fmtClock } from '../race.js';
 import { SKY } from '../weather.js';
 import { MODE } from '../cu/protocol.js';
 import { avatar } from './drivers.js';
+import { live, startLive, pilotUrl, drawQr } from '../live.js';
 
 let app;
 let root;
@@ -42,6 +43,7 @@ export function mount(main, a) {
           <div class="lights" id="lights">${'<div class="light"></div>'.repeat(5)}</div>
           <div class="controls" style="justify-content:center;margin:0" id="controls"></div>
         </div>
+        <div id="livePanel"></div>
         <div class="panel" style="margin-top:16px;padding:8px 8px 4px;overflow-x:auto">
           <table class="board" id="board"></table>
         </div>
@@ -122,8 +124,42 @@ function stateLabel(s) {
   }[s.state];
 }
 
+/**
+ * Vue pilote : avant le GO, un QR code que chaque pilote scanne avec son téléphone
+ * pour suivre la course (et déclencher VSC / drapeau rouge, régler sa voiture).
+ */
+let liveShown = '';
+async function renderLive() {
+  const el = $('#livePanel', root);
+  if (!el) return;
+  const s = app.session;
+  if (!s || s.state !== 'ready') { el.innerHTML = ''; liveShown = ''; return; }
+  if (live.status !== 'on') {
+    el.innerHTML = `<section class="panel live-panel"><p class="muted" style="margin:0">📱 ${live.status === 'error' ? esc(live.error) : 'Préparation du QR code « vue pilote »…'}</p>
+      ${live.status === 'error' ? '<button class="btn small" id="liveRetry" style="margin-top:8px">Réessayer</button>' : ''}</section>`;
+    const r = $('#liveRetry', el);
+    if (r) r.onclick = () => { live.status = 'off'; renderLive(); };
+    if (live.status === 'off') { await startLive(app); if (root) renderLive(); }
+    return;
+  }
+  if (liveShown === live.code && el.innerHTML) return;
+  liveShown = live.code;
+  const url = pilotUrl();
+  el.innerHTML = `
+    <section class="panel live-panel">
+      <div class="live-qr" id="liveQr"></div>
+      <div class="live-txt">
+        <h2 style="margin:0 0 4px">📱 Vue pilote</h2>
+        <p class="muted" style="margin:0">Chaque pilote scanne ce code avec l'appareil photo de son téléphone, puis touche son nom : il suit la course en direct, peut lancer le <b>VSC</b>, le <b>drapeau rouge</b> et régler <b>sa</b> voiture.</p>
+        <p class="live-code">Code : <b>${esc(live.code)}</b></p>
+      </div>
+    </section>`;
+  drawQr($('#liveQr', el), url).catch((e) => { $('#liveQr', el).textContent = e.message; });
+}
+
 function renderControls() {
   if (!root) return;
+  renderLive();
   const s = app.session;
   const el = $('#controls', root);
   const connected = app.cu.connected;

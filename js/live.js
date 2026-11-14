@@ -1,0 +1,192 @@
+// Vue pilote en direct : le téléphone branché au circuit publie l'état de la
+// séance dans Firestore (live/{code}), et chaque pilote le suit sur son propre
+// téléphone en scannant un QR code (pilote.html?c=CODE, sans installer l'appli).
+// Les pilotes peuvent aussi envoyer des commandes (VSC, drapeau rouge, réglage de
+// LEUR voiture) dans live/{code}/cmds : c'est ce téléphone-ci qui les applique.
+
+import * as sync from './sync.js';
+import { toast } from './ui.js';
+
+const PUBLIC_URL = 'https://lableeyohan91-art.github.io/paddock/';
+const CODE_KEY = 'paddock.liveCode';
+const ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // sans 0/O, 1/I
+
+export const live = { code: null, status: 'off', error: null };
+
+let app = null;
+let api = null;       // { fb, fs, uid }
+let timer = null;
+let unsubCmds = null;
+let lastJson = '';
+let startWall = null; // heure (Date.now) du départ de la séance en cours
+let wallFor = null;
+
+/** Adresse de la vue pilote (toujours le site en ligne : les téléphones n'ont pas accès au PC). */
+export function pilotUrl(code = live.code) {
+  const here = location.hostname.endsWith('github.io') ? location.origin + location.pathname.replace(/[^/]*$/, '') : PUBLIC_URL;
+  return `${here}pilote.html?c=${code}`;
+}
+
+function newCode() {
+  let c = '';
+  const r = crypto.getRandomValues(new Uint8Array(6));
+  for (const x of r) c += ALPHABET[x % ALPHABET.length];
+  return c;
+}
+
+/** Démarre la diffusion (une fois) : même code toute la soirée, les pilotes ne rescannent pas. */
+export async function startLive(theApp) {
+  app = theApp;
+  if (live.status === 'on' || live.status === 'starting') return live.code;
+  live.status = 'starting';
+  live.error = null;
+  try {
+    api = await sync.liveAccess();
+    let code = null;
+    try { code = localStorage.getItem(CODE_KEY); } catch { /* stockage indisponible */ }
+    if (!code) {
+      code = newCode();
+      try { localStorage.setItem(CODE_KEY, code); } catch { /* ignore */ }
+    }
+    live.code = code;
+    lastJson = '';
+    try {
+      await publish(true);
+    } catch (e) {
+      // code créé par un autre compte (ex. connexion Google depuis) : on en prend un neuf
+      if (!/permission/i.test(e?.code || e?.message || '')) throw e;
+      live.code = newCode();
+      try { localStorage.setItem(CODE_KEY, live.code); } catch { /* ignore */ }
+      await publish(true);
+    }
+    listenCommands();
+    clearInterval(timer);
+    timer = setInterval(() => publish().catch(() => {}), 1000);
+    live.status = 'on';
+  } catch (e) {
+    live.status = 'error';
+    live.error = friendly(e);
+  }
+  return live.code;
+}
+
+function friendly(e) {
+  const c = e?.code || e?.message || String(e);
+  if (/admin-restricted-operation|operation-not-allowed/.test(c)) return 'Connexion anonyme non activée dans Firebase (Authentication → Sign-in method → Anonyme).';
+  if (/permission-denied|insufficient permissions/i.test(c)) return 'Règles Firestore à mettre à jour (collection « live »).';
+  if (/network|unavailable|offline/i.test(c)) return 'Pas de connexion internet.';
+  return e?.message || String(e);
+}
+
+const ref = (...path) => api.fb.doc(api.fs, 'live', live.code, ...path);
+
+/** Instantané de la séance pour les téléphones des pilotes. */
+function snapshot() {
+  const s = app.session;
+  if (!s) return { state: 'none' };
+  if (wallFor !== s) { wallFor = s; startWall = null; }
+  if (s.startedAt && startWall === null) startWall = Date.now() - s.elapsedMs;
+  const list = s.order.length ? s.order : [...s.comps.values()];
+  return {
+    title: s.cfg.title || s.cfg.type,
+    type: s.cfg.type,
+    mode: s.cfg.mode,
+    laps: s.cfg.laps,
+    durationMs: s.durationMs || 0,
+    state: s.state,
+    flag: s.flag,
+    vscCountdown: s.vscCountdown || null,
+    redResuming: !!s.redResuming,
+    startWall,
+    endWall: s.endedAt && startWall !== null ? startWall + s.elapsedMs : null,
+    leaderLaps: s.leaderLaps,
+    fuel: app.fuelOn(),
+    overallBest: s.overallBest ? { time: s.overallBest.time, address: s.overallBest.address } : null,
+    comps: list.map((c) => {
+      const t = app.getTune(c.driver?.id, c.car?.id);
+      return {
+        a: c.address,
+        name: c.driver?.name || `Manette ${c.address + 1}`,
+        color: c.driver?.color || '#888',
+        car: c.car?.name || '',
+        pos: c.position,
+        laps: c.laps,
+        last: c.lastLap,
+        best: c.bestLap,
+        gap: c.gap,
+        recent: c.lapTimes.slice(-5),
+        fuelPct: c.fuelPct === null ? null : Math.round(c.fuelPct),
+        inPit: c.inPit,
+        pitStops: c.pitStops,
+        finished: c.finished,
+        speed: t.speed,
+        brake: t.brake,
+      };
+    }),
+  };
+}
+
+async function publish(force = false) {
+  if (!api || !live.code || !app) return;
+  const json = JSON.stringify(snapshot());
+  if (!force && json === lastJson) return; // rien de neuf : aucune écriture
+  lastJson = json;
+  await api.fb.setDoc(ref(), { owner: api.uid, json, updatedAt: Date.now() });
+}
+
+/** Commandes envoyées par les pilotes : appliquées ici, puis effacées. */
+function listenCommands() {
+  if (unsubCmds) unsubCmds();
+  const col = api.fb.collection(api.fs, 'live', live.code, 'cmds');
+  unsubCmds = api.fb.onSnapshot(col, (snap) => {
+    snap.docChanges().forEach((ch) => {
+      if (ch.type !== 'added') return;
+      const cmd = ch.doc.data();
+      api.fb.deleteDoc(ch.doc.ref).catch(() => {});
+      if (Date.now() - (cmd.at || 0) > 30000) return; // commande trop ancienne
+      handle(cmd);
+    });
+  }, (e) => { live.error = friendly(e); });
+}
+
+function handle(cmd) {
+  const s = app.session;
+  if (!s) return;
+  const who = cmd.by ? ` (${cmd.by})` : '';
+  if (cmd.type === 'vsc') {
+    if (s.vscCountdown) return;
+    app.toggleVsc();
+    toast(s.flag === 'vsc' ? `🟨 VSC déclenché${who}` : `Fin du VSC demandée${who}`);
+  } else if (cmd.type === 'red') {
+    if (s.flag === 'red' && s.redResuming) return;
+    app.toggleRed();
+    toast(s.flag === 'red' ? `🚩 Drapeau rouge${who}` : `Reprise demandée${who}`);
+  } else if (cmd.type === 'tune') {
+    // un pilote ne règle que SA voiture : celle de la manette indiquée
+    const c = s.comps.get(cmd.a);
+    const k = cmd.k;
+    const v = Math.round(+cmd.v);
+    if (!c?.driver?.id || !c?.car?.id || !['speed', 'brake'].includes(k) || !(v >= 0 && v <= 15)) return;
+    app.saveTune(c.driver.id, c.car.id, { [k]: v }); // appliqué tout de suite à sa manette
+    toast(`🔧 ${c.driver.name} : ${k === 'speed' ? 'accélération' : 'freinage'} ${Math.round((v / 15) * 100)} %`, 1500);
+  }
+  app.refresh?.();
+  publish().catch(() => {});
+}
+
+/** Dessine le QR code de la vue pilote dans un élément (bibliothèque chargée à la demande). */
+export async function drawQr(el, text) {
+  if (!window.qrcode) {
+    await new Promise((resolve, reject) => {
+      const sc = document.createElement('script');
+      sc.src = 'https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js';
+      sc.onload = resolve;
+      sc.onerror = () => reject(new Error('QR code indisponible (pas de connexion ?)'));
+      document.head.appendChild(sc);
+    });
+  }
+  const qr = window.qrcode(0, 'M');
+  qr.addData(text);
+  qr.make();
+  el.innerHTML = qr.createSvgTag({ cellSize: 5, margin: 2, scalable: true });
+}

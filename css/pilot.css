@@ -1,0 +1,42 @@
+/* Vue pilote (pilote.html) : complète css/app.css */
+#pv { padding: 12px 16px 24px; max-width: 640px; margin: 0 auto; }
+.pv-status { font-size: .8rem; color: var(--muted); font-weight: 700; }
+.pv-status.on { color: var(--green); }
+.pv-msg { text-align: center; padding: 28px 16px; line-height: 1.5; }
+
+.pv-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; margin-bottom: 8px; }
+.pv-title { font-size: 1.15rem; font-weight: 800; }
+.pv-sub { font-size: .9rem; }
+.pv-clock { font-size: 2rem; }
+
+.pv-flag { padding: 8px 12px; border-radius: 10px; font-weight: 800; text-align: center; margin-bottom: 12px;
+  background: var(--green); color: #04130a; }
+.pv-flag.idle { background: var(--panel-2); color: var(--muted); }
+.pv-flag.yellow { background: var(--yellow); color: #1a1500; animation: blink 1s infinite; }
+.pv-flag.vsc { background: repeating-linear-gradient(90deg, var(--yellow) 0 18px, #1a1500 18px 30px); color: #fff; text-shadow: 0 1px 3px #000; }
+.pv-flag.red { background: var(--accent); color: #fff; animation: blink 1s infinite; }
+.pv-flag.chequered { background: repeating-linear-gradient(90deg, #fff 0 14px, #000 14px 28px); color: #fff; text-shadow: 0 1px 3px #000; }
+
+.pv-me { display: grid; grid-template-columns: auto 1fr; gap: 10px 14px; align-items: center; border-left: 6px solid var(--dc); }
+.pv-pos { font-size: 2.6rem; font-weight: 900; line-height: 1; }
+.pv-name { font-size: 1.25rem; font-weight: 800; text-transform: uppercase; }
+.pv-change { margin-left: 6px; font-size: .75rem; padding: 2px 8px; border-radius: 8px; border: 1px solid var(--line); background: transparent; color: var(--muted); cursor: pointer; text-transform: none; font-weight: 600; }
+.pv-pit { color: var(--yellow); }
+.pv-stats { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.pv-stats div { background: var(--panel-2); border-radius: 10px; padding: 8px 6px; text-align: center; display: grid; gap: 2px; }
+.pv-stats span { font-size: .7rem; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+.pv-stats b { font-size: 1.15rem; }
+.pv-fuel { grid-column: 1 / -1; display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; font-size: .85rem; }
+.pv-fuel .fuelg-bar { height: 10px; }
+.pv-recent { grid-column: 1 / -1; font-size: .8rem; }
+
+.pv-actions { margin-top: 12px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.pv-act-l { font-size: .85rem; color: var(--muted); margin-right: 14px; }
+#pvGarage { margin-top: 12px; }
+
+.pv-board { margin-top: 12px; }
+.pv-row { display: grid; grid-template-columns: 26px 1fr 34px 70px 70px; gap: 8px; align-items: center; padding: 7px 4px; border-bottom: 1px solid var(--line); border-left: 4px solid var(--dc); padding-left: 8px; font-size: .9rem; }
+.pv-row.me { background: rgba(255,255,255,.06); font-weight: 800; }
+.pv-rname { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pv-rbest, .pv-rgap { text-align: right; font-size: .8rem; }
+.pv-pick { margin-top: 10px; }

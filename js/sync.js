@@ -58,7 +58,8 @@ export async function initSync(theApp) {
     fb.getRedirectResult(auth).catch((e) => set({ error: friendly(e) }));
     fb.onAuthStateChanged(auth, (u) => {
       user = u;
-      if (u) startSync(); else stopSync();
+      // connexion anonyme (vue pilote en direct) : pas de synchronisation des données
+      if (u && !u.isAnonymous) startSync(); else stopSync();
     });
   } catch (e) {
     set({ status: 'error', error: 'Service de compte injoignable (' + (e.message || e) + ')' });
@@ -242,4 +243,16 @@ async function reloadApp() {
 function scheduleLater() {
   clearTimeout(reloadTimer);
   reloadTimer = setTimeout(reloadApp, 5000);
+}
+
+/**
+ * Accès Firestore pour la vue pilote en direct (js/live.js).
+ * Sans compte Google, on se connecte en anonyme (aucune donnée synchronisée).
+ */
+export async function liveAccess() {
+  if (!configured()) throw new Error('Firebase non configuré');
+  for (let i = 0; i < 50 && !auth && state.status !== 'error'; i++) await new Promise((r) => setTimeout(r, 200));
+  if (!auth) throw new Error(state.error || 'Service en ligne injoignable');
+  if (!auth.currentUser) await fb.signInAnonymously(auth);
+  return { fb, fs, uid: auth.currentUser.uid };
 }
