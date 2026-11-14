@@ -178,6 +178,8 @@ export const app = {
     if (sim?.kind !== 'sim') return;
     sim.baseLap = this.simBaseLap();
     for (const [address, base] of perf.bases) sim.calibrate(address, base.speed, base.brake);
+    // seules les voitures de la session roulent (+ la voiture fantôme)
+    sim.cars.forEach((c, i) => { if (i !== 6) c.active = perf.bases.has(i); });
   },
 
   openFuelSettings() {
@@ -367,11 +369,14 @@ export const app = {
     return t ? (performance.now() - t) / 1000 : null;
   },
 
+  // manettes retirées à la main : la détection automatique ne les rajoute plus
+  mutedSlots: new Set(),
+
   markSeen(address) {
     const first = !this.seen[address];
     this.seen[address] = performance.now();
     const slot = this.setup?.slots?.[address];
-    if (slot && !slot.active) {
+    if (slot && !slot.active && !this.mutedSlots.has(address)) {
       slot.active = true;
       this.saveSetup();
       this.applyTune(address);
@@ -595,6 +600,8 @@ export const app = {
       if (st === 'finishing' && session.cfg.type !== 'race') say('Fin du temps. Dernier tour.');
       if (st === 'finishing' && session.cfg.type === 'race' && session.cfg.mode === 'time') say('Fin du temps, dernier tour !');
       if (st === 'finished') {
+        // simulateur : les voitures virtuelles s'arrêtent à la fin de la session
+        if (this.isSim) cu.conn.running = false;
         await this._saveSessionRecord('finished');
         perf.stop();
         perf.restore();

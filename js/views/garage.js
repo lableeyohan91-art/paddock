@@ -116,7 +116,10 @@ function bindTunes() {
     $$('[data-k]', card).forEach((input) => {
       input.addEventListener('change', () => {
         const k = input.dataset.k;
-        if (k === 'active') slot.active = input.checked;
+        if (k === 'active') {
+          slot.active = input.checked;
+          if (slot.active) app.mutedSlots.delete(slot.address); else app.mutedSlots.add(slot.address);
+        }
         else slot[k] = input.value || null;
         app.saveSetup();
         if (slot.active) app.applyTune(slot.address);
