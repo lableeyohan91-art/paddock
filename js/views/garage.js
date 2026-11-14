@@ -4,7 +4,7 @@
 // En dessous : gestion des voitures et circuits (les pilotes ont leur onglet).
 
 import { esc, $, $$, confirmBox, toast } from '../ui.js';
-import { PLACE_CARS_MSG } from './quick.js';
+const PLACE_CARS_MSG = "Les réglages doivent s'effectuer avec les voitures posées sur la piste.";
 
 let app;
 let root;
