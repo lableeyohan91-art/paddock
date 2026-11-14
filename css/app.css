@@ -386,7 +386,7 @@ input[type=checkbox] { accent-color: var(--accent); width: 18px; height: 18px; }
 .switch input:checked + span { background: var(--green); }
 .switch input:checked + span::after { left: 23px; }
 .q-fuel { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: 16px; align-items: center; margin-top: 12px; }
-.q-go { position: sticky; bottom: 0; padding: 14px 0; display: flex; justify-content: center; background: linear-gradient(transparent, var(--bg) 40%); }
+.q-go { position: sticky; bottom: 0; padding: 14px 0; display: flex; flex-direction: column; align-items: center; background: linear-gradient(transparent, var(--bg) 40%); }
 .q-go .btn { min-width: 280px; }
 .depart {
   display: grid; justify-items: center; gap: 4px; min-width: 300px; padding: 14px 34px 12px; cursor: pointer;
@@ -666,3 +666,4 @@ table.simple th { color: var(--muted); font-size: .75rem; text-transform: upperc
 .warn-note { margin: 10px 0 0; padding: 8px 10px; border-radius: 8px; font-size: .82rem; font-weight: 600;
   color: var(--yellow); background: rgba(250,204,21,.1); border: 1px solid rgba(250,204,21,.35); }
 .warn-note.top { margin: 0 0 12px; }
+.q-go .warn-note { margin: 8px 0 0; text-align: center; }
