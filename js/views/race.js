@@ -127,7 +127,12 @@ function renderControls() {
   const connected = app.cu.connected;
   let html = '';
   if (s.state === 'ready') {
-    html += `<button class="btn go big" id="bStart">${s.cfg.start === 'lights' ? 'GO' : '▶ Démarrer'}</button>`;
+    // Précédent à gauche, GO au milieu, Garage à droite
+    html += `<div class="go-row">
+      <button class="btn ghost" id="bEdit">← Précédent</button>
+      <button class="btn go big" id="bStart">${s.cfg.start === 'lights' ? 'GO' : '▶ Démarrer'}</button>
+      <button class="btn" id="bGarage" title="Régler les voitures sans arrêter la session">🔧 Garage</button>
+    </div>`;
     if (!connected) html += `<button class="btn big" id="bConn">Connecter le circuit</button>`;
   }
   if (['running', 'finishing'].includes(s.state)) {
@@ -135,16 +140,13 @@ function renderControls() {
     html += `<button class="btn" id="bEsc" title="Bouton ESC / Pace car de la Control Unit">⏸ ESC (CU)</button>`;
     html += `<button class="btn" id="bStop">🏁 Terminer</button>`;
   }
-  if (s.state !== 'finished') {
+  if (['armed', 'running', 'finishing'].includes(s.state)) {
     html += `<button class="btn" id="bGarage" title="Régler les voitures sans arrêter la session">🔧 Garage</button>`;
   }
   if (s.state === 'finished') {
     html += `<button class="btn primary big" id="bAgain">↻ ${s.cfg.quick && s.cfg.type === 'race' ? 'Relancer la même course' : 'Relancer la même session'}</button>`;
     html += `<button class="btn" id="bResults">Résultats</button>`;
     html += `<button class="btn" id="bSetup">🏠 Menu course</button>`;
-  }
-  if (s.state === 'ready') {
-    html += `<button class="btn ghost" id="bEdit">← Précédent</button>`;
   }
   el.innerHTML = html;
   const on = (id, fn) => { const b = $('#' + id, el); if (b) b.onclick = fn; };
