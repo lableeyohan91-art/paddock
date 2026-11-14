@@ -679,3 +679,5 @@ table.simple th { color: var(--muted); font-size: .75rem; text-transform: upperc
 .home-btn { position: absolute; top: 8px; right: 8px; width: 38px; height: 38px; border-radius: 10px; cursor: pointer;
   font-size: 1.15rem; line-height: 1; background: transparent; border: 1px solid var(--line); color: inherit; }
 .home-btn:hover { background: rgba(255,255,255,.06); }
+/* Pendant une session : seuls les onglets Course et Garage restent visibles */
+body.session-lock #tabs button:not([data-view="race"]):not([data-view="garage"]) { display: none; }

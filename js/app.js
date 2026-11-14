@@ -407,6 +407,18 @@ export const app = {
     main.innerHTML = '';
     VIEWS[view].mount(main, this);
     if (location.hash !== '#' + view) history.replaceState(null, '', '#' + view);
+    this.updateTabsLock();
+  },
+
+  /**
+   * Écran de session (course, essais, qualif) et son garage : seuls Course et Garage
+   * restent accessibles. On en sort par la maison (retour au menu).
+   */
+  updateTabsLock() {
+    const locked = !!this.session && !this.raceMenu && ['race', 'garage'].includes(this.view);
+    document.body.classList.toggle('session-lock', locked);
+    const label = $('#tabs [data-view="race"] span');
+    if (label) label.textContent = locked ? 'Course' : 'Menu';
   },
 
   refresh() {
