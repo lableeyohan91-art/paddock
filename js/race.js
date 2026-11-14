@@ -127,6 +127,30 @@ export class RaceSession extends EventTarget {
     this.emit('update');
   }
 
+  /** Drapeau rouge : toutes les voitures arrêtées (bouton START de la CU). */
+  redFlag() {
+    this.flag = 'red';
+    this.redResuming = false;
+    this._sawRedLights = false;
+    this.emit('flag', { flag: 'red' });
+    this.emit('update');
+  }
+
+  /** Reprise demandée : la CU relance la séquence des feux. */
+  resumeFromRed() {
+    if (this.flag !== 'red') return;
+    this.redResuming = true;
+    this._sawRedLights = false;
+    this.emit('update');
+  }
+
+  _endRed() {
+    this.redResuming = false;
+    this.flag = 'green';
+    this.emit('flag', { flag: 'green', resumed: true });
+    this.emit('update');
+  }
+
   /** À appeler régulièrement (horloge). */
   tick() {
     if (this.state === 'running' && this.durationMs && this.elapsedMs >= this.durationMs) {
@@ -156,6 +180,11 @@ export class RaceSession extends EventTarget {
       if (st.start > 0) this._sawLights = true;
       else if (this._sawLights) this.go();
     }
+    // Drapeau rouge : la reprise est faite quand la séquence des feux de la CU se termine
+    if (this.flag === 'red' && this.redResuming) {
+      if (st.start > 0) this._sawRedLights = true;
+      else if (this._sawRedLights) this._endRed();
+    }
     for (const c of this.comps.values()) {
       c.cuFuel = st.fuel[c.address];
       const pit = !!st.pit[c.address];
@@ -172,6 +201,8 @@ export class RaceSession extends EventTarget {
     // Feux allumés puis une voiture passe la ligne : la course est forcément
     // lancée, même si la fin de séquence des feux n'a pas été reconnue.
     if (this.state === 'armed' && this._sawLights) this.go();
+    // reprise demandée et une voiture repasse la ligne : la course est repartie
+    if (this.flag === 'red' && this.redResuming) this._endRed();
     if (!['running', 'finishing'].includes(this.state)) return;
     let c = this.comps.get(address);
     if (!c) {

@@ -139,7 +139,9 @@ function renderControls() {
   }
   if (['running', 'finishing'].includes(s.state)) {
     html += `<button class="btn ${s.flag === 'yellow' ? 'go' : 'yellow'} big" id="bYellow">${s.flag === 'yellow' ? '🟢 Drapeau vert' : '🟡 Drapeau jaune'}</button>`;
-    html += `<button class="btn" id="bEsc" title="Bouton ESC / Pace car de la Control Unit">⏸ ESC (CU)</button>`;
+    html += s.flag === 'red'
+      ? `<button class="btn go big" id="bRed" ${s.redResuming ? 'disabled' : ''}>${s.redResuming ? '🚦 Reprise en cours…' : '🟢 Reprendre la course'}</button>`
+      : `<button class="btn red big" id="bRed" title="Arrête toutes les voitures (bouton START de la Control Unit)">🟥 Drapeau rouge</button>`;
     html += `<button class="btn" id="bStop">🏁 Terminer</button>`;
   }
   if (['armed', 'running', 'finishing'].includes(s.state)) {
@@ -155,7 +157,7 @@ function renderControls() {
   on('bStart', () => app.startSession());
   on('bConn', () => app.openConnectDialog());
   on('bYellow', () => { app.toggleYellow(); renderControls(); });
-  on('bEsc', () => app.cu.pressEsc());
+  on('bRed', async () => { await app.toggleRed(); renderControls(); });
   on('bStop', async () => { if (await confirmBox('Terminer la session maintenant ?')) s.stop(); });
   on('bAgain', () => app.prepareSession(app.lastPrepare || {}));
   on('bResults', () => showResults(app));
@@ -278,7 +280,7 @@ export function tick() {
   // Drapeau
   const fb = $('#flagbar', root);
   fb.className = 'flagbar ' + (s.state === 'finishing' || s.state === 'finished' ? 'chequered'
-    : s.flag === 'yellow' ? 'yellow' : s.state === 'running' ? '' : 'idle');
+    : s.flag === 'red' ? 'red' : s.flag === 'yellow' ? 'yellow' : s.state === 'running' ? '' : 'idle');
 
   renderLights();
   renderBoard();

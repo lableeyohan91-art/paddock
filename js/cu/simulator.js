@@ -104,7 +104,16 @@ export class SimulatorConnection {
   }
 
   _pressStart() {
-    if (this.start === 0 && !this.running) {
+    // en pleine course : la CU coupe la piste (drapeau rouge), feux allumés
+    if (this.running) {
+      this.running = false;
+      this.halted = true;
+      clearInterval(this.startTimer);
+      this.start = 1;
+      return;
+    }
+    if (this.halted || (this.start === 0 && !this.running)) {
+      this.halted = false;
       // séquence des feux : 1 = prêt, 2..6 = feux rouges, puis départ
       this.start = 1;
       clearInterval(this.startTimer);

@@ -750,6 +750,27 @@ export const app = {
     }
   },
 
+  /**
+   * Drapeau rouge : appui sur START de la Control Unit, qui coupe le courant de la piste
+   * (toutes les voitures s'arrêtent). Second appui : la CU relance les feux et la course repart.
+   */
+  async toggleRed() {
+    const s = this.session;
+    if (!s || !['running', 'finishing'].includes(s.state)) return;
+    if (s.flag !== 'red') {
+      if (s.flag === 'yellow') { s.setFlag('green'); perf.update(); }
+      s.redFlag();
+      await cu.pressStart();
+      say('Drapeau rouge ! Tout le monde s\'arrête', { priority: true });
+    } else if (!s.redResuming) {
+      s.resumeFromRed();
+      await cu.pressStart();
+      // certaines CU demandent un 2e appui pour lancer la séquence des feux
+      setTimeout(() => { if (s.flag === 'red' && s.redResuming && cu.status?.start === 1) cu.pressStart(); }, 1500);
+      say('Reprise de la course, attention aux feux', { priority: true });
+    }
+  },
+
   toggleYellow() {
     const s = this.session;
     if (!s || !['running', 'finishing'].includes(s.state)) return;

@@ -681,3 +681,6 @@ table.simple th { color: var(--muted); font-size: .75rem; text-transform: upperc
 .home-btn:hover { background: rgba(255,255,255,.06); }
 /* Pendant une session : seuls les onglets Course et Garage restent visibles */
 body.session-lock #tabs button:not([data-view="race"]):not([data-view="garage"]) { display: none; }
+/* Drapeau rouge */
+.flagbar.red { background: var(--accent); animation: blink 1s infinite; }
+.btn.red { background: var(--accent); color: #fff; border-color: transparent; }
