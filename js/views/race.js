@@ -88,22 +88,22 @@ function renderMenu() {
   root.innerHTML = `
   <div class="race-menu">
     <h1 class="menu-title">Course</h1>
-    <div class="menu-cards">
-      <button class="menu-card primary-card" id="mQuick">
-        <span class="menu-ico">⚡</span>
-        <span class="menu-name">Course rapide</span>
-        <span class="menu-desc">Participants, nombre de tours, essence : c'est parti.</span>
-      </button>
-      <button class="menu-card" id="mCustom">
-        <span class="menu-ico">⚙️</span>
-        <span class="menu-name">Session personnalisée</span>
-        <span class="menu-desc">Essais libres, qualification ou course, avec météo et tous les réglages.</span>
-      </button>
+    <div class="menu-grid">
+      <button class="menu-tile" data-go="practice"><span class="menu-ico">🛞</span><span class="menu-name">Essais libres</span></button>
+      <button class="menu-tile" data-go="qualifying"><span class="menu-ico">⏱️</span><span class="menu-name">Qualification</span></button>
+      <button class="menu-tile quick" data-go="quick"><span class="menu-ico">⚡</span><span class="menu-name">Course rapide</span></button>
+      <button class="menu-tile" data-go="race"><span class="menu-ico">🏁</span><span class="menu-name">Course</span></button>
     </div>
     ${last ? '<button class="btn ghost" id="mLast" style="margin-top:16px">↩ Revoir la dernière session</button>' : ''}
   </div>`;
-  $('#mQuick', root).onclick = () => app.go('quick');
-  $('#mCustom', root).onclick = () => app.go('setup');
+  root.querySelectorAll('[data-go]').forEach((b) => (b.onclick = () => {
+    const t = b.dataset.go;
+    if (t === 'quick') { app.go('quick'); return; }
+    // essais, qualif, course : écran de préparation complet, déjà réglé sur le bon type
+    app.setup.type = t;
+    app.saveSetup();
+    app.go('setup');
+  }));
   const l = $('#mLast', root);
   if (l) l.onclick = () => { app.raceMenu = false; app.go('race'); };
 }
