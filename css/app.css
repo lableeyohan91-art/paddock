@@ -693,3 +693,7 @@ body.session-lock #tabs button:not([data-view="race"]):not([data-view="garage"])
 .flagbar.vsc { background: repeating-linear-gradient(90deg, var(--yellow) 0 18px, #1a1500 18px 30px); animation: blink 1s infinite; }
 .vsc-pct { font-size: 1.6rem; font-weight: 900; color: var(--yellow); min-width: 70px; text-align: right; }
 .btn.icon-sq.vsc-btn.vsc-count { font-size: 1.7rem; color: #1a1500; background: var(--yellow); opacity: 1; animation: blink .5s infinite; }
+/* Icône VSC (tuile Réglages), identique au bouton de course */
+.vsc-ico { display: inline-flex; align-items: center; justify-content: center; width: 52px; height: 52px; border-radius: 12px; font-size: .85rem; font-weight: 900; letter-spacing: .04em; color: var(--yellow); border: 1px solid var(--yellow); background: var(--panel-2); vertical-align: middle; }
+h1 .vsc-ico { width: 40px; height: 40px; font-size: .7rem; }
+.menu-tile .vsc-ico { width: 34px; height: 34px; border-radius: 8px; font-size: .58rem; }

@@ -14,7 +14,7 @@ let root;
 const SECTIONS = [
   { k: 'general', ico: '⚙️', name: 'Général' },
   { k: 'fuel', ico: '⛽', name: 'Essence' },
-  { k: 'vsc', ico: '🟨', name: 'VSC' },
+  { k: 'vsc', ico: '<span class="vsc-ico">VSC</span>', name: 'VSC' }, // même icône que le bouton en course
 ];
 let tab = 'menu';
 let openFuelNext = false;
