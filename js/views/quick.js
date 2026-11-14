@@ -12,7 +12,7 @@ let prefs = null; // dernières valeurs choisies
 let setups = [];
 let activeSetup = null;
 
-const LAP_CHIPS = [10, 20, 30, 50, 100];          // essais libres, qualification
+const MIN_CHIPS = [2, 5, 10];                     // essais libres, qualification (minutes)
 const RACE_LAP_CHIPS = [20, 30, 50, 75, 100];     // course, course rapide
 export const START_MSG = "* Il peut être nécessaire d'appuyer sur le bouton START de votre Control Unit pour lancer la course.";
 export const PLACE_CARS_MSG = "* Les réglages doivent s'effectuer avec l'ensemble des voitures déjà posées sur votre piste.";
@@ -26,7 +26,7 @@ export async function mount(main, a) {
     app.setup.slots.slice(0, min).forEach((s) => (s.active = true));
     app.saveSetup();
   }
-  prefs = { laps: 30, fuelOn: true, tank15: 15, ...(await app.db.getSetting('quickRace', {})) };
+  prefs = { laps: 30, minutes: 5, fuelOn: true, tank15: 15, ...(await app.db.getSetting('quickRace', {})) };
   setups = await app.fuelSetups();
   activeSetup = await app.db.getSetting('fuelActiveSetup', null);
   render();
@@ -48,6 +48,7 @@ const MODES = {
 };
 const mode = () => MODES[app.quickMode || app.setup?.prepMode] || MODES.quick;
 const title = () => mode().title;
+const isRace = () => mode().type === 'race';
 const savePrefs = () => app.db.setSetting('quickRace', prefs);
 const pct15 = (v) => Math.round((v / 15) * 100);
 
@@ -89,11 +90,18 @@ function render() {
     </section>
 
     <section class="panel" style="margin-top:14px">
+      ${isRace() ? `
       <h2>2. Nombre de tours</h2>
       <div class="q-laps">
-        ${(mode().type === 'race' ? RACE_LAP_CHIPS : LAP_CHIPS).map((l) => `<button class="chip ${prefs.laps === l ? 'on' : ''}" data-laps="${l}">${l}</button>`).join('')}
+        ${RACE_LAP_CHIPS.map((l) => `<button class="chip ${prefs.laps === l ? 'on' : ''}" data-laps="${l}">${l}</button>`).join('')}
         <input type="number" id="qLaps" min="1" max="999" value="${prefs.laps}" aria-label="Nombre de tours">
-      </div>
+      </div>` : `
+      <h2>2. Durée</h2>
+      <div class="q-laps">
+        ${MIN_CHIPS.map((m) => `<button class="chip ${prefs.minutes === m ? 'on' : ''}" data-min="${m}">${m} min</button>`).join('')}
+        <input type="number" id="qMin" min="1" max="600" value="${prefs.minutes}" aria-label="Durée en minutes">
+        <span class="muted">min</span>
+      </div>`}
     </section>
 
     <section class="panel" style="margin-top:14px">
@@ -122,7 +130,7 @@ function render() {
       <button class="depart" id="qStart">
         <span class="depart-lights"><i></i><i></i><i></i><i></i><i></i></span>
         <span class="depart-txt">DÉPART</span>
-        <span class="depart-sub">${prefs.laps} tours · ${n} pilote${n > 1 ? 's' : ''} · ${prefs.fuelOn ? `essence ${pct15(prefs.tank15)} %` : 'sans essence'}</span>
+        <span class="depart-sub">${isRace() ? prefs.laps + ' tours' : prefs.minutes + ' min'} · ${n} pilote${n > 1 ? 's' : ''} · ${prefs.fuelOn ? `essence ${pct15(prefs.tank15)} %` : 'sans essence'}</span>
       </button>
     </div>
     <p class="warn-note q-start-note">${START_MSG}</p>
@@ -162,7 +170,11 @@ function bind() {
   if (gear) gear.onclick = (e) => { e.preventDefault(); app.openFuelSettings(); };
 
   $$('[data-laps]', root).forEach((b) => (b.onclick = () => { prefs.laps = +b.dataset.laps; savePrefs(); render(); }));
-  $('#qLaps', root).onchange = (e) => { prefs.laps = Math.max(1, Math.min(999, parseInt(e.target.value, 10) || 1)); savePrefs(); render(); };
+  const ql = $('#qLaps', root);
+  if (ql) ql.onchange = (e) => { prefs.laps = Math.max(1, Math.min(999, parseInt(e.target.value, 10) || 1)); savePrefs(); render(); };
+  $$('[data-min]', root).forEach((b) => (b.onclick = () => { prefs.minutes = +b.dataset.min; savePrefs(); render(); }));
+  const qm = $('#qMin', root);
+  if (qm) qm.onchange = (e) => { prefs.minutes = Math.max(1, Math.min(600, parseInt(e.target.value, 10) || 1)); savePrefs(); render(); };
 
   $('#qFuel', root).onchange = (e) => { prefs.fuelOn = e.target.checked; savePrefs(); render(); };
   const sel = $('#qSetup', root);
@@ -184,7 +196,7 @@ function bind() {
     if (!parts.length) { toast('Coche au moins un participant'); return; }
     if (parts.some((s) => !s.driverId)) { toast('Choisis un pilote pour chaque participant coché'); return; }
     // Départ : on prépare la course et on lance directement les feux
-    const ok = await app.prepareQuickRace({ laps: prefs.laps, fuelOn: prefs.fuelOn, tank15: prefs.tank15, title: title(), type: mode().type });
+    const ok = await app.prepareQuickRace({ laps: prefs.laps, fuelOn: prefs.fuelOn, tank15: prefs.tank15, title: title(), type: mode().type, minutes: isRace() ? 0 : prefs.minutes });
     if (ok) await app.startSession(); // non connecté : l'appli propose de connecter le circuit
   };
 }
