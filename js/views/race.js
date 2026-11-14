@@ -38,6 +38,7 @@ export function mount(main, a) {
     <div class="race-layout">
       <div>
         <div class="panel" id="lightsPanel">
+          <button class="home-btn" id="bHome" title="Retour au menu" aria-label="Retour au menu">🏠</button>
           <div class="lights" id="lights">${'<div class="light"></div>'.repeat(5)}</div>
           <div class="controls" style="justify-content:center;margin:0" id="controls"></div>
         </div>
@@ -77,6 +78,7 @@ export function mount(main, a) {
   };
   board.addEventListener('click', openSwap);
   board.addEventListener('keydown', openSwap);
+  $('#bHome', root).onclick = () => { app.raceMenu = true; app.go('race'); };
   renderControls();
   tick();
 }
