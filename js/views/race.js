@@ -146,8 +146,10 @@ function renderControls() {
     html += s.flag === 'yellow'
       ? `<button class="btn go icon-sq" id="bYellow" title="Drapeau vert : la course reprend" aria-label="Drapeau vert">⚑</button>`
       : `<button class="btn yellow icon-sq" id="bYellow" title="Drapeau jaune : ralentissement" aria-label="Drapeau jaune" ${s.flag === 'red' ? 'disabled' : ''}>⚑</button>`;
-    html += s.flag === 'vsc'
-      ? `<button class="btn go icon-sq vsc-btn" id="bVsc" title="Fin du VSC : la course reprend" aria-label="Fin du VSC">VSC</button>`
+    html += s.flag === 'vsc' && s.vscCountdown
+      ? `<button class="btn icon-sq vsc-btn vsc-count" id="bVsc" disabled aria-label="Fin du VSC dans ${s.vscCountdown}">${s.vscCountdown}</button>`
+      : s.flag === 'vsc'
+      ? `<button class="btn go icon-sq vsc-btn" id="bVsc" title="Fin du VSC : décompte de 3 s puis la course reprend" aria-label="Fin du VSC">VSC</button>`
       : `<button class="btn icon-sq vsc-btn" id="bVsc" title="Virtual Safety Car : toutes les voitures à ${app.vscCfg.speedPct} % de la vitesse max" aria-label="Virtual Safety Car" ${s.flag === 'red' ? 'disabled' : ''}>VSC</button>`;
     if (s.flag !== 'red') html += `<button class="btn red icon-sq" id="bRed" title="Drapeau rouge : arrête toutes les voitures" aria-label="Drapeau rouge">🚩</button>`;
     html += `<button class="btn icon-sq" id="bStop" title="Terminer la session" aria-label="Terminer la session">🏁</button>`;
@@ -260,6 +262,7 @@ function renderLights() {
 
 let lastState = null;
 let lastFlag = null;
+let lastCount = null;
 let lastConn = null;
 
 export function tick() {
@@ -267,7 +270,8 @@ export function tick() {
   if (!root || !app.session || !$('#controls', root)) return;
   const s = app.session;
 
-  if (s.state !== lastState || s.flag !== lastFlag || app.cu.connected !== lastConn) {
+  if (s.state !== lastState || s.flag !== lastFlag || s.vscCountdown !== lastCount || app.cu.connected !== lastConn) {
+    lastCount = s.vscCountdown;
     lastState = s.state;
     lastFlag = s.flag;
     lastConn = app.cu.connected;

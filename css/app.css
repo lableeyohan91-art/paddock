@@ -692,3 +692,4 @@ body.session-lock #tabs button:not([data-view="race"]):not([data-view="garage"])
 .btn.icon-sq.vsc-btn.go { color: #04130a; }
 .flagbar.vsc { background: repeating-linear-gradient(90deg, var(--yellow) 0 18px, #1a1500 18px 30px); animation: blink 1s infinite; }
 .vsc-pct { font-size: 1.6rem; font-weight: 900; color: var(--yellow); min-width: 70px; text-align: right; }
+.btn.icon-sq.vsc-btn.vsc-count { font-size: 1.7rem; color: #1a1500; background: var(--yellow); opacity: 1; animation: blink .5s infinite; }

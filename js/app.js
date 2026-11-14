@@ -753,7 +753,8 @@ export const app = {
     const s = this.session;
     if (!s || !['running', 'finishing'].includes(s.state)) return;
     if (s.flag !== 'red') {
-      if (s.flag === 'yellow') { s.setFlag('green'); perf.update(); }
+      this.cancelVscCountdown();
+      if (s.flag === 'yellow' || s.flag === 'vsc') { s.setFlag('green'); perf.update(); }
       s.redFlag();
       await cu.pressStart();
       say('Drapeau rouge ! Tout le monde s\'arrête', { priority: true });
@@ -770,9 +771,43 @@ export const app = {
   toggleVsc() {
     const s = this.session;
     if (!s || !['running', 'finishing'].includes(s.state) || s.flag === 'red') return;
-    s.setFlag(s.flag === 'vsc' ? 'green' : 'vsc');
-    perf.update();
-    say(s.flag === 'vsc' ? 'Virtual Safety Car ! Vitesse limitée' : 'Fin du Virtual Safety Car, la course reprend', { priority: true });
+    if (s.vscCountdown) return; // décompte déjà lancé
+    if (s.flag !== 'vsc') {
+      s.setFlag('vsc');
+      perf.update();
+      say('Virtual Safety Car ! Vitesse limitée', { priority: true });
+      return;
+    }
+    // Fin du VSC : décompte de 3 secondes (affiché et annoncé), puis vitesse normale
+    const steps = [
+      { n: 3, text: 'Fin du VSC dans 3', at: 0 },
+      { n: 2, text: '2', at: 1400 },
+      { n: 1, text: '1', at: 2400 },
+      { n: 0, text: 'Go !', at: 3400 },
+    ];
+    s.vscCountdown = 3;
+    s.emit('update');
+    s._vscTimers = steps.map((st) => setTimeout(() => {
+      // annulé entre-temps (drapeau rouge, fin de session…)
+      if (s.flag !== 'vsc' || !['running', 'finishing'].includes(s.state)) { this.cancelVscCountdown(); return; }
+      say(st.text, { priority: true });
+      beep(st.n ? 660 : 990, st.n ? 150 : 400);
+      s.vscCountdown = st.n;
+      if (st.n === 0) {
+        s.vscCountdown = null;
+        s.setFlag('green');
+        perf.update();
+      }
+      s.emit('update');
+    }, st.at));
+  },
+
+  cancelVscCountdown() {
+    const s = this.session;
+    if (!s) return;
+    (s._vscTimers || []).forEach(clearTimeout);
+    s._vscTimers = null;
+    s.vscCountdown = null;
   },
 
   toggleYellow() {
