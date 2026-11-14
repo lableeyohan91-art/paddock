@@ -12,7 +12,8 @@ let prefs = null; // dernières valeurs choisies
 let setups = [];
 let activeSetup = null;
 
-const LAP_CHIPS = [10, 20, 30, 50, 100];
+const LAP_CHIPS = [10, 20, 30, 50, 100];          // essais libres, qualification
+const RACE_LAP_CHIPS = [20, 30, 50, 75, 100];     // course, course rapide
 export const START_MSG = "* Il peut être nécessaire d'appuyer sur le bouton START de votre Control Unit pour lancer la course.";
 export const PLACE_CARS_MSG = "* Les réglages doivent s'effectuer avec l'ensemble des voitures déjà posées sur votre piste.";
 
@@ -90,7 +91,7 @@ function render() {
     <section class="panel" style="margin-top:14px">
       <h2>2. Nombre de tours</h2>
       <div class="q-laps">
-        ${LAP_CHIPS.map((l) => `<button class="chip ${prefs.laps === l ? 'on' : ''}" data-laps="${l}">${l}</button>`).join('')}
+        ${(mode().type === 'race' ? RACE_LAP_CHIPS : LAP_CHIPS).map((l) => `<button class="chip ${prefs.laps === l ? 'on' : ''}" data-laps="${l}">${l}</button>`).join('')}
         <input type="number" id="qLaps" min="1" max="999" value="${prefs.laps}" aria-label="Nombre de tours">
       </div>
     </section>
