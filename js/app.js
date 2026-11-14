@@ -7,6 +7,7 @@ import { PerformanceEngine, yellowFlagModifier } from './performance.js';
 import { Weather, SKY } from './weather.js';
 import { RaceSession, TYPES, fmtTime, fmtClock } from './race.js';
 import * as db from './db.js';
+import * as sync from './sync.js';
 import { defaultFuelConfig, consumption, sanitize, balancedPreset, sprint30Preset } from './fuel.js';
 import { audio, beep, say, spokenTime, unlockAudio } from './audio.js';
 import { $, $$, esc, toast, modal, confirmBox } from './ui.js';
@@ -43,6 +44,18 @@ export const app = {
     this.logLines.push(line);
     if (this.logLines.length > 200) this.logLines.shift();
     VIEWS[this.view]?.onLog?.(line);
+  },
+
+  /** Relit tout depuis la base locale (après une synchronisation venue d'un autre appareil). */
+  async reloadFromDb() {
+    await this.loadData();
+    this.setup = await db.getSetting('setup', null) || setupView.defaultSetup(this);
+    this.fuelCfg = sanitize(await db.getSetting('fuel', defaultFuelConfig()));
+    this.ghost.settings = { ...this.ghost.settings, ...(await db.getSetting('ghost', {})) };
+    audio.voice = await db.getSetting('voice', true);
+    audio.sounds = await db.getSetting('sounds', true);
+    if (!this.isRacing) this.go(this.view);
+    this.log('Données synchronisées depuis ton compte');
   },
 
   async loadData() {
@@ -172,9 +185,9 @@ export const app = {
     this.go('settings');
   },
 
-  async saveFuelCfg(cfg) {
+  async saveFuelCfg(cfg, opts = {}) {
     this.fuelCfg = sanitize(cfg);
-    await db.setSetting('fuel', this.fuelCfg);
+    await db.setSetting('fuel', this.fuelCfg, opts);
   },
 
   // ---------- Setups d'essence (réglages nommés) ----------
@@ -184,19 +197,19 @@ export const app = {
     return db.getSetting('fuelSetups', []);
   },
 
-  async saveFuelSetup(name, id = null) {
+  async saveFuelSetup(name, id = null, opts = {}) {
     const list = await this.fuelSetups();
     const { enabled, ...cfg } = this.fuelCfg;
     const existing = id ? list.find((s) => s.id === id) : list.find((s) => s.name.toLowerCase() === name.toLowerCase());
     if (existing) Object.assign(existing, { name, cfg, date: Date.now() });
     else list.push({ id: db.uid(), name, cfg, date: Date.now() });
-    await db.setSetting('fuelSetups', list);
-    await db.setSetting('fuelActiveSetup', existing?.id ?? list[list.length - 1].id);
+    await db.setSetting('fuelSetups', list, opts);
+    await db.setSetting('fuelActiveSetup', existing?.id ?? list[list.length - 1].id, opts);
     return list;
   },
 
   /** Ajoute un setup tout fait sans le rendre actif (remplace s'il existe déjà). */
-  async addFuelSetup(name, cfgPart) {
+  async addFuelSetup(name, cfgPart, opts = {}) {
     const list = await this.fuelSetups();
     const { enabled, ...base } = this.fuelCfg;
     const cfg = { ...sanitize({ ...base, ...cfgPart }) };
@@ -204,7 +217,7 @@ export const app = {
     const existing = list.find((s) => s.name.toLowerCase() === name.toLowerCase());
     if (existing) Object.assign(existing, { cfg, date: Date.now() });
     else list.push({ id: db.uid(), name, cfg, date: Date.now() });
-    await db.setSetting('fuelSetups', list);
+    await db.setSetting('fuelSetups', list, opts);
   },
 
   async loadFuelSetup(id) {
@@ -805,6 +818,55 @@ async function checkVersion() {
   } catch { /* serveur sans contrôle de version (ex. hébergement en ligne) */ }
 }
 
+// ---------- Compte (synchronisation) ----------
+
+function updateAcct(st) {
+  const ico = $('#acctIco'), lab = $('#acctLabel'), btn = $('#acctBtn');
+  if (!ico) return;
+  btn.classList.toggle('hidden', st.status === 'unconfigured');
+  btn.classList.toggle('on', !!st.user);
+  btn.classList.toggle('err', !!st.error);
+  if (st.user) {
+    ico.innerHTML = st.user.photo ? `<img src="${esc(st.user.photo)}" alt="" referrerpolicy="no-referrer">` : '👤';
+    lab.textContent = st.status === 'syncing' || st.pending ? 'Synchro…' : (st.user.name || 'Compte').split(' ')[0];
+  } else {
+    ico.textContent = '👤';
+    lab.textContent = 'Se connecter';
+  }
+  if (app.view === 'settings') VIEWS.settings.onAcct?.();
+}
+
+function openAccount() {
+  const st = sync.state;
+  const when = st.lastSync ? new Date(st.lastSync).toLocaleTimeString('fr-FR') : '—';
+  const m = modal(st.user ? `
+    <h2>👤 Ton compte</h2>
+    <div class="row" style="gap:12px">
+      ${st.user.photo ? `<img src="${esc(st.user.photo)}" alt="" referrerpolicy="no-referrer" style="width:48px;height:48px;border-radius:50%">` : ''}
+      <div><b>${esc(st.user.name || '')}</b><br><span class="muted">${esc(st.user.email || '')}</span></div>
+    </div>
+    <p style="margin-top:14px">${st.status === 'syncing' ? '🔄 Synchronisation en cours…' : st.error ? '⚠️ ' + esc(st.error) : '✅ Synchronisé'} <span class="muted">· dernière synchro ${when}</span></p>
+    <p class="muted" style="font-size:.85rem">Pilotes, photos, voitures, réglages du garage, setups d'essence, sessions et records sont sauvegardés sur ton compte et se retrouvent sur tous les appareils où tu te connectes.</p>
+    <div class="row" style="justify-content:flex-end">
+      <button class="btn ghost" id="acOut">Se déconnecter</button>
+      <button class="btn primary" data-close>Fermer</button>
+    </div>` : `
+    <h2>👤 Se connecter</h2>
+    <p>Connecte-toi avec ton compte Google pour retrouver tes pilotes, records, setups et réglages <b>sur le PC et sur le téléphone</b>, synchronisés automatiquement.</p>
+    <p class="muted" style="font-size:.85rem">Tes données restent aussi sur cet appareil : sans internet, l'appli marche comme avant.</p>
+    ${st.error ? `<p class="warnbox">${esc(st.error)}</p>` : ''}
+    <div class="row" style="justify-content:flex-end">
+      <button class="btn ghost" data-close>Plus tard</button>
+      <button class="btn primary" id="acIn">Se connecter avec Google</button>
+    </div>`);
+  const out = m.el.querySelector('#acOut');
+  if (out) out.onclick = async () => { await sync.signOut(); m.close(); toast('Déconnecté. Les données restent sur cet appareil.'); };
+  const inn = m.el.querySelector('#acIn');
+  if (inn) inn.onclick = async () => {
+    try { await sync.signIn(); m.close(); toast('Connecté : synchronisation en cours…'); } catch { /* message affiché */ }
+  };
+}
+
 // ---------- Démarrage ----------
 
 async function init() {
@@ -817,15 +879,16 @@ async function init() {
   // Une seule fois : on installe le réglage équilibré (validé par simulation 50 et 100 tours)
   // et on l'enregistre comme setup nommé.
   if (!(await db.getSetting('fuelBalancedApplied', false))) {
-    await app.saveFuelCfg({ ...app.fuelCfg, ...balancedPreset() });
-    await app.saveFuelSetup('Équilibré 50/100 tours');
-    await db.setSetting('fuelBalancedApplied', true);
+    // "quiet" : ne remplace jamais les réglages d'un compte déjà synchronisé
+    await app.saveFuelCfg({ ...app.fuelCfg, ...balancedPreset() }, { quiet: true });
+    await app.saveFuelSetup('Équilibré 50/100 tours', null, { quiet: true });
+    await db.setSetting('fuelBalancedApplied', true, { quiet: true });
     app.log('Essence : réglage équilibré installé');
   }
   // Setup "Sprint 30 tours" ajouté à la liste (sans changer le réglage en cours)
   if (!(await db.getSetting('fuelSprint30Added', false))) {
-    await app.addFuelSetup('Sprint 30 tours', sprint30Preset());
-    await db.setSetting('fuelSprint30Added', true);
+    await app.addFuelSetup('Sprint 30 tours', sprint30Preset(), { quiet: true });
+    await db.setSetting('fuelSprint30Added', true, { quiet: true });
   }
   app.setup = await db.getSetting('setup', null) || setupView.defaultSetup(app);
 
@@ -856,6 +919,12 @@ async function init() {
     navigator.serviceWorker.register('sw.js').catch(() => {});
   }
   window.paddock = app; // pratique pour le débogage
+
+  // Compte : connexion Google et synchronisation entre appareils
+  sync.onState(updateAcct);
+  updateAcct(sync.state);
+  $('#acctBtn').onclick = () => openAccount();
+  sync.initSync(app);
 
   // Records SmartRace à importer (une fois) : on propose la fenêtre d'association
   if (!(await importDone(app))) openImport(app, { onDone: () => app.refresh() });
