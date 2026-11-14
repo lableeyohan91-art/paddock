@@ -419,6 +419,8 @@ export const app = {
     document.body.classList.toggle('session-lock', locked);
     const label = $('#tabs [data-view="race"] span');
     if (label) label.textContent = locked ? 'Course' : 'Menu';
+    const ico = $('#tabs [data-view="race"] i');
+    if (ico) ico.textContent = locked ? '🏁' : '🏠'; // même maison que sur l'écran de course
   },
 
   refresh() {
