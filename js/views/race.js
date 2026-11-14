@@ -179,14 +179,6 @@ function fuelCell(c) {
     <span class="num">${pct <= 0 ? 'À SEC' : pct + ' %'}</span></div>`;
 }
 
-function perfCell(c) {
-  const p = app.perf.current.get(c.address);
-  if (!p) return '';
-  const reduced = p.speed < p.base.speed;
-  const notes = p.effects.map((e) => e.note || e.label).join(', ');
-  return `<div class="perf ${reduced ? 'reduced' : ''}" title="${esc(notes)}"><b class="num">${p.speed}</b>/15${reduced ? ' ↓' : ''}</div>`;
-}
-
 function sectorsCell(c, s) {
   const list = c.sectors.length ? c.sectors : c.lastSectors;
   if (!list.length) return '';
@@ -209,7 +201,7 @@ function renderBoard() {
     <th class="hide-sm">${isRace ? 'Écart' : 'Écart'}</th>
     ${hasSectors ? '<th class="hide-sm">Secteurs</th>' : ''}
     ${fuelMode ? '<th><button class="th-link" data-gofuel title="Régler la consommation">Essence ⚙</button></th>' : ''}
-    <th class="hide-sm">Vitesse</th><th></th></tr>`;
+    <th></th></tr>`;
 
   const rows = list.map((c) => {
     const flash = now - (flashes.get(c.address) || 0) < 1200;
@@ -227,7 +219,6 @@ function renderBoard() {
       <td class="num hide-sm">${esc(c.gap)}</td>
       ${hasSectors ? `<td class="hide-sm">${sectorsCell(c, s)}</td>` : ''}
       ${fuelMode ? `<td>${fuelCell(c)}</td>` : ''}
-      <td class="hide-sm">${perfCell(c)}</td>
       <td>${badge}</td>
     </tr>`;
   }).join('');
