@@ -666,7 +666,6 @@ table.simple th { color: var(--muted); font-size: .75rem; text-transform: upperc
 .warn-note { margin: 10px 0 0; padding: 8px 10px; border-radius: 8px; font-size: .82rem; font-weight: 600;
   color: var(--yellow); background: rgba(250,204,21,.1); border: 1px solid rgba(250,204,21,.35); }
 .warn-note.top { margin: 0 0 12px; }
-.q-start-note { margin: 4px 0 0; text-align: center; }
 /* Écran de course prêt : Précédent | GO | Garage sur une ligne */
 .go-row { display: grid; grid-template-columns: 1fr auto 1fr; gap: 8px; align-items: center; width: 100%; }
 .go-row #bEdit { justify-self: end; }
