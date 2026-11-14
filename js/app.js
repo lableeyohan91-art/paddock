@@ -850,7 +850,7 @@ async function init() {
   checkVersion();
   setInterval(checkVersion, 15000);
 
-  app.go(location.hash.slice(1) || (app.session ? 'race' : 'setup'));
+  app.go(location.hash.slice(1) || 'race'); // accueil : menu Course
 
   if ('serviceWorker' in navigator && location.protocol !== 'file:') {
     navigator.serviceWorker.register('sw.js').catch(() => {});
