@@ -130,7 +130,6 @@ function bind() {
     }));
     $('[data-del]', row).onclick = () => {
       slot.active = false;
-      app.mutedSlots.add(slot.address); // ne pas la rajouter automatiquement
       app.saveSetup();
       render();
     };
@@ -141,7 +140,6 @@ function bind() {
     const slot = app.setup.slots.find((s) => !s.active);
     if (!slot) return;
     slot.active = true;
-    app.mutedSlots.delete(slot.address);
     app.saveSetup();
     app.applyTune(slot.address);
     render();
