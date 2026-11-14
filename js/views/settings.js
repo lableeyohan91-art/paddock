@@ -13,6 +13,7 @@ let root;
 const SECTIONS = [
   { k: 'general', ico: '⚙️', name: 'Général' },
   { k: 'fuel', ico: '⛽', name: 'Essence' },
+  { k: 'vsc', ico: '🟨', name: 'VSC' },
 ];
 let tab = 'menu';
 let openFuelNext = false;
@@ -53,6 +54,11 @@ function render() {
     bindTabs();
     return;
   }
+  if (tab === 'vsc') {
+    renderVsc();
+    bindTabs();
+    return;
+  }
   if (tab === 'fuel') {
     root.innerHTML = sectionHead() + '<div id="fuelRoot"></div>';
     bindTabs();
@@ -61,6 +67,32 @@ function render() {
   }
   renderGeneral();
   bindTabs();
+}
+
+/** Réglages → VSC : vitesse imposée aux voitures pendant le Virtual Safety Car. */
+function renderVsc() {
+  const pct = app.vscCfg.speedPct;
+  root.innerHTML = sectionHead() + `
+  <section class="panel">
+    <h2>Virtual Safety Car</h2>
+    <p class="muted" style="margin-top:-4px">En course, le bouton <b>VSC</b> bride immédiatement toutes les voitures à un pourcentage fixe de <b>leur vitesse max</b> (leur réglage du garage). Un second appui rend la course.</p>
+    <div class="row" style="gap:14px;margin-top:14px">
+      <label class="field" style="flex:1">Vitesse sous VSC
+        <input type="range" id="vscPct" min="5" max="100" step="5" value="${pct}"></label>
+      <span class="vsc-pct num" id="vscPctV">${pct} %</span>
+    </div>
+    <p class="muted" style="font-size:.85rem;margin:8px 0 0" id="vscEx"></p>
+    <button class="btn small ghost" id="vscReset" style="margin-top:10px">Revenir à 20 % (nominal)</button>
+  </section>`;
+  const r = $('#vscPct', root);
+  const show = (v) => {
+    $('#vscPctV', root).textContent = v + ' %';
+    $('#vscEx', root).textContent = `Exemple : une voiture réglée à 100 % roulera à ${v} %, une voiture réglée à 80 % roulera à ${Math.round(0.8 * v)} %.`;
+  };
+  show(pct);
+  r.oninput = () => show(+r.value);
+  r.onchange = async () => { await app.saveVscCfg({ speedPct: +r.value }); toast('VSC : ' + r.value + ' %', 1200); };
+  $('#vscReset', root).onclick = async () => { await app.saveVscCfg({ speedPct: 20 }); renderVsc(); bindTabs(); };
 }
 
 /** Ouvre directement Réglages → Essence (depuis un autre écran). */

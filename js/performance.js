@@ -109,3 +109,17 @@ export function yellowFlagModifier(getFlag, factor = 0.55) {
     },
   };
 }
+
+/**
+ * Virtual Safety Car : chaque voiture est bridée à un pourcentage fixe
+ * de sa vitesse max (son réglage garage). Ex. 20 % : réglage 15 → 3.
+ */
+export function vscModifier(getFlag, getPct) {
+  return {
+    id: 'vsc',
+    label: 'Virtual Safety Car',
+    compute() {
+      return getFlag() === 'vsc' ? { speed: getPct() / 100, brake: 1, note: 'VSC' } : null;
+    },
+  };
+}

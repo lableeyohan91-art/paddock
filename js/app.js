@@ -3,7 +3,7 @@
 import { ControlUnit } from './cu/controlunit.js';
 import { BleConnection, bluetoothSupported } from './cu/ble.js';
 import { SimulatorConnection } from './cu/simulator.js';
-import { PerformanceEngine, yellowFlagModifier } from './performance.js';
+import { PerformanceEngine, yellowFlagModifier, vscModifier } from './performance.js';
 import { Weather, SKY } from './weather.js';
 import { RaceSession, TYPES, fmtTime, fmtClock } from './race.js';
 import * as db from './db.js';
@@ -47,6 +47,7 @@ function defaultSetup(a) {
 const VIEWS = { race: raceView, garage: garageView, drivers: driversView, driver: driverView, ghost: ghostView, quick: quickView, stats: statsView, settings: settingsView };
 
 const cu = new ControlUnit();
+const DEFAULT_VSC = { speedPct: 20 }; // vitesse imposée sous VSC : % de la vitesse max de chaque voiture
 export const GHOST = 6; // adresse de la voiture autonome (fantôme) ; 7 = pace car
 const perf = new PerformanceEngine(cu);
 const weather = new Weather();
@@ -72,6 +73,7 @@ export const app = {
     await this.loadData();
     this.setup = await db.getSetting('setup', null) || defaultSetup(this);
     this.fuelCfg = sanitize(await db.getSetting('fuel', defaultFuelConfig()));
+    this.vscCfg = { ...DEFAULT_VSC, ...(await db.getSetting('vsc', {})) };
     audio.voice = await db.getSetting('voice', true);
     audio.sounds = await db.getSetting('sounds', true);
     if (!this.isRacing) this.go(this.view);
@@ -185,6 +187,13 @@ export const app = {
   // ---------- Essence simulée ----------
 
   fuelCfg: defaultFuelConfig(),
+  vscCfg: { ...DEFAULT_VSC },
+
+  async saveVscCfg(values) {
+    this.vscCfg = { ...this.vscCfg, ...values };
+    await db.setSetting('vsc', this.vscCfg);
+    perf.update(); // VSC en cours : la nouvelle vitesse s'applique tout de suite
+  },
 
   /** Temps au tour du simulateur : le milieu de la fourchette nominale d'essence. */
   simBaseLap() {
@@ -574,6 +583,8 @@ export const app = {
     perf.removeModifier('flag');
     if (!s.quick) perf.addModifier(weather.modifier()); // pas de météo en course rapide
     perf.addModifier(yellowFlagModifier(() => this.session?.flag));
+    perf.removeModifier('vsc');
+    perf.addModifier(vscModifier(() => this.session?.flag, () => this.vscCfg.speedPct));
     perf.removeModifier('fuel');
     perf.addModifier(this.emptyTankModifier());
     entries.forEach((e) => perf.setBase(e.address, e.car.speed, e.car.brake));
@@ -753,6 +764,15 @@ export const app = {
       setTimeout(() => { if (s.flag === 'red' && s.redResuming && cu.status?.start === 1) cu.pressStart(); }, 1500);
       say('Reprise de la course, attention aux feux', { priority: true });
     }
+  },
+
+  /** Virtual Safety Car : toutes les voitures bridées à un % de leur vitesse max. */
+  toggleVsc() {
+    const s = this.session;
+    if (!s || !['running', 'finishing'].includes(s.state) || s.flag === 'red') return;
+    s.setFlag(s.flag === 'vsc' ? 'green' : 'vsc');
+    perf.update();
+    say(s.flag === 'vsc' ? 'Virtual Safety Car ! Vitesse limitée' : 'Fin du Virtual Safety Car, la course reprend', { priority: true });
   },
 
   toggleYellow() {
@@ -940,6 +960,7 @@ async function init() {
   audio.voice = await db.getSetting('voice', true);
   audio.sounds = await db.getSetting('sounds', true);
   app.fuelCfg = sanitize(await db.getSetting('fuel', defaultFuelConfig()));
+  app.vscCfg = { ...DEFAULT_VSC, ...(await db.getSetting('vsc', {})) };
   // Une seule fois : on installe le réglage équilibré (validé par simulation 50 et 100 tours)
   // et on l'enregistre comme setup nommé.
   if (!(await db.getSetting('fuelBalancedApplied', false))) {
