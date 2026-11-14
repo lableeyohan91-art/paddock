@@ -1,0 +1,111 @@
+// Moteur de performance : calcule en continu la vitesse et le freinage de
+// chaque voiture à partir de son réglage de base et d'une liste d'effets
+// (météo, drapeau jaune, et plus tard pneus, carburant, dégâts...).
+//
+//   valeur envoyée à la CU = arrondi(base × produit des facteurs), bornée 0..15
+//
+// Ajouter un effet = ajouter un objet { id, label, compute(address, ctx) }
+// qui renvoie { speed: facteur, brake: facteur, note?: texte } ou null.
+
+export class PerformanceEngine extends EventTarget {
+  constructor(cu) {
+    super();
+    this.cu = cu;
+    this.modifiers = new Map();
+    this.bases = new Map();  // address -> {speed, brake}
+    this.sent = new Map();   // address -> {speed, brake} dernière valeur envoyée
+    this.current = new Map(); // address -> détail du calcul (pour l'affichage)
+    this.enabled = true;
+    this._timer = null;
+  }
+
+  addModifier(mod) {
+    this.modifiers.set(mod.id, mod);
+    this.update();
+  }
+
+  removeModifier(id) {
+    this.modifiers.delete(id);
+    this.update();
+  }
+
+  setBase(address, speed, brake) {
+    this.bases.set(address, { speed, brake });
+    this.update();
+  }
+
+  clearBases() {
+    this.bases.clear();
+    this.sent.clear();
+    this.current.clear();
+  }
+
+  start(intervalMs = 1000) {
+    this.stop();
+    this._timer = setInterval(() => this.update(), intervalMs);
+  }
+
+  stop() {
+    clearInterval(this._timer);
+    this._timer = null;
+  }
+
+  /** Remet chaque voiture à sa valeur de base (fin de session). */
+  restore() {
+    for (const [address, base] of this.bases) {
+      this.cu.setSpeed(address, base.speed);
+      this.cu.setBrake(address, base.brake);
+      this.current.set(address, { address, base, speedF: 1, brakeF: 1, speed: base.speed, brake: base.brake, effects: [] });
+    }
+    this.sent.clear();
+    this.dispatchEvent(new CustomEvent('update'));
+  }
+
+  compute(address) {
+    const base = this.bases.get(address) || { speed: 15, brake: 15 };
+    let speedF = 1;
+    let brakeF = 1;
+    const effects = [];
+    if (this.enabled) {
+      for (const mod of this.modifiers.values()) {
+        const r = mod.compute(address);
+        if (!r) continue;
+        const s = r.speed ?? 1;
+        const b = r.brake ?? 1;
+        if (s !== 1 || b !== 1 || r.note) {
+          effects.push({ id: mod.id, label: mod.label, speed: s, brake: b, note: r.note });
+        }
+        speedF *= s;
+        brakeF *= b;
+      }
+    }
+    const speed = clamp(Math.round(base.speed * speedF));
+    const brake = clamp(Math.round(base.brake * brakeF));
+    return { address, base, speedF, brakeF, speed, brake, effects };
+  }
+
+  update() {
+    for (const address of this.bases.keys()) {
+      const r = this.compute(address);
+      this.current.set(address, r);
+      const prev = this.sent.get(address);
+      if (!prev || prev.speed !== r.speed) this.cu.setSpeed(address, r.speed);
+      if (!prev || prev.brake !== r.brake) this.cu.setBrake(address, r.brake);
+      this.sent.set(address, { speed: r.speed, brake: r.brake });
+    }
+    this.dispatchEvent(new CustomEvent('update'));
+  }
+}
+
+const clamp = (v) => Math.max(0, Math.min(15, v));
+
+/** Drapeau jaune : toutes les voitures ralenties. */
+export function yellowFlagModifier(getFlag, factor = 0.55) {
+  return {
+    id: 'flag',
+    label: 'Drapeau jaune',
+    compute() {
+      return getFlag() === 'yellow' ? { speed: factor, brake: 1, note: 'Drapeau jaune' } : null;
+    },
+  };
+}

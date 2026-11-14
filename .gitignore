@@ -1,0 +1,8 @@
+# Données personnelles : jamais publiées en ligne
+js/imports/
+*.json.bak
+paddock-sauvegarde-*.json
+
+# Divers
+node_modules/
+.claude/
