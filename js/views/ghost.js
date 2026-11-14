@@ -1,6 +1,5 @@
 // Onglet Voiture fantôme : une voiture qui roule seule (adresse "autonome" de la CU).
-// On la programme sur la Control Unit, on la règle ici (garage dédié),
-// puis Start / Stop. Son chrono s'affiche en direct : pratique pour les tests.
+// On la programme sur la Control Unit, puis Start / Stop. Son chrono s'affiche en direct : pratique pour les tests.
 
 import { esc, $, $$, confirmBox, toast } from '../ui.js';
 import { fmtTime } from '../race.js';
@@ -8,12 +7,6 @@ import { BUTTON, cmdPress } from '../cu/protocol.js';
 
 let app;
 let root;
-
-const pct = (v) => Math.round((v / 15) * 100);
-const BARS = [
-  { k: 'speed', label: 'Vitesse', color: 'var(--green)' },
-  { k: 'brake', label: 'Freinage', color: 'var(--accent-2)' },
-];
 
 export function mount(main, a) {
   app = a;
@@ -30,7 +23,6 @@ export function refresh() {
 }
 
 function render() {
-  const g = app.ghost.settings;
   const connected = app.cu.connected;
   const racing = app.isRacing;
   root.innerHTML = `
@@ -58,26 +50,10 @@ function render() {
         <p class="muted" style="font-size:.8rem;margin:10px 0 0">Pour lui rendre une manette plus tard : programme-la comme d'habitude (CODE puis bouton de la manette).<br>Source : <a href="https://www.smartrace.de/en/the-smartrace-manual/tipps-tricks/program-ghost-car-for-carrera-digital/" target="_blank" rel="noopener">guide SmartRace</a>.</p>
       </section>
 
-      <section class="panel">
-        <h2>2. Vitesse du fantôme</h2>
-        <p style="margin-top:-4px">Sa vitesse est <b>celle à laquelle tu l'as fait rouler</b> pendant la programmation (étape 4). Pour la changer, reprogramme-le à une autre vitesse.</p>
-        <details class="ghost-exp">
-          <summary>Essai : régler depuis l'appli (expérimental)</summary>
-          <p class="muted" style="font-size:.8rem">Envoie un réglage vitesse / freinage à l'adresse du fantôme. Rien ne garantit que la Control Unit en tienne compte : si la voiture ne change pas d'allure, c'est qu'elle l'ignore.</p>
-        <div class="ghost-bars">
-          ${BARS.map((b) => `
-          <div class="bar" style="--c:${b.color};--p:${pct(g[b.k])}%">
-            <span class="bar-l">${b.label}</span>
-            <input type="range" min="0" max="15" step="1" value="${g[b.k]}" data-bar="${b.k}" aria-label="${b.label}">
-            <span class="bar-v num">${pct(g[b.k])} %</span>
-          </div>`).join('')}
-        </div>
-        </details>
-      </section>
     </div>
 
     <section class="panel" style="margin-top:16px">
-      <h2>3. Départ</h2>
+      <h2>2. Départ</h2>
       <div class="row" style="gap:10px">
         <button class="btn go big" id="gStart" ${connected && !racing ? '' : 'disabled'}>▶ Start</button>
         <button class="btn big" id="gStop" ${connected && !racing ? '' : 'disabled'}>⏹ Stop</button>
@@ -100,20 +76,7 @@ function render() {
   renderTiming();
 }
 
-let timers = {};
 function bind() {
-  const g = app.ghost.settings;
-  $$('[data-bar]', root).forEach((range) => {
-    range.addEventListener('input', () => {
-      const k = range.dataset.bar;
-      const v = +range.value;
-      const bar = range.parentElement;
-      bar.style.setProperty('--p', pct(v) + '%');
-      bar.querySelector('.bar-v').textContent = pct(v) + ' %';
-      clearTimeout(timers[k]);
-      timers[k] = setTimeout(() => app.saveGhost({ [k]: v }), 150);
-    });
-  });
   $('#gCode', root).onclick = async () => {
     // 2 appuis sur CODE, comme sur la Control Unit
     await app.cu.send(codeCmd());

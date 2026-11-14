@@ -72,7 +72,6 @@ export const app = {
     await this.loadData();
     this.setup = await db.getSetting('setup', null) || defaultSetup(this);
     this.fuelCfg = sanitize(await db.getSetting('fuel', defaultFuelConfig()));
-    this.ghost.settings = { ...this.ghost.settings, ...(await db.getSetting('ghost', {})) };
     audio.voice = await db.getSetting('voice', true);
     audio.sounds = await db.getSetting('sounds', true);
     if (!this.isRacing) this.go(this.view);
@@ -331,7 +330,6 @@ export const app = {
   // Chrono indépendant des sessions : sert aux tests (régularité, réglages).
 
   ghost: {
-    settings: { speed: 10, brake: 15 },
     laps: [],        // temps des tours (ms)
     lastTs: null,
     sectorTs: null,
@@ -364,20 +362,6 @@ export const app = {
 
   resetGhostTiming() {
     Object.assign(this.ghost, { laps: [], lastTs: null, sectorTs: null, sectors: [], lastSectors: [] });
-  },
-
-  async saveGhost(values) {
-    Object.assign(this.ghost.settings, values);
-    await db.setSetting('ghost', this.ghost.settings);
-    this.applyGhost(Object.keys(values));
-  },
-
-  /** Envoie vitesse/freinage du fantôme à la CU (si elle l'accepte pour l'adresse 7). */
-  applyGhost(keys = ['speed', 'brake']) {
-    if (!cu.connected) return;
-    const g = this.ghost.settings;
-    if (keys.includes('speed')) cu.setSpeed(GHOST, g.speed);
-    if (keys.includes('brake')) cu.setBrake(GHOST, g.brake);
   },
 
   // ---------- Détection des voitures en piste ----------
@@ -955,7 +939,6 @@ async function init() {
   await app.loadData();
   audio.voice = await db.getSetting('voice', true);
   audio.sounds = await db.getSetting('sounds', true);
-  app.ghost.settings = { ...app.ghost.settings, ...(await db.getSetting('ghost', {})) };
   app.fuelCfg = sanitize(await db.getSetting('fuel', defaultFuelConfig()));
   // Une seule fois : on installe le réglage équilibré (validé par simulation 50 et 100 tours)
   // et on l'enregistre comme setup nommé.
