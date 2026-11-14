@@ -12,7 +12,7 @@ let prefs = null; // dernières valeurs choisies
 let setups = [];
 let activeSetup = null;
 
-const MIN_CHIPS = [2, 5, 10];                     // essais libres, qualification (minutes)
+const MIN_CHIPS = [1, 2, 5, 10];                     // essais libres, qualification (minutes)
 const RACE_LAP_CHIPS = [20, 30, 50, 75, 100];     // course, course rapide
 export const START_MSG = "* Il peut être nécessaire d'appuyer sur le bouton START de votre Control Unit pour lancer la course.";
 export const PLACE_CARS_MSG = "* Les réglages doivent s'effectuer avec l'ensemble des voitures déjà posées sur votre piste.";
