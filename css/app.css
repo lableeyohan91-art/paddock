@@ -691,7 +691,3 @@ body.session-lock #tabs button:not([data-view="race"]):not([data-view="garage"])
 .btn.icon-sq { width: 52px; height: 52px; min-width: 52px; font-size: 1.5rem; }
 .btn.yellow.icon-sq, .btn.go.icon-sq { font-size: 1.7rem; font-weight: 900; }
 .btn.icon-sq:disabled { opacity: .35; }
-/* Drapeau rouge : voile rouge clignotant sur tout l'écran (les boutons restent utilisables) */
-body.red-flag::after { content: ""; position: fixed; inset: 0; z-index: 900; pointer-events: none;
-  background: rgba(225, 6, 0, .28); animation: redflag 1s ease-in-out infinite; }
-@keyframes redflag { 0%, 100% { opacity: 1; } 50% { opacity: .15; } }
