@@ -686,7 +686,8 @@ body.session-lock #tabs button:not([data-view="race"]):not([data-view="garage"])
 /* Bouton icône carré (drapeau rouge) */
 .btn.icon-sq { width: 46px; height: 46px; min-width: 46px; padding: 0; font-size: 1.35rem; line-height: 1; display: inline-flex; align-items: center; justify-content: center; }
 /* Raccourcis de course en icônes carrées */
-.ico-row { display: flex; gap: 10px; justify-content: center; width: 100%; }
+.ico-row { display: flex; gap: 22px; justify-content: center; width: 100%; }
+@media (max-width: 420px) { .ico-row { gap: 18px; } #lightsPanel .ico-row { margin-top: 40px; } }
 .btn.icon-sq { width: 52px; height: 52px; min-width: 52px; font-size: 1.5rem; }
 .btn.yellow.icon-sq, .btn.go.icon-sq { font-size: 1.7rem; font-weight: 900; }
 .btn.icon-sq:disabled { opacity: .35; }
