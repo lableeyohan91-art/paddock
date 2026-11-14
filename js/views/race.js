@@ -130,9 +130,6 @@ function renderControls() {
     html += `<button class="btn go big" id="bStart">${s.cfg.start === 'lights' ? '🚦 Lancer les feux' : '▶ Démarrer'}</button>`;
     if (!connected) html += `<button class="btn big" id="bConn">Connecter le circuit</button>`;
   }
-  if (s.state === 'armed') {
-    html += `<button class="btn go" id="bForce">Forcer le départ</button>`;
-  }
   if (['running', 'finishing'].includes(s.state)) {
     html += `<button class="btn ${s.flag === 'yellow' ? 'go' : 'yellow'} big" id="bYellow">${s.flag === 'yellow' ? '🟢 Drapeau vert' : '🟡 Drapeau jaune'}</button>`;
     html += `<button class="btn" id="bEsc" title="Bouton ESC / Pace car de la Control Unit">⏸ ESC (CU)</button>`;
@@ -153,7 +150,6 @@ function renderControls() {
   const on = (id, fn) => { const b = $('#' + id, el); if (b) b.onclick = fn; };
   on('bStart', () => app.startSession());
   on('bConn', () => app.openConnectDialog());
-  on('bForce', () => s.go());
   on('bYellow', () => { app.toggleYellow(); renderControls(); });
   on('bEsc', () => app.cu.pressEsc());
   on('bStop', async () => { if (await confirmBox('Terminer la session maintenant ?')) s.stop(); });
