@@ -43,6 +43,7 @@ function render() {
   const isRace = s.type === 'race';
   const timeUsed = !isRace || s.mode === 'time';
   root.innerHTML = `
+  <div class="row" style="margin-bottom:12px"><button class="btn small ghost" id="sBack">← Course</button></div>
   <div class="grid grid-2">
     <section class="panel">
       <h2>Type de session</h2>
@@ -171,6 +172,7 @@ function bind() {
   $$('[data-garage]', root).forEach((b) => (b.onclick = () => app.go('garage')));
 
   $('#prepare', root).onclick = () => app.prepareSession();
+  $('#sBack', root).onclick = () => { app.raceMenu = true; app.go('race'); };
   const back = $('#backRace', root);
   if (back) back.onclick = () => app.go('race');
 }

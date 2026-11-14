@@ -396,7 +396,7 @@ export const app = {
     if (!VIEWS[view]) view = 'race';
     VIEWS[this.view]?.unmount?.();
     this.view = view;
-    const tab = view === 'driver' ? 'drivers' : view === 'quick' ? 'race' : view; // la fiche pilote dépend de l'onglet Pilotes
+    const tab = view === 'driver' ? 'drivers' : (view === 'quick' || view === 'setup') ? 'race' : view; // la fiche pilote dépend de l'onglet Pilotes
     $$('#tabs button').forEach((b) => b.classList.toggle('active', b.dataset.view === tab));
     window.scrollTo(0, 0);
     const main = $('#main');
