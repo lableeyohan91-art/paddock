@@ -144,7 +144,7 @@ function renderControls() {
     html += `<button class="btn" id="bSetup">🏠 Menu course</button>`;
   }
   if (s.state === 'ready') {
-    html += `<button class="btn ghost" id="bEdit">✎ Modifier</button>`;
+    html += `<button class="btn ghost" id="bEdit">← Précédent</button>`;
   }
   el.innerHTML = html;
   const on = (id, fn) => { const b = $('#' + id, el); if (b) b.onclick = fn; };
