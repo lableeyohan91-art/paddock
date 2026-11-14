@@ -9,28 +9,52 @@ import { openImport, importDone, removeImport } from './import-records.js';
 let app;
 let root;
 
+// Écran d'accueil des Réglages : des tuiles, comme le menu (Général, Essence…)
+const SECTIONS = [
+  { k: 'general', ico: '⚙️', name: 'Général' },
+  { k: 'fuel', ico: '⛽', name: 'Essence' },
+];
+let tab = 'menu';
+let openFuelNext = false;
+
 export function mount(main, a) {
   app = a;
   root = main;
+  tab = openFuelNext ? 'fuel' : 'menu'; // l'onglet Réglages s'ouvre sur les tuiles
+  openFuelNext = false;
   render();
 }
 
-let tab = 'general';
-
-function subTabs() {
-  return `<div class="subtabs">
-    ${[['general', '⚙️ Général'], ['fuel', '⛽ Essence']].map(([k, l]) =>
-      `<button data-tab="${k}" class="${tab === k ? 'on' : ''}">${l}</button>`).join('')}
-  </div>`;
+/** En-tête d'une section : retour aux tuiles + titre. */
+function sectionHead() {
+  const sec = SECTIONS.find((x) => x.k === tab);
+  return `<div class="row" style="justify-content:space-between;margin-bottom:12px">
+      <button class="btn small ghost" data-back>← Réglages</button>
+      <h1 class="menu-title" style="margin:0">${sec.ico} ${sec.name}</h1>
+      <span style="width:80px"></span>
+    </div>`;
 }
 
 function bindTabs() {
-  root.querySelectorAll('[data-tab]').forEach((b) => (b.onclick = () => { tab = b.dataset.tab; render(); }));
+  root.querySelectorAll('[data-tab]').forEach((b) => (b.onclick = () => { tab = b.dataset.tab; render(); window.scrollTo(0, 0); }));
+  const back = root.querySelector('[data-back]');
+  if (back) back.onclick = () => { tab = 'menu'; render(); window.scrollTo(0, 0); };
 }
 
 function render() {
+  if (tab === 'menu') {
+    root.innerHTML = `
+    <div class="race-menu">
+      <h1 class="menu-title">Réglages</h1>
+      <div class="menu-grid">
+        ${SECTIONS.map((x) => `<button class="menu-tile" data-tab="${x.k}"><span class="menu-ico">${x.ico}</span><span class="menu-name">${x.name}</span></button>`).join('')}
+      </div>
+    </div>`;
+    bindTabs();
+    return;
+  }
   if (tab === 'fuel') {
-    root.innerHTML = subTabs() + '<div id="fuelRoot"></div>';
+    root.innerHTML = sectionHead() + '<div id="fuelRoot"></div>';
     bindTabs();
     renderFuel($('#fuelRoot', root), app);
     return;
@@ -41,12 +65,12 @@ function render() {
 
 /** Ouvre directement Réglages → Essence (depuis un autre écran). */
 export function openFuel() {
-  tab = 'fuel';
+  openFuelNext = true;
 }
 
 function renderGeneral() {
   const cu = app.cu;
-  root.innerHTML = subTabs() + `
+  root.innerHTML = sectionHead() + `
   <div class="grid grid-2">
     <section class="panel">
       <h2>Circuit</h2>
@@ -184,5 +208,5 @@ export function unmount() {
 }
 
 export function refresh() {
-  if (root && tab !== 'fuel') render(); // ne pas casser une saisie en cours dans l'onglet Essence
+  if (root && tab === 'general') render(); // ne pas casser une saisie en cours dans l'onglet Essence
 }
