@@ -127,7 +127,7 @@ function renderControls() {
   const connected = app.cu.connected;
   let html = '';
   if (s.state === 'ready') {
-    html += `<button class="btn go big" id="bStart">${s.cfg.start === 'lights' ? '🚦 Lancer les feux' : '▶ Démarrer'}</button>`;
+    html += `<button class="btn go big" id="bStart">${s.cfg.start === 'lights' ? 'GO' : '▶ Démarrer'}</button>`;
     if (!connected) html += `<button class="btn big" id="bConn">Connecter le circuit</button>`;
   }
   if (['running', 'finishing'].includes(s.state)) {
