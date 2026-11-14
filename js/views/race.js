@@ -160,7 +160,7 @@ function renderControls() {
   on('bAgain', () => app.prepareSession(app.lastPrepare || {}));
   on('bResults', () => showResults(app));
   on('bSetup', () => { app.raceMenu = true; app.go('race'); });
-  on('bEdit', () => app.go(s.cfg.quick ? 'quick' : 'setup'));
+  on('bEdit', () => app.go('quick'));
   on('bGarage', () => app.go('garage'));
 }
 
@@ -250,7 +250,8 @@ let lastFlag = null;
 let lastConn = null;
 
 export function tick() {
-  if (!root || !app.session) return;
+  // rien à rafraîchir quand l'onglet affiche le menu (pas d'écran de séance)
+  if (!root || !app.session || !$('#controls', root)) return;
   const s = app.session;
 
   if (s.state !== lastState || s.flag !== lastFlag || app.cu.connected !== lastConn) {

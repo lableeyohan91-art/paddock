@@ -13,7 +13,6 @@ import { audio, beep, say, spokenTime, unlockAudio } from './audio.js';
 import { $, $$, esc, toast, modal, confirmBox } from './ui.js';
 
 import * as raceView from './views/race.js';
-import * as setupView from './views/setup.js';
 import * as garageView from './views/garage.js';
 import * as driversView from './views/drivers.js';
 import * as driverView from './views/driver.js';
@@ -23,7 +22,29 @@ import { openImport, importDone } from './views/import-records.js';
 import * as statsView from './views/stats.js';
 import * as settingsView from './views/settings.js';
 
-const VIEWS = { race: raceView, setup: setupView, garage: garageView, drivers: driversView, driver: driverView, ghost: ghostView, quick: quickView, stats: statsView, settings: settingsView };
+/** Réglages de session par défaut (participants, circuit ; météo gardée en sommeil). */
+function defaultSetup(a) {
+  return {
+    type: 'race',
+    mode: 'laps',
+    laps: 10,
+    duration: 5,
+    start: 'lights',
+    minLapMs: 1500,
+    trackId: a.data.tracks[0]?.id || null,
+    weather: { sky: 'sun', dynamic: false, variability: 3, intensity: 1 },
+    slots: Array.from({ length: 6 }, (_, i) => ({
+      address: i,
+      active: i < 2,
+      driverId: a.data.drivers[i]?.id || null,
+      carId: a.data.cars[i]?.id || null,
+      speed: 15,
+      brake: 15,
+    })),
+  };
+}
+
+const VIEWS = { race: raceView, garage: garageView, drivers: driversView, driver: driverView, ghost: ghostView, quick: quickView, stats: statsView, settings: settingsView };
 
 const cu = new ControlUnit();
 export const GHOST = 6; // adresse de la voiture autonome (fantôme) ; 7 = pace car
@@ -49,7 +70,7 @@ export const app = {
   /** Relit tout depuis la base locale (après une synchronisation venue d'un autre appareil). */
   async reloadFromDb() {
     await this.loadData();
-    this.setup = await db.getSetting('setup', null) || setupView.defaultSetup(this);
+    this.setup = await db.getSetting('setup', null) || defaultSetup(this);
     this.fuelCfg = sanitize(await db.getSetting('fuel', defaultFuelConfig()));
     this.ghost.settings = { ...this.ghost.settings, ...(await db.getSetting('ghost', {})) };
     audio.voice = await db.getSetting('voice', true);
@@ -382,7 +403,7 @@ export const app = {
       const who = this.driver(slot.driverId)?.name;
       toast(`🏎️ Manette ${address + 1} détectée en piste${who ? ' — ' + who : ''}`);
       this.log(`Manette ${address + 1} détectée en piste`);
-      if (['garage', 'setup', 'quick'].includes(this.view)) VIEWS[this.view].refresh?.();
+      if (['garage', 'quick'].includes(this.view)) VIEWS[this.view].refresh?.();
     } else if (first && this.view === 'garage') {
       VIEWS.garage.refresh?.();
     }
@@ -400,7 +421,7 @@ export const app = {
     if (!VIEWS[view]) view = 'race';
     VIEWS[this.view]?.unmount?.();
     this.view = view;
-    const tab = view === 'driver' ? 'drivers' : (view === 'quick' || view === 'setup') ? 'race' : view; // la fiche pilote dépend de l'onglet Pilotes
+    const tab = view === 'driver' ? 'drivers' : view === 'quick' ? 'race' : view; // la fiche pilote dépend de l'onglet Pilotes
     $$('#tabs button').forEach((b) => b.classList.toggle('active', b.dataset.view === tab));
     window.scrollTo(0, 0);
     const main = $('#main');
@@ -929,7 +950,7 @@ async function init() {
     await app.addFuelSetup('Sprint 30 tours', sprint30Preset(), { quiet: true });
     await db.setSetting('fuelSprint30Added', true, { quiet: true });
   }
-  app.setup = await db.getSetting('setup', null) || setupView.defaultSetup(app);
+  app.setup = await db.getSetting('setup', null) || defaultSetup(app);
 
   $('#tabs').addEventListener('click', (e) => {
     const b = e.target.closest('button[data-view]');
