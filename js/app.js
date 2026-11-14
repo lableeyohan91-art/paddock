@@ -494,7 +494,7 @@ export const app = {
    */
   async prepareQuickRace(opts) {
     return this.prepareSession({
-      type: 'race', mode: 'laps', laps: opts.laps, start: 'lights',
+      type: opts.type || 'race', mode: 'laps', laps: opts.laps, start: 'lights',
       weather: { sky: 'sun', dynamic: false, variability: 1, intensity: 1 },
       quick: true,
       title: opts.title,

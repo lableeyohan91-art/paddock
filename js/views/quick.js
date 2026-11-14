@@ -19,9 +19,10 @@ export const PLACE_CARS_MSG = "* Les réglages doivent s'effectuer avec l'ensemb
 export async function mount(main, a) {
   app = a;
   root = main;
-  // au moins 2 participants affichés par défaut
-  if (app.setup.slots.filter((s) => s.active).length < 2) {
-    app.setup.slots.slice(0, 2).forEach((s) => (s.active = true));
+  // participants affichés par défaut : 2 en course, 1 en essais libres et qualification
+  const min = MODES[app.quickMode]?.type === 'race' || !MODES[app.quickMode] ? 2 : 1;
+  if (app.setup.slots.filter((s) => s.active).length < min) {
+    app.setup.slots.slice(0, min).forEach((s) => (s.active = true));
     app.saveSetup();
   }
   prefs = { laps: 30, fuelOn: true, tank15: 15, ...(await app.db.getSetting('quickRace', {})) };
@@ -38,7 +39,14 @@ export function refresh() {
   if (root && app.view === 'quick') render();
 }
 
-const title = () => (app.quickMode === 'race' ? '🏁 Course' : '⚡ Course rapide');
+const MODES = {
+  quick: { title: '⚡ Course rapide', type: 'race' },
+  race: { title: '🏁 Course', type: 'race' },
+  practice: { title: '🛞 Essais libres', type: 'practice' },
+  qualifying: { title: '⏱️ Qualification', type: 'qualifying' },
+};
+const mode = () => MODES[app.quickMode] || MODES.quick;
+const title = () => mode().title;
 const savePrefs = () => app.db.setSetting('quickRace', prefs);
 const pct15 = (v) => Math.round((v / 15) * 100);
 
@@ -175,7 +183,7 @@ function bind() {
     if (!parts.length) { toast('Coche au moins un participant'); return; }
     if (parts.some((s) => !s.driverId)) { toast('Choisis un pilote pour chaque participant coché'); return; }
     // Départ : on prépare la course et on lance directement les feux
-    const ok = await app.prepareQuickRace({ laps: prefs.laps, fuelOn: prefs.fuelOn, tank15: prefs.tank15, title: title() });
+    const ok = await app.prepareQuickRace({ laps: prefs.laps, fuelOn: prefs.fuelOn, tank15: prefs.tank15, title: title(), type: mode().type });
     if (ok) await app.startSession(); // non connecté : l'appli propose de connecter le circuit
   };
 }

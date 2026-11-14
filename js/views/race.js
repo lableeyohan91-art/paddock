@@ -98,12 +98,9 @@ function renderMenu() {
   </div>`;
   root.querySelectorAll('[data-go]').forEach((b) => (b.onclick = () => {
     const t = b.dataset.go;
-    // course rapide et course : même écran pour l'instant (la course aura ses options plus tard)
-    if (t === 'quick' || t === 'race') { app.quickMode = t; app.go('quick'); return; }
-    // essais, qualif : écran de préparation complet, déjà réglé sur le bon type
-    app.setup.type = t;
-    app.saveSetup();
-    app.go('setup');
+    // les 4 modes partagent le même écran de préparation pour l'instant
+    app.quickMode = t;
+    app.go('quick');
   }));
   const l = $('#mLast', root);
   if (l) l.onclick = () => { app.raceMenu = false; app.go('race'); };
@@ -142,7 +139,7 @@ function renderControls() {
     html += `<button class="btn" id="bGarage" title="Régler les voitures sans arrêter la session">🔧 Garage</button>`;
   }
   if (s.state === 'finished') {
-    html += `<button class="btn primary big" id="bAgain">↻ ${s.cfg.quick ? 'Relancer la même course' : 'Relancer la même session'}</button>`;
+    html += `<button class="btn primary big" id="bAgain">↻ ${s.cfg.quick && s.cfg.type === 'race' ? 'Relancer la même course' : 'Relancer la même session'}</button>`;
     html += `<button class="btn" id="bResults">Résultats</button>`;
     html += `<button class="btn" id="bSetup">🏠 Menu course</button>`;
   }
