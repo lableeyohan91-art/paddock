@@ -861,6 +861,8 @@ function updateLiveBar() {
   const bar = $('#liveBar');
   const s = app.session;
   const live = s && ['armed', 'running', 'finishing'].includes(s.state);
+  // drapeau rouge : tout l'écran clignote en rouge transparent
+  document.body.classList.toggle('red-flag', !!s && s.flag === 'red' && ['running', 'finishing'].includes(s.state));
   bar.classList.toggle('hidden', !live || app.view === 'race');
   $('#tabs [data-view="race"]').classList.toggle('live', !!live);
   if (!live || app.view === 'race') return;
