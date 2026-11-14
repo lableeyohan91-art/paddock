@@ -87,7 +87,7 @@ function renderMenu() {
   const last = s && s.state === 'finished';
   root.innerHTML = `
   <div class="race-menu">
-    <h1 class="menu-title">Course</h1>
+    <h1 class="menu-title">Menu</h1>
     <div class="menu-grid">
       <button class="menu-tile" data-go="practice"><span class="menu-ico">🛞</span><span class="menu-name">Essais libres</span></button>
       <button class="menu-tile" data-go="qualifying"><span class="menu-ico">⏱️</span><span class="menu-name">Qualification</span></button>

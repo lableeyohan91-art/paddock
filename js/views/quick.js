@@ -66,7 +66,7 @@ function render() {
   root.innerHTML = `
   <div class="quick">
     <div class="row" style="justify-content:space-between;margin-bottom:12px">
-      <button class="btn small ghost" id="qBack">← Course</button>
+      <button class="btn small ghost" id="qBack">← Menu</button>
       <h1 class="menu-title" style="margin:0">${title()}</h1>
       <span style="width:80px"></span>
     </div>

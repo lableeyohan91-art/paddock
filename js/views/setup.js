@@ -43,7 +43,7 @@ function render() {
   const isRace = s.type === 'race';
   const timeUsed = !isRace || s.mode === 'time';
   root.innerHTML = `
-  <div class="row" style="margin-bottom:12px"><button class="btn small ghost" id="sBack">← Course</button></div>
+  <div class="row" style="margin-bottom:12px"><button class="btn small ghost" id="sBack">← Menu</button></div>
   <div class="grid grid-2">
     <section class="panel">
       <h2>Type de session</h2>
