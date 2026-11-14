@@ -226,10 +226,9 @@ function bind() {
     const parts = app.setup.slots.filter((s) => s.active);
     if (!parts.length) { toast('Coche au moins un participant'); return; }
     if (parts.some((s) => !s.driverId)) { toast('Choisis un pilote pour chaque participant coché'); return; }
-    // Départ : on prépare la course et on lance directement les feux
+    // Départ : on prépare la séance et on passe à l'écran de course ; le lancement se fait avec GO
     const pqLaps = !isRace() && prefs.pqByLaps;
-    const ok = await app.prepareQuickRace({ laps: pqLaps ? prefs.pqLaps : prefs.laps, fuelOn: prefs.fuelOn, tank15: prefs.tank15, title: title(), type: mode().type, minutes: isRace() ? (prefs.raceByTime ? prefs.raceMinutes : 0) : pqLaps ? 0 : prefs.minutes });
-    if (ok) await app.startSession(); // non connecté : l'appli propose de connecter le circuit
+    await app.prepareQuickRace({ laps: pqLaps ? prefs.pqLaps : prefs.laps, fuelOn: prefs.fuelOn, tank15: prefs.tank15, title: title(), type: mode().type, minutes: isRace() ? (prefs.raceByTime ? prefs.raceMinutes : 0) : pqLaps ? 0 : prefs.minutes });
   };
 }
 
