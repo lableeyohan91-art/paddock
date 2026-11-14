@@ -141,7 +141,7 @@ function renderControls() {
     html += `<button class="btn ${s.flag === 'yellow' ? 'go' : 'yellow'} big" id="bYellow">${s.flag === 'yellow' ? '🟢 Drapeau vert' : '🟡 Drapeau jaune'}</button>`;
     html += s.flag === 'red'
       ? `<button class="btn go big" id="bRed" ${s.redResuming ? 'disabled' : ''}>${s.redResuming ? '🚦 Reprise en cours…' : '🟢 Reprendre la course'}</button>`
-      : `<button class="btn red" id="bRed" title="Arrête toutes les voitures (bouton START de la Control Unit)">🚩 Drapeau rouge</button>`;
+      : `<button class="btn red icon-sq" id="bRed" title="Drapeau rouge : arrête toutes les voitures" aria-label="Drapeau rouge">🚩</button>`;
     html += `<button class="btn" id="bStop">🏁 Terminer</button>`;
   }
   if (['armed', 'running', 'finishing'].includes(s.state)) {

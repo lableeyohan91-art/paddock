@@ -683,3 +683,5 @@ body.session-lock #tabs button:not([data-view="race"]):not([data-view="garage"])
 /* Drapeau rouge */
 .flagbar.red { background: var(--accent); animation: blink 1s infinite; }
 .btn.red { background: var(--accent); color: #fff; border-color: transparent; }
+/* Bouton icône carré (drapeau rouge) */
+.btn.icon-sq { width: 46px; height: 46px; min-width: 46px; padding: 0; font-size: 1.35rem; line-height: 1; display: inline-flex; align-items: center; justify-content: center; }
