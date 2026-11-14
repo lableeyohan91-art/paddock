@@ -280,14 +280,19 @@ export const app = {
   },
 
   /** Effet "panne sèche" pour le moteur de performance : vitesse bridée à 0 %. */
+  /** La voiture est-elle en panne sèche (essence gérée, réservoir vide, séance en cours) ? */
+  isOutOfFuel(address) {
+    const c = this.session?.comps.get(address);
+    if (!this.fuelOn() || !c || c.fuelPct === null || c.fuelPct > 0) return false;
+    return ['running', 'finishing'].includes(this.session.state);
+  },
+
   emptyTankModifier() {
     return {
       id: 'fuel',
       label: 'Panne sèche',
       compute: (address) => {
-        const c = this.session?.comps.get(address);
-        if (!this.fuelOn() || !c || c.fuelPct === null || c.fuelPct > 0) return null;
-        if (!['running', 'finishing'].includes(this.session.state)) return null;
+        if (!this.isOutOfFuel(address)) return null;
         const f = this.fuelCfg;
         if (f.emptyMode === 'fixed') {
           // vitesse imposée : facteur = vitesse voulue / vitesse de base de la voiture
@@ -584,7 +589,7 @@ export const app = {
     if (!s.quick) perf.addModifier(weather.modifier()); // pas de météo en course rapide
     perf.addModifier(yellowFlagModifier(() => this.session?.flag));
     perf.removeModifier('vsc');
-    perf.addModifier(vscModifier(() => this.session?.flag, () => this.vscCfg.speedPct, (a) => perf.bases.get(a)?.speed));
+    perf.addModifier(vscModifier(() => this.session?.flag, () => this.vscCfg.speedPct, (a) => perf.bases.get(a)?.speed, (a) => this.isOutOfFuel(a)));
     perf.removeModifier('fuel');
     perf.addModifier(this.emptyTankModifier());
     entries.forEach((e) => perf.setBase(e.address, e.car.speed, e.car.brake));
