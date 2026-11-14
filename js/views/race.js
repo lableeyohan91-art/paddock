@@ -268,7 +268,7 @@ export function tick() {
   $('#clock', root).textContent = rem !== null && s.state !== 'ready' ? fmtClock(rem) : fmtClock(s.elapsedMs);
   const fmt = s.cfg.type === 'race'
     ? (s.cfg.mode === 'time' ? `Course de ${s.cfg.duration} min` : `Course de ${s.cfg.laps} tours`)
-    : (s.cfg.duration ? `${s.cfg.duration} min` : 'Durée libre');
+    : s.lapLimited ? `${s.cfg.laps} tours par pilote` : (s.cfg.duration ? `${s.cfg.duration} min` : 'Durée libre');
   $('#raceFormat', root).textContent = fmt + (app.isSim ? ' · 🎮 simulateur, non enregistré' : '');
   $('#lapCount', root).textContent = s.cfg.type === 'race' && s.cfg.mode !== 'time'
     ? `Tour ${Math.min(s.leaderLaps + (s.state === 'running' ? 1 : 0), s.cfg.laps)} / ${s.cfg.laps}`

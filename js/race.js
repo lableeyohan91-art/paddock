@@ -85,6 +85,11 @@ export class RaceSession extends EventTarget {
     return (this.cfg.duration || 0) * 60000;
   }
 
+  /** Essais / qualif avec un nombre de tours par pilote. */
+  get lapLimited() {
+    return this.cfg.type !== 'race' && this.cfg.mode === 'laps' && this.cfg.laps > 0;
+  }
+
   get remainingMs() {
     return this.durationMs ? Math.max(0, this.durationMs - this.elapsedMs) : null;
   }
@@ -126,6 +131,11 @@ export class RaceSession extends EventTarget {
   tick() {
     if (this.state === 'running' && this.durationMs && this.elapsedMs >= this.durationMs) {
       this._startFinishing();
+    }
+    // essais / qualif aux tours : fin quand tous les pilotes en piste ont fait leurs tours
+    if (this.state === 'running' && this.lapLimited) {
+      const onTrack = [...this.comps.values()].filter((c) => c.onTrack);
+      if (onTrack.length && onTrack.every((c) => c.finished)) this.stop();
     }
     if (this.state === 'finishing') {
       const slowest = Math.max(10000, ...[...this.comps.values()].map((c) => (c.bestLap || 0) * 3));
@@ -222,6 +232,9 @@ export class RaceSession extends EventTarget {
       this._finish(c);
     } else if (this.cfg.type === 'race' && this.cfg.mode !== 'time' && c.laps >= this.cfg.laps) {
       this._startFinishing();
+      this._finish(c);
+    } else if (this.lapLimited && c.laps >= this.cfg.laps) {
+      // essais / qualif aux tours : ce pilote a fait ses N tours
       this._finish(c);
     }
 
