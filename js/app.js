@@ -609,9 +609,24 @@ export const app = {
         perf.stop();
         perf.restore();
         weather.stop();
+        // quitté par la maison : pas de fenêtre de résultats, on est déjà au menu
+        if (session._quit) return;
         raceView.showResults?.(this);
       }
     });
+  },
+
+  /** Maison de l'écran de course : arrête la session en cours (après confirmation) et revient au menu. */
+  async quitToMenu() {
+    const s = this.session;
+    if (s && ['armed', 'running', 'finishing'].includes(s.state)) {
+      const ok = await confirmBox('Cette action entraîne l\'arrêt de la session en cours. Êtes-vous sûr ?');
+      if (!ok) return;
+      s._quit = true;
+      s.stop();
+    }
+    this.raceMenu = true;
+    this.go('race');
   },
 
   async _saveSessionRecord(state) {
