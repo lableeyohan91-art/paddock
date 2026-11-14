@@ -626,3 +626,33 @@ table.simple th { color: var(--muted); font-size: .75rem; text-transform: upperc
 .acct.on { border-color: rgba(34,197,94,.5); }
 .acct.err { border-color: var(--yellow); }
 @media (max-width: 720px) { .acct #acctLabel { display: none; } .acct { padding: 4px; } }
+
+/* ---------- Course rapide : version compacte ---------- */
+.quick .panel { padding: 12px; }
+.quick h2 { font-size: 1rem; margin-bottom: 8px; }
+.q-slots { gap: 6px; margin-top: 8px; }
+.q-slot {
+  grid-template-columns: 28px minmax(0, 1fr) minmax(0, 1fr) 30px; gap: 6px;
+  padding: 4px 6px; border-left: 4px solid var(--dc); opacity: 1;
+}
+.q-slot select { min-height: 34px; padding: 4px 6px; font-size: .9rem; }
+.q-n { width: 26px; height: 26px; border-radius: 6px; background: var(--dc); color: #fff; font-weight: 800; display: flex; align-items: center; justify-content: center; font-size: .85rem; text-shadow: 0 1px 2px rgba(0,0,0,.5); }
+.q-del { width: 30px; height: 30px; border: 0; border-radius: 8px; background: transparent; color: var(--muted); cursor: pointer; font-size: .9rem; }
+.q-del:hover { background: rgba(255,59,48,.15); color: var(--accent-2); }
+.q-add { width: 100%; margin-top: 8px; min-height: 36px; border-style: dashed; color: var(--muted); }
+.q-laps { display: flex; gap: 6px; align-items: center; flex-wrap: nowrap; }
+.q-laps .chip { padding: 6px 0; font-size: .9rem; flex: 1; min-width: 0; }
+.q-laps input { width: 62px; min-height: 34px; padding: 4px 6px; flex: none; text-align: center; }
+.q-gear { border: 0; background: none; color: var(--muted); cursor: pointer; font-size: .9rem; padding: 0 4px; vertical-align: middle; }
+.q-gear:hover { color: var(--text); }
+@media (max-width: 720px) {
+  .q-slot { grid-template-columns: 26px minmax(0, 1fr) minmax(0, 1fr) 28px; }
+  .q-slot select[data-k="carId"] { grid-column: auto; }
+  .q-slot select { font-size: .82rem; }
+}
+@media (max-width: 720px) {
+  .depart { padding: 8px 16px 8px; gap: 2px; }
+  .depart-txt { font-size: 1.35rem; }
+  .depart-lights i { width: 12px; height: 12px; }
+  .q-go { padding: 8px 0; }
+}

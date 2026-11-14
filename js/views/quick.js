@@ -17,6 +17,11 @@ const LAP_CHIPS = [10, 20, 30, 50, 100];
 export async function mount(main, a) {
   app = a;
   root = main;
+  // au moins 2 participants affichés par défaut
+  if (app.setup.slots.filter((s) => s.active).length < 2) {
+    app.setup.slots.slice(0, 2).forEach((s) => (s.active = true));
+    app.saveSetup();
+  }
   prefs = { laps: 30, fuelOn: true, tank15: 15, ...(await app.db.getSetting('quickRace', {})) };
   setups = await app.fuelSetups();
   activeSetup = await app.db.getSetting('fuelActiveSetup', null);
@@ -57,24 +62,29 @@ function render() {
         <span class="muted" style="font-size:.85rem" id="qLive"></span>
       </div>
       <div class="q-slots">
-        ${slots.map((s) => {
+        ${slots.filter((s) => s.active).map((s) => {
           const d = app.driver(s.driverId);
           return `
-        <div class="q-slot ${s.active ? 'on' : ''}" data-slot="${s.address}" style="--dc:${esc(d?.color || '#555')}">
-          <label class="q-check"><input type="checkbox" data-k="active" ${s.active ? 'checked' : ''}><b>${s.address + 1}</b></label>
-          <span class="q-av">${avatar(d || { name: '?', color: '#555' })}</span>
+        <div class="q-slot on" data-slot="${s.address}" style="--dc:${esc(d?.color || '#555')}">
+          <span class="q-n" title="Manette ${s.address + 1}">${s.address + 1}</span>
           <select data-k="driverId">${opt(app.data.drivers, s.driverId, '— Pilote —')}</select>
           <select data-k="carId">${opt(app.data.cars, s.carId, '— Voiture —')}</select>
+          <button class="q-del" data-del title="Retirer ce participant">✕</button>
         </div>`;
         }).join('')}
       </div>
+      ${slots.some((s) => !s.active) ? `
+      <select id="qAdd" class="q-add">
+        <option value="">＋ Ajouter un participant…</option>
+        ${slots.filter((s) => !s.active).map((s) => `<option value="${s.address}">Manette ${s.address + 1}${app.driver(s.driverId) ? ' · ' + esc(app.driver(s.driverId).name) : ''}</option>`).join('')}
+      </select>` : ''}
     </section>
 
     <section class="panel" style="margin-top:14px">
       <h2>2. Nombre de tours</h2>
-      <div class="row" style="gap:8px">
+      <div class="q-laps">
         ${LAP_CHIPS.map((l) => `<button class="chip ${prefs.laps === l ? 'on' : ''}" data-laps="${l}">${l}</button>`).join('')}
-        <input type="number" id="qLaps" min="1" max="999" value="${prefs.laps}" style="width:90px"> <span class="muted">tours</span>
+        <input type="number" id="qLaps" min="1" max="999" value="${prefs.laps}" aria-label="Nombre de tours">
       </div>
     </section>
 
@@ -85,7 +95,7 @@ function render() {
       </div>
       ${prefs.fuelOn ? `
       <div class="q-fuel">
-        <label class="field">Setup d'essence
+        <label class="field"><span>Setup d'essence <button class="q-gear" id="qFuelCfg" title="Réglages essence">⚙</button></span>
           <select id="qSetup">${setups.length ? setups.map((s) => `<option value="${esc(s.id)}" ${s.id === activeSetup ? 'selected' : ''}>${esc(s.name)}</option>`).join('')
             : '<option value="">Réglage actuel</option>'}</select></label>
         <div>
@@ -117,13 +127,24 @@ function bind() {
   $$('.q-slot', root).forEach((row) => {
     const slot = app.setup.slots[+row.dataset.slot];
     $$('[data-k]', row).forEach((input) => input.addEventListener('change', () => {
-      const k = input.dataset.k;
-      slot[k] = k === 'active' ? input.checked : (input.value || null);
+      slot[input.dataset.k] = input.value || null;
       app.saveSetup();
-      if (slot.active) app.applyTune(slot.address);
+      app.applyTune(slot.address);
       render();
     }));
+    $('[data-del]', row).onclick = () => { slot.active = false; app.saveSetup(); render(); };
   });
+  const add = $('#qAdd', root);
+  if (add) add.onchange = () => {
+    const slot = app.setup.slots[+add.value];
+    if (!slot) return;
+    slot.active = true;
+    app.saveSetup();
+    app.applyTune(slot.address);
+    render();
+  };
+  const gear = $('#qFuelCfg', root);
+  if (gear) gear.onclick = (e) => { e.preventDefault(); app.openFuelSettings(); };
 
   $$('[data-laps]', root).forEach((b) => (b.onclick = () => { prefs.laps = +b.dataset.laps; savePrefs(); render(); }));
   $('#qLaps', root).onchange = (e) => { prefs.laps = Math.max(1, Math.min(999, parseInt(e.target.value, 10) || 1)); savePrefs(); render(); };
