@@ -497,6 +497,7 @@ export const app = {
       type: 'race', mode: 'laps', laps: opts.laps, start: 'lights',
       weather: { sky: 'sun', dynamic: false, variability: 1, intensity: 1 },
       quick: true,
+      title: opts.title,
       fuel: { enabled: !!opts.fuelOn, tank15: opts.tank15 },
     });
   },
@@ -537,6 +538,7 @@ export const app = {
       entries,
       autoAdd: true, // une manette non configurée apparaît quand même au classement
       quick: !!s.quick,
+      title: s.title,
       fuel: s.fuel, // course rapide : essence activée ou non + réservoir commun
     });
     session.trackId = s.trackId;

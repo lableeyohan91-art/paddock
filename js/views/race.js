@@ -24,7 +24,7 @@ export function mount(main, a) {
   root.innerHTML = `
     <div class="race-head">
       <div>
-        <div class="race-title">${s.cfg.quick ? '⚡ Course rapide' : esc(TYPES[s.cfg.type])} <span class="muted" style="font-weight:500;font-size:1rem">· ${esc(app.track(s.trackId)?.name || '')}</span></div>
+        <div class="race-title">${s.cfg.quick ? esc(s.cfg.title || '⚡ Course rapide') : esc(TYPES[s.cfg.type])} <span class="muted" style="font-weight:500;font-size:1rem">· ${esc(app.track(s.trackId)?.name || '')}</span></div>
         <div class="muted" id="raceFormat"></div>
       </div>
       <span class="race-state" id="raceState"></span>
@@ -98,8 +98,9 @@ function renderMenu() {
   </div>`;
   root.querySelectorAll('[data-go]').forEach((b) => (b.onclick = () => {
     const t = b.dataset.go;
-    if (t === 'quick') { app.go('quick'); return; }
-    // essais, qualif, course : écran de préparation complet, déjà réglé sur le bon type
+    // course rapide et course : même écran pour l'instant (la course aura ses options plus tard)
+    if (t === 'quick' || t === 'race') { app.quickMode = t; app.go('quick'); return; }
+    // essais, qualif : écran de préparation complet, déjà réglé sur le bon type
     app.setup.type = t;
     app.saveSetup();
     app.go('setup');

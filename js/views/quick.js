@@ -37,6 +37,7 @@ export function refresh() {
   if (root && app.view === 'quick') render();
 }
 
+const title = () => (app.quickMode === 'race' ? '🏁 Course' : '⚡ Course rapide');
 const savePrefs = () => app.db.setSetting('quickRace', prefs);
 const pct15 = (v) => Math.round((v / 15) * 100);
 
@@ -53,7 +54,7 @@ function render() {
   <div class="quick">
     <div class="row" style="justify-content:space-between;margin-bottom:12px">
       <button class="btn small ghost" id="qBack">← Course</button>
-      <h1 class="menu-title" style="margin:0">⚡ Course rapide</h1>
+      <h1 class="menu-title" style="margin:0">${title()}</h1>
       <span style="width:80px"></span>
     </div>
 
@@ -172,7 +173,7 @@ function bind() {
     if (!parts.length) { toast('Coche au moins un participant'); return; }
     if (parts.some((s) => !s.driverId)) { toast('Choisis un pilote pour chaque participant coché'); return; }
     // Départ : on prépare la course et on lance directement les feux
-    const ok = await app.prepareQuickRace({ laps: prefs.laps, fuelOn: prefs.fuelOn, tank15: prefs.tank15 });
+    const ok = await app.prepareQuickRace({ laps: prefs.laps, fuelOn: prefs.fuelOn, tank15: prefs.tank15, title: title() });
     if (ok) await app.startSession(); // non connecté : l'appli propose de connecter le circuit
   };
 }
