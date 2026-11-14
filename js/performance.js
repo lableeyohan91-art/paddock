@@ -50,6 +50,18 @@ export class PerformanceEngine extends EventTarget {
     this._timer = null;
   }
 
+  /**
+   * Renvoie la vitesse actuelle de chaque voiture, même inchangée.
+   * Une voiture hors de la piste ne reçoit pas les commandes : en les répétant,
+   * elle prend la bonne vitesse dès qu'on la repose.
+   */
+  resendSpeeds() {
+    for (const address of this.bases.keys()) {
+      const r = this.current.get(address);
+      if (r) this.cu.setSpeed(address, r.speed);
+    }
+  }
+
   /** Remet chaque voiture à sa valeur de base (fin de session). */
   restore() {
     for (const [address, base] of this.bases) {

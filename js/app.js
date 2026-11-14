@@ -759,6 +759,7 @@ export const app = {
     if (!s || !['running', 'finishing'].includes(s.state)) return;
     if (s.flag !== 'red') {
       this.cancelVscCountdown();
+      if (s.flag === 'vsc') this.vscResendUntil = performance.now() + 5000;
       if (s.flag === 'yellow' || s.flag === 'vsc') { s.setFlag('green'); perf.update(); }
       s.redFlag();
       await cu.pressStart();
@@ -802,6 +803,7 @@ export const app = {
         s.vscCountdown = null;
         s.setFlag('green');
         perf.update();
+        this.vscResendUntil = performance.now() + 5000; // voiture sortie pendant le VSC : elle retrouve aussi sa vitesse
       }
       s.emit('update');
     }, st.at));
@@ -1034,6 +1036,13 @@ async function init() {
     VIEWS[app.view]?.tick?.();
     updateLiveBar();
   }, 200);
+  // VSC : vitesse renvoyée 2 fois par seconde tant qu'il est actif (et 5 s après),
+  // pour qu'une voiture remise en piste prenne aussi la bonne vitesse
+  setInterval(() => {
+    const s = app.session;
+    if (!s || !cu.connected || !['running', 'finishing'].includes(s.state)) return;
+    if (s.flag === 'vsc' || performance.now() < (app.vscResendUntil || 0)) perf.resendSpeeds();
+  }, 500);
   $('#liveBar').onclick = () => app.go('race');
   checkVersion();
   setInterval(checkVersion, 15000);
