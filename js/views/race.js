@@ -138,14 +138,21 @@ function renderControls() {
     if (!connected) html += `<button class="btn big" id="bConn">Connecter le circuit</button>`;
   }
   if (['running', 'finishing'].includes(s.state)) {
-    html += `<button class="btn ${s.flag === 'yellow' ? 'go' : 'yellow'} big" id="bYellow">${s.flag === 'yellow' ? '🟢 Drapeau vert' : '🟡 Drapeau jaune'}</button>`;
-    html += s.flag === 'red'
-      ? `<button class="btn go big" id="bRed" ${s.redResuming ? 'disabled' : ''}>${s.redResuming ? '🚦 Reprise en cours…' : '🟢 Reprendre la course'}</button>`
-      : `<button class="btn red icon-sq" id="bRed" title="Drapeau rouge : arrête toutes les voitures" aria-label="Drapeau rouge">🚩</button>`;
-    html += `<button class="btn" id="bStop">🏁 Terminer</button>`;
+    // raccourcis en icônes carrées : drapeau jaune/vert, drapeau rouge, terminer, garage
+    if (s.flag === 'red') {
+      html += `<button class="btn go big" id="bRed" ${s.redResuming ? 'disabled' : ''}>${s.redResuming ? '🚦 Reprise en cours…' : '🟢 Reprendre la course'}</button>`;
+    }
+    html += `<div class="ico-row">`;
+    html += s.flag === 'yellow'
+      ? `<button class="btn go icon-sq" id="bYellow" title="Drapeau vert : la course reprend" aria-label="Drapeau vert">⚑</button>`
+      : `<button class="btn yellow icon-sq" id="bYellow" title="Drapeau jaune : ralentissement" aria-label="Drapeau jaune" ${s.flag === 'red' ? 'disabled' : ''}>⚑</button>`;
+    if (s.flag !== 'red') html += `<button class="btn red icon-sq" id="bRed" title="Drapeau rouge : arrête toutes les voitures" aria-label="Drapeau rouge">🚩</button>`;
+    html += `<button class="btn icon-sq" id="bStop" title="Terminer la session" aria-label="Terminer la session">🏁</button>`;
+    html += `<button class="btn icon-sq" id="bGarage" title="Garage : régler les voitures sans arrêter la session" aria-label="Garage">🔧</button>`;
+    html += `</div>`;
   }
-  if (['armed', 'running', 'finishing'].includes(s.state)) {
-    html += `<button class="btn" id="bGarage" title="Régler les voitures sans arrêter la session">🔧 Garage</button>`;
+  if (s.state === 'armed') {
+    html += `<button class="btn icon-sq" id="bGarage" title="Garage : régler les voitures sans arrêter la session" aria-label="Garage">🔧</button>`;
   }
   if (s.state === 'finished') {
     html += `<button class="btn primary big" id="bAgain">↻ ${s.cfg.quick && s.cfg.type === 'race' ? 'Relancer la même course' : 'Relancer la même session'}</button>`;
