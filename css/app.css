@@ -661,3 +661,8 @@ table.simple th { color: var(--muted); font-size: .75rem; text-transform: upperc
   border: 1px dashed var(--line); background: transparent; color: var(--muted); font-size: 1.3rem; line-height: 1;
 }
 .q-plus:hover { color: var(--text); border-color: var(--muted); }
+
+/* Avertissement jaune */
+.warn-note { margin: 10px 0 0; padding: 8px 10px; border-radius: 8px; font-size: .82rem; font-weight: 600;
+  color: var(--yellow); background: rgba(250,204,21,.1); border: 1px solid rgba(250,204,21,.35); }
+.warn-note.top { margin: 0 0 12px; }

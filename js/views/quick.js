@@ -13,6 +13,7 @@ let setups = [];
 let activeSetup = null;
 
 const LAP_CHIPS = [10, 20, 30, 50, 100];
+export const PLACE_CARS_MSG = "* Les réglages doivent s'effectuer avec l'ensemble des voitures déjà posées sur votre piste.";
 
 export async function mount(main, a) {
   app = a;
@@ -103,6 +104,7 @@ function render() {
           <p class="muted" style="font-size:.8rem;margin:4px 0 0">Même réservoir pour toutes les voitures de la course.</p>
         </div>
       </div>` : '<p class="muted" style="margin:8px 0 0">Pas de consommation : les voitures roulent sans jamais s\'arrêter.</p>'}
+      <p class="warn-note">${PLACE_CARS_MSG}</p>
     </section>
 
     <div class="q-go">

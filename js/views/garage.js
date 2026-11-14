@@ -4,6 +4,7 @@
 // En dessous : gestion des voitures et circuits (les pilotes ont leur onglet).
 
 import { esc, $, $$, confirmBox, toast } from '../ui.js';
+import { PLACE_CARS_MSG } from './quick.js';
 
 let app;
 let root;
@@ -61,6 +62,7 @@ function render() {
   const slots = app.setup.slots;
   const visible = showAll ? slots : slots.filter((s) => s.active);
   root.innerHTML = `
+  <p class="warn-note top">${PLACE_CARS_MSG}</p>
   <section class="panel" style="margin-bottom:16px">
     <div class="row" style="justify-content:space-between">
       <div><h2 style="margin:0">Réglage des voitures</h2><span class="live-hint" id="liveHint"></span></div>
