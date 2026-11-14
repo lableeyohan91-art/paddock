@@ -73,11 +73,7 @@ function render() {
         </div>`;
         }).join('')}
       </div>
-      ${slots.some((s) => !s.active) ? `
-      <select id="qAdd" class="q-add">
-        <option value="">＋ Ajouter un participant…</option>
-        ${slots.filter((s) => !s.active).map((s) => `<option value="${s.address}">Manette ${s.address + 1}${app.driver(s.driverId) ? ' · ' + esc(app.driver(s.driverId).name) : ''}</option>`).join('')}
-      </select>` : ''}
+      ${slots.some((s) => !s.active) ? '<button class="q-plus" id="qAdd" title="Ajouter un participant">＋</button>' : ''}
     </section>
 
     <section class="panel" style="margin-top:14px">
@@ -135,8 +131,9 @@ function bind() {
     $('[data-del]', row).onclick = () => { slot.active = false; app.saveSetup(); render(); };
   });
   const add = $('#qAdd', root);
-  if (add) add.onchange = () => {
-    const slot = app.setup.slots[+add.value];
+  if (add) add.onclick = () => {
+    // ajoute la manette libre suivante (3, puis 4, 5, 6)
+    const slot = app.setup.slots.find((s) => !s.active);
     if (!slot) return;
     slot.active = true;
     app.saveSetup();

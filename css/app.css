@@ -656,3 +656,8 @@ table.simple th { color: var(--muted); font-size: .75rem; text-transform: upperc
   .depart-lights i { width: 12px; height: 12px; }
   .q-go { padding: 8px 0; }
 }
+.q-plus {
+  display: block; width: 100%; margin-top: 6px; min-height: 34px; border-radius: 8px; cursor: pointer;
+  border: 1px dashed var(--line); background: transparent; color: var(--muted); font-size: 1.3rem; line-height: 1;
+}
+.q-plus:hover { color: var(--text); border-color: var(--muted); }
