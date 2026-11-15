@@ -185,6 +185,7 @@ export class ChihirosLight extends EventTarget {
     }
     this.rx = rx;
     this._msg = [0, 0];
+    this._manualSent = false; // nouvelle connexion : on renverra le passage en manuel
     // prélude (une fois par connexion) : statut, puis heure de la rampe
     const d = new Date();
     await this._send([
@@ -196,18 +197,20 @@ export class ChihirosLight extends EventTarget {
 
   _id() { this._msg = nextMsgId(this._msg); return this._msg; }
 
-  async _write(bytes) {
+  async _write(bytes, fast = false) {
     if (!this.rx) throw new Error('Rampe non connectée');
-    if (this.rx.properties.write) await this.rx.writeValueWithResponse(bytes);
-    else await this.rx.writeValueWithoutResponse(bytes);
+    const p = this.rx.properties;
+    // couleurs : sans attendre d'accusé de réception quand la rampe le permet (plus rapide)
+    if ((fast && p.writeWithoutResponse) || !p.write) await this.rx.writeValueWithoutResponse(bytes);
+    else await this.rx.writeValueWithResponse(bytes);
   }
 
   /** Envoie des trames une par une (file d'attente : jamais deux écritures en même temps). */
-  _send(frames) {
+  _send(frames, fast = false) {
     const run = async () => {
       for (let i = 0; i < frames.length; i++) {
         if (i) await wait(GAP_MS);
-        await this._write(frames[i]);
+        await this._write(frames[i], fast);
       }
     };
     this._chain = this._chain.then(run, run);
@@ -227,12 +230,16 @@ export class ChihirosLight extends EventTarget {
       const c = this._pending;
       this._pending = null;
       if (!c || !this.rx) return;
-      await this._send([
-        frame(0x05, this._id(), [11, 255, 255]), // passage en mode manuel
-        frame(0x07, this._id(), [0, c.r]),
-        frame(0x07, this._id(), [1, c.g]),
-        frame(0x07, this._id(), [2, c.b]),
-      ]);
+      const frames = [];
+      // passage en mode manuel : une seule fois par connexion
+      if (!this._manualSent) frames.push(frame(0x05, this._id(), [11, 255, 255]));
+      // seulement les canaux qui changent (rouge → vert : 2 trames au lieu de 4)
+      const prev = this._manualSent ? this.color : null;
+      [['r', 0], ['g', 1], ['b', 2]].forEach(([k, ch]) => {
+        if (!prev || prev[k] !== c[k]) frames.push(frame(0x07, this._id(), [ch, c[k]]));
+      });
+      if (frames.length) await this._send(frames, true);
+      this._manualSent = true;
       this.color = c;
       this.dispatchEvent(new Event('color'));
     }).catch((e) => { this._set('error', e?.message || String(e)); });

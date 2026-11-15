@@ -882,6 +882,7 @@ cu.addEventListener('status', (e) => {
     lastStart = st.start;
   }
   app.session?.onStatus(st);
+  syncLights(app); // éclairage : réagit dès que la CU change d'état (feux, départ)
 });
 
 cu.addEventListener('timer', (e) => {
