@@ -639,7 +639,8 @@ export const app = {
     perf.removeModifier('flag');
     if (!s.quick) perf.addModifier(weather.modifier()); // pas de météo en course rapide
     perf.removeModifier('vsc');
-    perf.addModifier(vscModifier(() => this.session?.flag, () => this.vscCfg.speedPct, (a) => perf.bases.get(a)?.speed, (a) => this.isOutOfFuel(a)));
+    // vscReleased : débridage lancé juste avant le « Go » (les voitures sont libres pile au Go)
+    perf.addModifier(vscModifier(() => (this.session?.vscReleased ? 'green' : this.session?.flag), () => this.vscCfg.speedPct, (a) => perf.bases.get(a)?.speed, (a) => this.isOutOfFuel(a)));
     perf.removeModifier('fuel');
     perf.addModifier(this.emptyTankModifier());
     entries.forEach((e) => perf.setBase(e.address, e.car.speed, e.car.brake));
@@ -883,7 +884,18 @@ export const app = {
       { n: 0, text: 'Go !', at: 4300 },
     ];
     s.vscCountdown = '…';
+    s.vscReleased = false;
     s.emit('update');
+    // débridage anticipé : une commande par voiture (~0,11 s chacune), on commence assez tôt
+    // pour que la dernière voiture soit libérée au moment du « Go »
+    const GO_AT = 4300;
+    const lead = Math.min(900, perf.bases.size * 110);
+    s._vscRelease = setTimeout(() => {
+      if (s.flag !== 'vsc' || !s.vscCountdown) return;
+      s.vscReleased = true;
+      cu.urgent();
+      perf.update();
+    }, GO_AT - lead);
     s._vscTimers = steps.map((st) => setTimeout(() => {
       // annulé entre-temps (drapeau rouge, fin de session…)
       if (s.flag !== 'vsc' || !['running', 'finishing'].includes(s.state)) { this.cancelVscCountdown(); return; }
@@ -892,6 +904,7 @@ export const app = {
       s.vscCountdown = st.n;
       if (st.n === 0) {
         s.vscCountdown = null;
+        s.vscReleased = false;
         s.setFlag('green');
         cu.urgent(); // vitesse normale rendue tout de suite au « Go »
         perf.update();
@@ -905,8 +918,10 @@ export const app = {
     const s = this.session;
     if (!s) return;
     (s._vscTimers || []).forEach(clearTimeout);
+    clearTimeout(s._vscRelease);
     s._vscTimers = null;
     s.vscCountdown = null;
+    s.vscReleased = false;
   },
 
 };
