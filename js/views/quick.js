@@ -16,7 +16,6 @@ const MIN_CHIPS = [1, 2, 5, 10];                     // essais libres, qualifica
 const PQ_LAP_CHIPS = [3, 5, 10, 20];                 // essais libres, qualification (tours)
 const RACE_MIN_CHIPS = [5, 10, 30, 60];              // course au temps (endurance), minutes
 const RACE_LAP_CHIPS = [20, 30, 50, 75, 100];     // course, course rapide
-export const START_MSG = "* Il peut être nécessaire d'appuyer sur le bouton START de votre Control Unit pour lancer la course.";
 export const PLACE_CARS_MSG = "* Les réglages doivent s'effectuer avec l'ensemble des voitures déjà posées sur votre piste.";
 
 export async function mount(main, a) {
@@ -200,7 +199,6 @@ function render() {
         <span class="depart-sub">${isRace() ? (prefs.raceByTime ? prefs.raceMinutes + ' min' : prefs.laps + ' tours') : prefs.pqByLaps ? prefs.pqLaps + ' tours' : prefs.minutes + ' min'} · ${n} pilote${n > 1 ? 's' : ''} · ${prefs.fuelOn ? `essence ${pct15(tank15())} %` : 'sans essence'}</span>
       </button>
     </div>
-    <p class="warn-note q-start-note">${START_MSG}</p>
   </div>`;
   bind();
   tick();
