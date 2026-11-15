@@ -178,7 +178,11 @@ export class RaceSession extends EventTarget {
     // Feux : départ quand la séquence de la CU se termine
     if (this.state === 'armed') {
       if (st.start > 0) this._sawLights = true;
-      else if (this._sawLights) this.go();
+      // après le 5e feu (valeur 6), le premier changement = extinction des feux = départ
+      // (certaines CU ne repassent pas tout de suite à 0)
+      if (this._sawAllLights && st.start !== 6) this.go();
+      else if (st.start === 6) this._sawAllLights = true;
+      else if (st.start === 0 && this._sawLights) this.go();
     }
     // Drapeau rouge : la reprise est faite quand la séquence des feux de la CU se termine
     if (this.flag === 'red' && this.redResuming) {

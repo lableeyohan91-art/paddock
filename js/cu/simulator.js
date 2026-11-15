@@ -124,12 +124,12 @@ export class SimulatorConnection {
           this.start = step;
         } else {
           clearInterval(this.startTimer);
+          // 5 feux allumés (valeur 6) pendant un délai aléatoire, puis extinction = départ
           setTimeout(() => {
             this.start = 0;
             this.running = true;
             this.cars.forEach((c) => { c.nextAt = null; c.midAt = null; });
           }, rand(200, 1500));
-          this.start = 7;
         }
       }, 800);
     }

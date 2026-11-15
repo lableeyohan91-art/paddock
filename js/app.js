@@ -875,11 +875,36 @@ cu.addEventListener('connection', (e) => {
 });
 
 let lastStart = null;
+// Diagnostic du départ : valeurs « feux » de la CU et leurs instants, enregistrés
+// pour caler précisément l'extinction des feux (réglage startSeq, synchronisé)
+let startSeq = null;
+function recordStart(v) {
+  const s = app.session;
+  const now = performance.now();
+  if (!startSeq && s?.state === 'armed') {
+    startSeq = { t0: now, steps: [], firstLap: null, goAt: null };
+    setTimeout(saveStartSeq, 30000); // filet : enregistré même sans passage
+  }
+  if (!startSeq) return;
+  startSeq.steps.push({ v, t: Math.round(now - startSeq.t0) });
+  if (s?.state === 'running' && startSeq.goAt === null) startSeq.goAt = Math.round(s.startedAt - startSeq.t0);
+}
+function saveStartSeq() {
+  if (!startSeq) return;
+  const s = app.session;
+  if (s?.startedAt && startSeq.goAt === null) startSeq.goAt = Math.round(s.startedAt - startSeq.t0);
+  const rec = { at: new Date().toISOString(), version: cu.version, sim: app.isSim, ...startSeq };
+  delete rec.t0;
+  db.setSetting('startSeq', rec);
+  app.log('Départ enregistré : ' + rec.steps.map((x) => `${x.v}@${x.t}`).join(' ') + ` | départ appli @${rec.goAt} | 1er passage @${rec.firstLap}`);
+  startSeq = null;
+}
 cu.addEventListener('status', (e) => {
   const st = e.detail;
   if (st.start !== lastStart) {
     if (st.start >= 2 && st.start <= 6) beep(660, 220);
     lastStart = st.start;
+    recordStart(st.start);
   }
   app.session?.onStatus(st);
   syncLights(app); // éclairage : réagit dès que la CU change d'état (feux, départ)
@@ -887,6 +912,10 @@ cu.addEventListener('status', (e) => {
 
 cu.addEventListener('timer', (e) => {
   const t = e.detail;
+  if (startSeq && startSeq.firstLap === null && t.address <= 5) {
+    startSeq.firstLap = Math.round(performance.now() - startSeq.t0); // 1er passage après le départ
+    setTimeout(saveStartSeq, 1500);
+  }
   if (t.address <= 5) app.markSeen(t.address);
   if (t.address === GHOST) app.onGhostTimer(t);
   const s = app.session;
