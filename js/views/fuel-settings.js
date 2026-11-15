@@ -197,7 +197,7 @@ function consoHtml() {
         <input type="range" id="fEmptyFix" min="0" max="15" step="1" value="${cfg.emptySpeedFixed}">
         <span class="bar-v num" id="fEmptyFixV">${Math.round((cfg.emptySpeedFixed / 15) * 100)} %</span>
       </div>
-      <p class="muted" style="font-size:.85rem;margin-bottom:0">Toutes les voitures à sec roulent à cette vitesse (même échelle que la barre verte du garage), quel que soit leur réglage. Une voiture déjà réglée plus lentement garde sa vitesse.</p>
+      <p class="muted" style="font-size:.85rem;margin-bottom:0">Toutes les voitures à sec roulent à cette vitesse.</p>
     </section>
   </div>`;
 }
