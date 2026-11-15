@@ -20,7 +20,7 @@ const SECTIONS = [
   { k: 'fuel', ico: '⛽', name: 'Essence' },
   { k: 'vsc', ico: '<span class="vsc-ico">VSC</span>', name: 'VSC' }, // même icône que le bouton en course
   { k: 'tyres', ico: '🛞', name: 'Pneus' },
-  { k: 'devices', ico: '🔌', name: 'Appareils connectés' },
+  { k: 'devices', ico: '💡', name: 'Éclairage connecté' },
 ];
 let tab = 'menu';
 
@@ -68,7 +68,7 @@ HELP.tyres = `
     </ul>`;
 
 HELP.devices = `
-    <p>Les appareils que Paddock peut piloter en plus du circuit.</p>
+    <p>Les lampes que Paddock peut piloter en plus du circuit : elles prennent la couleur de la course.</p>
     <ul>
       <li><b>Chihiros</b> : une rampe LED <b>Chihiros WRGB II</b> en Bluetooth. Pendant une séance, elle prend la couleur de la situation : vert au départ, orange en VSC, rouge au drapeau rouge, blanc à l'arrivée (interrupteur « Couleurs en course »).</li>
       <li><b>Autres lampes</b> : rubans LED, ampoules et lampes Bluetooth des marques courantes (ELK-BLEDOM / LEDnet, Triones / HappyLighting, Govee). Bouton « Rechercher une lampe » : Paddock reconnaît sa marque et lui applique les mêmes couleurs en course que la rampe.</li>
@@ -323,7 +323,7 @@ function renderTyres() {
   };
 }
 
-/** Réglages → Appareils connectés : onglets « Chihiros » (rampe) et « Autres lampes ». */
+/** Réglages → Éclairage connecté : onglets « Chihiros » (rampe) et « Autres lampes ». */
 let devTab = 'lights';
 let selColor = 'racing'; // couleur (situation de course) en cours de réglage
 let colorsOpen = false;  // case « Test des couleurs » dépliée ?
@@ -401,7 +401,7 @@ function bindColorsPanel() {
   };
 }
 
-/** Onglets d'Appareils connectés : la rampe Chihiros et les autres lampes. */
+/** Onglets d'Éclairage connecté : la rampe Chihiros et les autres lampes. */
 function devTabs() {
   return `<div class="subtabs small">
     <button class="${devTab === 'lights' ? 'on' : ''}" data-devtab="lights">💡 Chihiros</button>

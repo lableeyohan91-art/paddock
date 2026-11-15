@@ -196,8 +196,8 @@ export const app = {
   // ---------- Essence simulée ----------
 
   fuelCfg: defaultFuelConfig(),
-  lights: new ChihirosLight(), // rampe LED Chihiros (Réglages → Appareils connectés → Éclairage)
-  extraLights: [],             // autres lampes Bluetooth (Réglages → Appareils connectés → Autres lampes)
+  lights: new ChihirosLight(), // rampe LED Chihiros (Réglages → Éclairage connecté → Chihiros)
+  extraLights: [],             // autres lampes Bluetooth (Réglages → Éclairage connecté → Autres lampes)
 
   /** Lampes qui reçoivent les scènes de course (celles qui font leur signal de connexion attendent). */
   lightOutputs() {
