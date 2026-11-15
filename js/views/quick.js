@@ -22,9 +22,10 @@ export const PLACE_CARS_MSG = "* Les réglages doivent s'effectuer avec l'ensemb
 export async function mount(main, a) {
   app = a;
   root = main;
-  // participants affichés par défaut : 2 en course, 1 en essais libres et qualification
+  // participants par défaut (2 en course, 1 en essais libres / qualification), seulement si le
+  // circuit n'est pas connecté : connecté, on peut partir de 0 et chaque voiture qui passe la ligne s'ajoute
   const min = mode().type === 'race' ? 2 : 1;
-  if (app.setup.slots.filter((s) => s.active).length < min) {
+  if (!app.cu.connected && app.setup.slots.filter((s) => s.active).length < min) {
     app.setup.slots.slice(0, min).forEach((s) => (s.active = true));
     app.saveSetup();
   }
@@ -217,6 +218,7 @@ function bind() {
     }));
     $('[data-del]', row).onclick = () => {
       slot.active = false;
+      slot.removedByHand = true; // essais / qualif : pas de nouvel ajout automatique
       app.saveSetup();
       render();
     };
@@ -227,6 +229,7 @@ function bind() {
     const slot = app.setup.slots.find((s) => !s.active);
     if (!slot) return;
     slot.active = true;
+    slot.removedByHand = false;
     app.saveSetup();
     app.applyTune(slot.address);
     render();
@@ -292,5 +295,5 @@ export function tick() {
     row.classList.toggle('live', on);
   });
   const l = $('#qLive', root);
-  if (l) l.textContent = !app.cu.connected ? 'Circuit non connecté' : live ? `● ${live} voiture${live > 1 ? 's' : ''} en piste` : 'Fais rouler une voiture pour la détecter';
+  if (l) l.textContent = !app.cu.connected ? 'Circuit non connecté' : live ? `● ${live} voiture${live > 1 ? 's' : ''} en piste` : 'Passe la ligne avec une voiture : elle s\'ajoute toute seule';
 }
