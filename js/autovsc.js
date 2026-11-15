@@ -10,8 +10,8 @@ export const DEFAULT_AUTO = { lapOn: false, lapSec: 12, sectorOn: false, sectorS
 
 export const autoCfg = (app) => ({ ...DEFAULT_AUTO, ...(app.vscCfg?.auto || {}) });
 
-/** Le VSC automatique (déclenchement et fin) ne fonctionne qu'en Course (pas en course rapide, qualif, essais). */
-export const autoAllowed = (s) => s?.cfg?.kind === 'race';
+/** Le VSC automatique (déclenchement et fin) fonctionne en Course et Course rapide (pas en qualif ni essais). */
+export const autoAllowed = (s) => ['race', 'quick'].includes(s?.cfg?.kind);
 
 /** Renvoie { comp, rule, secs } si une voiture doit déclencher le VSC, sinon null. */
 export function checkAutoVsc(app, now = performance.now()) {
