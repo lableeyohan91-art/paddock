@@ -19,7 +19,7 @@ export function sceneFor(session) {
   if (s.state === 'ready') return 'ready';
   if (s.state === 'armed') return 'lights';
   if (s.state === 'finishing' || s.state === 'finished') return 'end';
-  if (s.flag === 'red') return 'red';
+  if (s.flag === 'red') return s.redResuming ? 'lights' : 'red'; // reprise : suit les feux de la CU comme au départ
   if (s.flag === 'vsc') return 'vsc';
   if (s.flag === 'yellow') return 'yellow';
   // départ ou reprise (fin de drapeau jaune, de VSC, de drapeau rouge) : vert 2 secondes, puis blanc

@@ -132,6 +132,7 @@ export class RaceSession extends EventTarget {
     this.flag = 'red';
     this.redResuming = false;
     this._sawRedLights = false;
+    this._sawAllRedLights = false;
     this.emit('flag', { flag: 'red' });
     this.emit('update');
   }
@@ -141,6 +142,7 @@ export class RaceSession extends EventTarget {
     if (this.flag !== 'red') return;
     this.redResuming = true;
     this._sawRedLights = false;
+    this._sawAllRedLights = false;
     this.emit('update');
   }
 
@@ -187,7 +189,10 @@ export class RaceSession extends EventTarget {
     // Drapeau rouge : la reprise est faite quand la séquence des feux de la CU se termine
     if (this.flag === 'red' && this.redResuming) {
       if (st.start > 0) this._sawRedLights = true;
-      else if (this._sawRedLights) this._endRed();
+      // comme au départ : après le 5e feu (6), le premier changement = extinction des feux
+      if (this._sawAllRedLights && st.start !== 6) this._endRed();
+      else if (st.start === 6) this._sawAllRedLights = true;
+      else if (st.start === 0 && this._sawRedLights) this._endRed();
     }
     for (const c of this.comps.values()) {
       c.cuFuel = st.fuel[c.address];
