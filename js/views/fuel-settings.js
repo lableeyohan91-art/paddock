@@ -18,6 +18,9 @@ let calcResult = null;
 let driversOpen = false; // liste « Pilotes présents » dépliée ?
 let calcOpen = false;    // menu « Calcul automatique des valeurs » déplié ?
 
+/** Prochain affichage : ouvrir directement ce sous-onglet ('conso' ou 'ref'). */
+export function openFuelTab(t) { sub = t; }
+
 export async function renderFuel(container, a) {
   app = a;
   el = container;

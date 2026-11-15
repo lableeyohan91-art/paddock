@@ -636,6 +636,7 @@ table.simple th { color: var(--muted); font-size: .75rem; text-transform: upperc
 .q-laps input { width: 62px; min-height: 34px; padding: 4px 6px; flex: none; text-align: center; }
 .q-gear { border: 0; background: none; color: var(--muted); cursor: pointer; font-size: .9rem; padding: 0 4px; vertical-align: middle; }
 .q-gear:hover { color: var(--text); }
+.q-link, .q-fuel-mode a { color: var(--blue, #3b82f6); font-weight: 700; text-decoration: underline; }
 @media (max-width: 720px) {
   .q-slot { grid-template-columns: 26px minmax(0, 1fr) minmax(0, 1fr) 28px; }
   .q-slot select[data-k="carId"] { grid-column: auto; }

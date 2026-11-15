@@ -157,7 +157,7 @@ function render() {
           : 'Plus on roule vite, plus on consomme (fourchettes de temps de référence).'}</span>
       </div>
       <div class="q-fuel">
-        ${app.fuelCfg.mode === 'fixed' ? '' : `<label class="field"><span>Setup d'essence <button class="q-gear" id="qFuelCfg" title="Réglages essence">⚙</button></span>
+        ${app.fuelCfg.mode === 'fixed' ? '' : `<label class="field"><span>Setup d'essence · <a href="#" class="q-link" id="qFuelCfg">Régler les temps de référence</a></span>
           <select id="qSetup">${setups.length ? setups.map((s) => `<option value="${esc(s.id)}" ${s.id === activeSetup ? 'selected' : ''}>${esc(s.name)}</option>`).join('')
             : '<option value="">Réglage actuel</option>'}</select></label>`}
         <div>
@@ -246,9 +246,9 @@ function bind() {
     render();
   };
   const gear = $('#qFuelCfg', root);
-  if (gear) gear.onclick = (e) => { e.preventDefault(); app.openFuelSettings(); };
+  if (gear) gear.onclick = (e) => { e.preventDefault(); app.openFuelSettings('ref'); };
   const nomLink = $('#qFuelNom', root);
-  if (nomLink) nomLink.onclick = (e) => { e.preventDefault(); app.openFuelSettings(); };
+  if (nomLink) nomLink.onclick = (e) => { e.preventDefault(); app.openFuelSettings('conso'); };
 
   $$('[data-laps]', root).forEach((b) => (b.onclick = () => { prefs.laps = +b.dataset.laps; savePrefs(); render(); }));
   const ql = $('#qLaps', root);

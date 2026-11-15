@@ -3,7 +3,7 @@
 import { esc, $, toast, download, confirmBox, modal } from '../ui.js';
 import { audio, say } from '../audio.js';
 import { MODE } from '../cu/protocol.js';
-import { renderFuel } from './fuel-settings.js';
+import { renderFuel, openFuelTab } from './fuel-settings.js';
 import { vscSpeed } from '../performance.js';
 import { autoCfg } from '../autovsc.js';
 import { COMPOUNDS, COMPOUND_INFO, DEFAULT_TYRES } from '../tyres.js';
@@ -597,8 +597,9 @@ function renderDevices() {
 }
 
 /** Ouvre directement Réglages → Essence (depuis un autre écran). */
-export function openFuel() {
+export function openFuel(tab) {
   openFuelNext = true;
+  if (tab) openFuelTab(tab);
 }
 
 function renderGeneral() {
