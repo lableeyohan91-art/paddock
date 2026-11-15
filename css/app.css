@@ -787,7 +787,6 @@ h1 .vsc-ico { width: 40px; height: 40px; font-size: .7rem; }
 .calc-l em { font-style: normal; font-size: .78rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; margin-left: auto; }
 .table-wrap { overflow-x: auto; }
 .dev-banner { background: var(--accent); color: #fff; font-weight: 900; font-size: 1.15rem; text-align: center; text-transform: uppercase; letter-spacing: .04em; padding: 14px 12px; border-radius: 12px; margin-bottom: 14px; }
-.dev-tag { display: block; margin-top: 4px; font-size: .68rem; font-weight: 800; color: #fff; background: var(--accent); border-radius: 6px; padding: 2px 6px; }
 .sheet-track { gap: 10px; margin: 12px 0 4px; font-weight: 700; }
 .sheet-track select { flex: 1; max-width: 320px; }
 .cu-log { font-size: .7rem; color: var(--muted); white-space: pre-wrap; word-break: break-word; max-height: 140px; overflow: auto; background: var(--panel-2); border-radius: 8px; padding: 6px 8px; margin: 0 0 12px; }

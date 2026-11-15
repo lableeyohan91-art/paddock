@@ -114,7 +114,7 @@ function render() {
       <h1 class="menu-title">Réglages</h1>
       <div class="menu-grid">
         ${SECTIONS.map((x) => `<div class="tile-wrap">
-          <button class="menu-tile" data-tab="${x.k}"><span class="menu-ico">${x.ico}</span><span class="menu-name">${x.name}</span>${x.k === 'tyres' ? '<span class="dev-tag">en développement</span>' : ''}</button>
+          <button class="menu-tile" data-tab="${x.k}"><span class="menu-ico">${x.ico}</span><span class="menu-name">${x.name}</span></button>
           <button class="tile-help" data-help="${x.k}" title="À quoi sert ${x.name} ?" aria-label="Aide : ${x.name}">?</button>
         </div>`).join('')}
       </div>
