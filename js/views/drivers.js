@@ -2,6 +2,7 @@
 // où l'on modifie ou supprime. Ici : ajouter, importer, trier / filtrer.
 
 import { esc, $, $$, modal, confirmBox, toast } from '../ui.js';
+import { raceMedianOf } from '../fuel-calc.js';
 
 let app;
 let root;
@@ -170,6 +171,9 @@ export function editDriver(d, onSaved) {
             <input type="color" id="pColor" value="${esc(draft.color)}" title="Autre couleur">
           </div>
         </div>
+        <label class="field">Temps médian au tour en course (s)
+          <input type="number" id="pMedian" step="0.01" min="1" max="60" value="${draft.raceMedian ?? ''}" placeholder="calcul automatique" style="width:160px">
+          <small class="muted" id="pMedianAuto">Laisse vide pour le calcul automatique sur ses courses.</small></label>
       </div>
     </div>
     ${isNew ? '' : `
@@ -210,6 +214,8 @@ export function editDriver(d, onSaved) {
     const name = $('#pName', el).value.trim();
     if (!name) { toast('Donne un nom au pilote'); $('#pName', el).focus(); return; }
     draft.name = name;
+    const med = parseFloat($('#pMedian', el).value);
+    draft.raceMedian = med > 0 ? Math.round(med * 100) / 100 : null; // vide = calcul automatique
     if (isNew) draft.created = Date.now();
     await app.db.put('drivers', draft);
     await app.loadData();
@@ -239,5 +245,15 @@ export function editDriver(d, onSaved) {
     toast(`Compteurs de ${d.name} remis à zéro`);
     done();
   };
+  // temps médian calculé sur ses tours de course (circuit en cours)
+  if (!isNew) app.db.all('laps').then((laps) => {
+    const r = raceMedianOf(laps, d.id, app.setup?.trackId);
+    const box = $('#pMedianAuto', el);
+    if (!box) return;
+    box.innerHTML = r
+      ? `Calcul automatique : <b>${r.sec.toFixed(2)} s</b> (sur ${r.laps} tours de course). Laisse vide pour l'utiliser, ou saisis ton propre temps.`
+      : 'Pas encore de tours de course : saisis un temps, ou laisse vide.';
+    if (r) $('#pMedian', el).placeholder = `auto : ${r.sec.toFixed(2)}`;
+  });
   setTimeout(() => $('#pName', el).focus(), 50);
 }

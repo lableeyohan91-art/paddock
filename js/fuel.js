@@ -7,7 +7,8 @@
 // Chaque fourchette est réglable (bornes 2-30 s, 1-40 %) et désactivable.
 // Au stand (voie des stands), la voiture se ravitaille jusqu'à son réservoir.
 
-export const LIMITS = { tMin: 2, tMax: 30, pMin: 1, pMax: 40 };
+export const LIMITS = { tMin: 2, tMax: 30, pMin: 0.5, pMax: 40 };
+const half = (x) => Math.round(x * 2) / 2; // consommations au demi-pourcent
 
 export function defaultFuelConfig() {
   return {
@@ -117,9 +118,9 @@ export function sanitize(cfg) {
     on: b?.on ?? def.on,
     min: num(b?.min, LIMITS.tMin, LIMITS.tMax, def.min),
     max: num(b?.max, LIMITS.tMin, LIMITS.tMax, def.max),
-    pct: Math.round(num(b?.pct, LIMITS.pMin, LIMITS.pMax, def.pct)),
+    pct: half(num(b?.pct, LIMITS.pMin, LIMITS.pMax, def.pct)),
   });
-  c.nominalPct = Math.round(num(c.nominalPct, LIMITS.pMin, LIMITS.pMax, d.nominalPct));
+  c.nominalPct = half(num(c.nominalPct, LIMITS.pMin, LIMITS.pMax, d.nominalPct));
   c.nominal = { min: num(c.nominal?.min, LIMITS.tMin, LIMITS.tMax, d.nominal.min), max: num(c.nominal?.max, LIMITS.tMin, LIMITS.tMax, d.nominal.max) };
   c.faster = d.faster.map((def, i) => band(cfg?.faster?.[i], def));
   c.slower = d.slower.map((def, i) => band(cfg?.slower?.[i], def));
