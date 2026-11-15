@@ -741,3 +741,10 @@ h1 .vsc-ico { width: 40px; height: 40px; font-size: .7rem; }
 .ol-state.error { color: var(--yellow); }
 .ol-act { grid-column: 1 / -1; display: flex; gap: 6px; flex-wrap: wrap; }
 .light-chip.sel { border-color: var(--text); box-shadow: 0 0 0 2px rgba(255,255,255,.25); }
+.color-box summary { cursor: pointer; list-style: none; display: flex; align-items: center; justify-content: space-between; }
+.color-box summary::-webkit-details-marker { display: none; }
+.color-box summary h2 { margin: 0; }
+.color-box summary::after { content: '▾'; color: var(--muted); font-size: 1.1rem; transition: transform .15s; }
+.color-box[open] summary::after { transform: rotate(180deg); }
+.light-presets.slots { grid-template-columns: repeat(2, 1fr); }
+.light-presets.slots .light-chip { font-size: .82rem; text-align: left; }

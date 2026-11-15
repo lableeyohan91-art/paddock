@@ -5,7 +5,7 @@ import { audio, say } from '../audio.js';
 import { MODE } from '../cu/protocol.js';
 import { renderFuel } from './fuel-settings.js';
 import { vscSpeed } from '../performance.js';
-import { LIGHT_SCENES, DEFAULT_PALETTE, PALETTE_NAMES, paletteColor, sceneCss, cssOf } from '../devices/lightsync.js';
+import { LIGHT_SCENES, COLOR_SLOTS, paletteColor, sceneCss, cssOf } from '../devices/lightsync.js';
 import { GenericLight, PROTOCOLS } from '../devices/generic-light.js';
 import { openImport, importDone, removeImport } from './import-records.js';
 
@@ -155,7 +155,8 @@ function renderVsc() {
 
 /** Réglages → Appareils connectés : onglets « Chihiros » (rampe) et « Autres lampes ». */
 let devTab = 'lights';
-let selColor = 'white'; // couleur de la palette en cours de réglage
+let selColor = 'racing'; // couleur (situation de course) en cours de réglage
+let colorsOpen = false;  // case « Personnalisation des couleurs » dépliée ?
 
 /** Envoie une couleur d'essai à toutes les lampes connectées. */
 function testColor(c) {
@@ -170,16 +171,18 @@ function testColor(c) {
 function colorsPanel() {
   const c = selColor === 'off' ? [0, 0, 0] : paletteColor(app, selColor);
   const edited = !!app.lightSync.palette && Object.keys(app.lightSync.palette).length > 0;
+  const sel = COLOR_SLOTS.find((x) => x.k === selColor);
   return `
   <section class="panel" style="margin-top:14px">
-    <h2>Couleurs</h2>
-    <p class="muted" style="font-size:.85rem;margin:-4px 0 10px">Touche une couleur pour l'essayer, puis règle-la avec les curseurs : elle est enregistrée et servira en course (ex. l'orange du VSC).</p>
-    <div class="light-presets">
-      ${Object.keys(DEFAULT_PALETTE).map((k) => `<button class="light-chip ${selColor === k ? 'sel' : ''}" data-preset="${k}"><i style="background:${cssOf(paletteColor(app, k))}"></i>${PALETTE_NAMES[k]}</button>`).join('')}
+  <details class="color-box" id="colorsBox" ${colorsOpen ? 'open' : ''}>
+    <summary><h2>Personnalisation des couleurs</h2></summary>
+    <p class="muted" style="font-size:.85rem;margin:6px 0 10px">Toutes les couleurs qui peuvent s'afficher en course. Touche-en une pour l'essayer, puis règle-la avec les curseurs : elle est enregistrée et utilisée en course.</p>
+    <div class="light-presets slots">
+      ${COLOR_SLOTS.map((x) => `<button class="light-chip ${selColor === x.k ? 'sel' : ''}" data-preset="${x.k}"><i style="background:${cssOf(paletteColor(app, x.k))}"></i>${esc(x.label)}</button>`).join('')}
       <button class="light-chip ${selColor === 'off' ? 'sel' : ''}" data-preset="off"><i style="background:#222"></i>Éteint</button>
     </div>
     ${selColor === 'off' ? '<p class="muted" style="margin:12px 0 0;font-size:.85rem">Éteint : rien à régler.</p>' : `
-    <h3>Réglage du ${esc(PALETTE_NAMES[selColor].toLowerCase())}</h3>
+    <h3>Réglage : ${esc(sel?.label || '')}</h3>
     ${[['r', 'Rouge', '#e10600', 0], ['g', 'Vert', '#22c55e', 1], ['b', 'Bleu', '#3b82f6', 2]].map(([k, l, col, i]) => `
     <div class="bar" style="--c:${col};--p:${c[i]}%">
       <span class="bar-l">${l}</span>
@@ -188,11 +191,14 @@ function colorsPanel() {
     </div>`).join('')}`}
     <div class="light-preview" id="lPreview" style="background:${cssOf(c)}"></div>
     <button class="btn small ghost" id="lReset" style="margin-top:10px" ${edited ? '' : 'disabled'}>↺ Revenir aux couleurs d'origine</button>
+  </details>
   </section>`;
 }
 
 let paletteTimer = null;
 function bindColorsPanel() {
+  const box = $('#colorsBox', root);
+  if (box) box.addEventListener('toggle', () => { colorsOpen = box.open; });
   root.querySelectorAll('[data-preset]').forEach((b) => (b.onclick = () => {
     selColor = b.dataset.preset;
     testColor(selColor === 'off' ? [0, 0, 0] : paletteColor(app, selColor));
@@ -207,7 +213,7 @@ function bindColorsPanel() {
     if (dot) dot.style.background = cssOf(c);
     testColor(c);
     // enregistrée dans la palette (un court délai pendant qu'on fait glisser)
-    app.lightSync.palette = { ...(app.lightSync.palette || {}), [selColor]: c };
+    app.lightSync.palette = { ...(app.lightSync.palette || {}), ['s:' + selColor]: c };
     clearTimeout(paletteTimer);
     paletteTimer = setTimeout(async () => {
       await app.saveLightSync({ palette: app.lightSync.palette });

@@ -10,26 +10,47 @@ export const DEFAULT_PALETTE = {
   blue: [0, 0, 100],
   white: [100, 100, 100],
 };
-export const PALETTE_NAMES = {
-  red: 'Rouge', orange: 'Orange (VSC)', green: 'Vert', blue: 'Bleu', white: 'Blanc',
-};
 
-/** Couleur d'un nom de la palette, en tenant compte des réglages de l'utilisateur. */
-export function paletteColor(app, name) {
-  return app?.lightSync?.palette?.[name] || DEFAULT_PALETTE[name];
+// Toutes les couleurs qui peuvent s'afficher en course : chacune se règle à part
+// (Réglages → Éclairage → Personnalisation des couleurs). base = couleur d'origine.
+export const COLOR_SLOTS = [
+  { k: 'ready', label: 'Prêt (avant le GO)', base: 'white' },
+  { k: 'lights', label: 'Feux de départ', base: 'red' },
+  { k: 'green', label: 'Départ / reprise', base: 'green' },
+  { k: 'racing', label: 'Course en cours', base: 'white' },
+  { k: 'vsc', label: 'VSC', base: 'orange' },
+  { k: 'red', label: 'Drapeau rouge', base: 'red' },
+  { k: 'twoLapsA', label: 'Deux tours restants (1re couleur)', base: 'white' },
+  { k: 'twoLapsB', label: 'Deux tours restants (2e couleur)', base: 'blue' },
+  { k: 'finish', label: 'Arrivée', base: 'blue' },
+  { k: 'end', label: 'Fin de séance', base: 'white' },
+];
+const SLOT = Object.fromEntries(COLOR_SLOTS.map((x) => [x.k, x]));
+
+/**
+ * Couleur d'une situation de course (ou d'un nom de base), avec les réglages de l'utilisateur :
+ * couleur propre à la situation, sinon sa couleur de base personnalisée, sinon l'origine.
+ */
+export function paletteColor(app, key) {
+  const p = app?.lightSync?.palette || {};
+  const slot = SLOT[key];
+  if (slot) return p['s:' + key] || p[slot.base] || DEFAULT_PALETTE[slot.base];
+  return p[key] || DEFAULT_PALETTE[key];
 }
+/** Couleur d'origine d'une situation (pour savoir si elle a été modifiée). */
+export const originColor = (key) => DEFAULT_PALETTE[SLOT[key]?.base || key];
 export const cssOf = (c) => `rgb(${Math.round(c[0] * 2.55)},${Math.round(c[1] * 2.55)},${Math.round(c[2] * 2.55)})`;
 
 export const LIGHT_SCENES = [
-  { k: 'ready', label: 'Prêt (avant le GO)', c: 'white' },
-  { k: 'lights', label: 'Feux de départ', c: 'red' },
+  { k: 'ready', label: 'Prêt (avant le GO)', c: 'ready' },
+  { k: 'lights', label: 'Feux de départ', c: 'lights' },
   { k: 'green', label: 'Départ / reprise (2 secondes)', c: 'green' },
-  { k: 'racing', label: 'Course en cours (rien de spécial)', c: 'white' },
-  { k: 'vsc', label: 'VSC', c: 'orange' },
+  { k: 'racing', label: 'Course en cours (rien de spécial)', c: 'racing' },
+  { k: 'vsc', label: 'VSC', c: 'vsc' },
   { k: 'red', label: 'Drapeau rouge', c: 'red' },
-  { k: 'twoLaps', label: 'Deux tours restants : 2 clignotements rapides blanc / bleu', alt: ['white', 'blue'] },
-  { k: 'finish', label: 'Arrivée : bleu fixe 5 s', c: 'blue' },
-  { k: 'end', label: 'Ensuite (fin de séance)', c: 'white' },
+  { k: 'twoLaps', label: 'Deux tours restants : 2 clignotements rapides blanc / bleu', alt: ['twoLapsA', 'twoLapsB'] },
+  { k: 'finish', label: 'Arrivée : bleu fixe 5 s', c: 'finish' },
+  { k: 'end', label: 'Ensuite (fin de séance)', c: 'end' },
 ];
 
 /** Aperçu d'une scène pour le tableau des réglages. */
