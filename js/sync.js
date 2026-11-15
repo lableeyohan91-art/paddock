@@ -253,6 +253,7 @@ export async function liveAccess() {
   if (!configured()) throw new Error('Firebase non configuré');
   for (let i = 0; i < 50 && !auth && state.status !== 'error'; i++) await new Promise((r) => setTimeout(r, 200));
   if (!auth) throw new Error(state.error || 'Service en ligne injoignable');
+  await auth.authStateReady(); // attend le compte déjà enregistré avant d'en créer un
   if (!auth.currentUser) await fb.signInAnonymously(auth);
   return { fb, fs, uid: auth.currentUser.uid };
 }

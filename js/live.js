@@ -61,7 +61,7 @@ export async function startLive(theApp) {
     }
     listenCommands();
     clearInterval(timer);
-    timer = setInterval(() => publish().catch(() => {}), 1000);
+    timer = setInterval(() => publish().catch(onPublishError), 1000);
     live.status = 'on';
   } catch (e) {
     live.status = 'error';
@@ -124,6 +124,18 @@ function snapshot() {
       };
     }),
   };
+}
+
+/** Écriture refusée (compte changé entre-temps…) : on redémarre la diffusion. */
+function onPublishError(e) {
+  console.warn('[live] publication impossible', e?.code || e);
+  lastJson = '';
+  if (/permission/i.test(e?.code || e?.message || '') && live.status === 'on') {
+    clearInterval(timer);
+    if (unsubCmds) { unsubCmds(); unsubCmds = null; }
+    live.status = 'off';
+    startLive(app);
+  }
 }
 
 async function publish(force = false) {

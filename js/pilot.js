@@ -34,7 +34,10 @@ async function start() {
     const app = fb.initializeApp(FIREBASE_CONFIG);
     const auth = fb.getAuth(app);
     fs = fb.getFirestore(app);
-    if (!auth.currentUser) await fb.signInAnonymously(auth);
+    // connexion gardée en mémoire seulement : n'écrase jamais celle de l'appli Paddock
+    // si le même téléphone a les deux ouverts
+    await fb.setPersistence(auth, fb.inMemoryPersistence);
+    await fb.signInAnonymously(auth);
     fb.onSnapshot(fb.doc(fs, 'live', code), (snap) => {
       if (!snap.exists()) { data = null; status.textContent = 'Code ' + code; render(); return; }
       try { data = JSON.parse(snap.data().json); } catch { data = null; }
