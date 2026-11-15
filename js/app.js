@@ -5,7 +5,7 @@ import { BleConnection, bluetoothSupported } from './cu/ble.js';
 import { SimulatorConnection } from './cu/simulator.js';
 import { PerformanceEngine, vscModifier } from './performance.js';
 import { ChihirosLight } from './devices/chihiros.js';
-import { checkAutoVsc } from './autovsc.js';
+import { checkAutoVsc, shouldEndVsc } from './autovsc.js';
 import { GenericLight } from './devices/generic-light.js';
 import { syncLights, resetLightSync } from './devices/lightsync.js';
 import { Weather, SKY } from './weather.js';
@@ -876,6 +876,7 @@ export const app = {
     if (s.vscCountdown) return; // décompte déjà lancé
     if (s.flag !== 'vsc') {
       s.setFlag('vsc');
+      s.vscSince = performance.now(); // pour la fin de VSC automatique
       cu.urgent(); // les voitures sont bridées tout de suite (avant de relire les passages)
       perf.update();
       say('Virtual Safety Car ! Vitesse limitée', { priority: true });
@@ -1265,6 +1266,11 @@ async function init() {
     const stuck = !!s && (s.state === 'armed' || s.redResuming) && raceView.lightsStuck(s);
     if (stuck && !stuckSaid) say('Faux départ', { priority: true });
     stuckSaid = stuck;
+    // Fin de VSC automatique : VSC trop long sans drapeau rouge ni fin manuelle → 3, 2, 1, Go
+    if (shouldEndVsc(app)) {
+      app.log('Fin de VSC automatique');
+      app.toggleVsc();
+    }
     // VSC automatique : une voiture ne repasse plus (sortie de piste…)
     const hit = checkAutoVsc(app);
     if (hit) {

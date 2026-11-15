@@ -6,7 +6,7 @@
 // un drapeau rouge ou la fin de course. Le compte repart à chaque passage, à la sortie
 // du stand et à chaque reprise (fin de VSC, de drapeau rouge, départ).
 
-export const DEFAULT_AUTO = { lapOn: false, lapSec: 12, sectorOn: false, sectorSec: 7 };
+export const DEFAULT_AUTO = { lapOn: false, lapSec: 12, sectorOn: false, sectorSec: 7, endOn: false, endSec: 20 };
 
 export const autoCfg = (app) => ({ ...DEFAULT_AUTO, ...(app.vscCfg?.auto || {}) });
 
@@ -31,4 +31,16 @@ export function checkAutoVsc(app, now = performance.now()) {
     }
   }
   return null;
+}
+
+/**
+ * Fin de VSC automatique : un VSC (manuel ou automatique) qui dure plus de X secondes
+ * sans drapeau rouge ni fin manuelle se termine tout seul, par le décompte habituel.
+ */
+export function shouldEndVsc(app, now = performance.now()) {
+  const s = app.session;
+  const cfg = autoCfg(app);
+  if (!s || !cfg.endOn || s.state !== 'running') return false;
+  if (s.flag !== 'vsc' || s.vscCountdown || !s.vscSince) return false;
+  return (now - s.vscSince) / 1000 >= cfg.endSec;
 }
