@@ -9,6 +9,8 @@
 
 import * as P from './protocol.js';
 
+const SILENCE_MS = 3500; // sans aucune réponse du circuit pendant ce temps : reconnexion complète
+
 export class ControlUnit extends EventTarget {
   constructor() {
     super();
@@ -115,8 +117,36 @@ export class ControlUnit extends EventTarget {
     this.commands.push({ key, cmd, resolve: () => {} });
   }
 
+  /**
+   * Le circuit ne répond plus depuis SILENCE_MS (AppConnect figé, liaison encore ouverte) :
+   * reconnexion complète, en attendant de plus en plus entre deux essais (2 s → 10 s), comme OpenLap.
+   */
+  async _restart() {
+    const conn = this.conn;
+    this.reconnecting = true;
+    this.log(`Circuit muet depuis ${(SILENCE_MS / 1000).toFixed(1)} s : reconnexion`);
+    this.emit('connection', { state: 'error', message: 'Le circuit ne répond plus, reconnexion…' });
+    for (let i = 0; i < 6 && this.running && this.conn === conn; i++) {
+      try {
+        await conn.restart();
+        this.reconnecting = false;
+        this._lastOk = performance.now();
+        this.log('Reconnexion réussie');
+        this.emit('connection', { state: 'connected', name: conn.name, version: this.version });
+        return;
+      } catch (e) {
+        const wait = Math.min(10000, 2000 * 1.5 ** i);
+        this.log(`Reconnexion ${i + 1}/6 échouée : ${e.message} (nouvel essai dans ${(wait / 1000).toFixed(1)} s)`);
+        await new Promise((r) => setTimeout(r, wait));
+      }
+    }
+    this.reconnecting = false;
+    this._lastOk = performance.now();
+  }
+
   async _loop() {
     let lastWasCmd = false;
+    this._lastOk = performance.now();
     while (this.running && this.conn) {
       // une interrogation après chaque commande : les passages (tours) continuent
       // d'arriver même quand beaucoup de réglages sont envoyés (VSC renvoyé 2×/s…)
@@ -128,6 +158,7 @@ export class ControlUnit extends EventTarget {
       try {
         const raw = await this.conn.request(cmd);
         this.stats.requests++;
+        this._lastOk = performance.now();
         if (item) {
           item.resolve(raw);
         } else {
@@ -142,6 +173,11 @@ export class ControlUnit extends EventTarget {
         }
         item?.resolve(null);
         if (!this.running) break;
+        // muet trop longtemps alors que la liaison est encore ouverte : reconnexion complète
+        if (this.conn?.restart && !this._reconnecting && performance.now() - this._lastOk > SILENCE_MS) {
+          await this._restart();
+          continue;
+        }
         await new Promise((r) => setTimeout(r, 50));
       }
     }

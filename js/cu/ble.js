@@ -3,9 +3,10 @@
 // et les réponses arrivent par notification, terminées par '$'.
 //
 // Selon la version de l'AppConnect / de la Control Unit et le téléphone, l'échange
-// ne se passe pas toujours pareil ; la connexion s'adapte toute seule :
-//  - écriture : avec accusé de réception si possible ; si elle reste bloquée ou échoue,
-//    on passe en écriture « sans réponse » (et inversement) ;
+// ne se passe pas toujours pareil ; la connexion s'adapte toute seule (alignée sur OpenLap) :
+//  - écriture : « sans réponse » d'abord (comme OpenLap), sans attendre la fin de l'envoi :
+//    c'est l'arrivée de la réponse qui compte. Si l'AppConnect décroche dans ce mode, on
+//    revient à l'écriture avec accusé de réception (la façon de la v1.27) ;
 //  - réponse : par notification ; une réponse coupée en plusieurs morceaux est recollée
 //    jusqu'au '$' ; si aucune notification n'arrive jamais, on lit la réponse directement.
 
@@ -77,6 +78,11 @@ export class BleConnection {
       });
     this.device.addEventListener('gattserverdisconnected', () => {
       if (this._resetting) return; // coupure volontaire (remise à zéro de la liaison)
+      if (this.writeMode === 'noresponse' && this.out?.properties.write) {
+        // secours : l'AppConnect a décroché en écriture sans réponse → façon de la v1.27
+        this.writeMode = 'response';
+        this.log('AppConnect décroché : retour à l\'écriture avec accusé (comme la v1.27)');
+      }
       this._reject(new Error('Déconnecté'));
       this.ondisconnect?.();
     });
@@ -106,7 +112,7 @@ export class BleConnection {
     this.out = await service.getCharacteristic(OUTPUT_UUID);
     this.notify = await service.getCharacteristic(NOTIFY_UUID);
     const p = this.out.properties;
-    if (!this.writeMode) this.writeMode = p.write ? 'response' : 'noresponse';
+    if (!this.writeMode) this.writeMode = p.writeWithoutResponse ? 'noresponse' : 'response';
     try {
       await this.notify.startNotifications();
       this.notify.removeEventListener('characteristicvaluechanged', this._onNotify);
@@ -122,6 +128,12 @@ export class BleConnection {
   async reconnect() {
     if (!this.device) throw new Error('Aucun appareil');
     await this._connectGatt();
+  }
+
+  /** Reconnexion complète (circuit muet depuis plusieurs secondes, comme OpenLap). */
+  async restart() {
+    this._reject(new Error('Reconnexion'));
+    await this._resetGatt();
   }
 
   /** Coupe et rétablit la liaison (une écriture restée bloquée bloque toutes les suivantes). */
@@ -201,19 +213,29 @@ export class BleConnection {
     });
     result.catch(() => {}); // évite une alerte « promesse rejetée » si l'écriture échoue avant
     const data = enc.encode(cmd);
+    const mine = this._pending;
     try {
       if (!this.device?.gatt?.connected) throw new Error('Bluetooth non connecté');
-      await withTimeout(this._write(data), WRITE_TIMEOUT, 'Écriture bloquée');
-      this._writeFails = 0;
-      if (this.readMode && this._pending) {
-        // pas de notification : on lit la réponse
-        await sleep(15);
-        const v = await this.notify.readValue();
-        this._buf = dec.decode(v);
-        this._finish();
+      const sent = withTimeout(this._write(data), WRITE_TIMEOUT, 'Écriture bloquée');
+      if (this.readMode) {
+        // pas de notification : on attend la fin de l'envoi puis on lit la réponse
+        await sent;
+        this._writeFails = 0;
+        if (this._pending === mine) {
+          await sleep(15);
+          const v = await this.notify.readValue();
+          this._buf = dec.decode(v);
+          this._finish();
+        }
+      } else {
+        // comme OpenLap : on n'attend pas la fin de l'envoi, c'est la réponse qui compte
+        sent.then(() => { this._writeFails = 0; }, (e) => {
+          if (this._pending === mine) this._reject(e);
+          this._writeProblem(e);
+        });
       }
     } catch (e) {
-      this._reject(e);
+      if (this._pending === mine) this._reject(e);
       await this._writeProblem(e);
     }
     return result;
@@ -221,6 +243,7 @@ export class BleConnection {
 
   /** Écriture ratée ou bloquée : on change de façon d'écrire, et on rétablit la liaison si besoin. */
   async _writeProblem(e) {
+    if (/non connecté|Déconnecté|Reconnexion/.test(e.message) || !this.device?.gatt?.connected) return; // Bluetooth coupé : rien à voir avec la façon d'écrire
     this._writeFails++;
     if (this._writeFails < 2 && !/bloquée/.test(e.message)) return;
     this._writeFails = 0;
