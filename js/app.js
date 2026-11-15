@@ -775,6 +775,9 @@ export const app = {
       this.sessionRecord.results = s.results();
       this.sessionRecord.ended = Date.now();
       this.sessionRecord.bestLap = s.overallBest?.time ?? null;
+      // séance allée à son terme (sinon : quittée / arrêtée avant la fin) — seules les séances
+      // terminées comptent pour les victoires et les poles ; les tours comptent toujours
+      this.sessionRecord.completed = !!s.completed;
     }
     await db.put('sessions', this.sessionRecord);
   },

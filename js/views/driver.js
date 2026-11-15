@@ -44,7 +44,8 @@ async function compute(d) {
   const lapSessions = new Set(laps.map((l) => l.sessionId));
   const mine = sessions.filter((s) => s.state === 'finished' &&
     (lapSessions.has(s.id) || (s.entries || []).some((e) => e.driverId === d.id)));
-  const ofType = (t) => mine.filter((s) => s.type === t);
+  // courses / qualifs : seulement celles allées à leur terme (une séance interrompue ne compte pas)
+  const ofType = (t) => mine.filter((s) => s.type === t && (t === 'practice' || s.completed !== false));
   const first = (s) => s.results?.[0]?.driverId === d.id;
 
   // Records par circuit (meilleur tour, hors drapeau jaune)

@@ -172,7 +172,7 @@ export class RaceSession extends EventTarget {
     // essais / qualif aux tours : fin quand tous les pilotes en piste ont fait leurs tours
     if (this.state === 'running' && this.lapLimited) {
       const onTrack = [...this.comps.values()].filter((c) => c.onTrack);
-      if (onTrack.length && onTrack.every((c) => c.finished)) this.stop();
+      if (onTrack.length && onTrack.every((c) => c.finished)) { this.completed = true; this.stop(); }
     }
     if (this.state === 'finishing') {
       const slowest = Math.max(10000, ...[...this.comps.values()].map((c) => (c.bestLap || 0) * 3));
@@ -183,6 +183,7 @@ export class RaceSession extends EventTarget {
 
   _startFinishing() {
     if (this.state !== 'running') return;
+    this.completed = true; // fin normale (tours ou temps écoulés) : compte pour victoires / poles
     this.finishingAt = performance.now();
     this.setState('finishing');
   }
