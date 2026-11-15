@@ -25,6 +25,18 @@ export function sceneFor(session) {
 }
 
 let last = null;
+let blinkTimer = null;
+
+/**
+ * Étape de clignotement : chaque feu de départ de la Control Unit, et chaque
+ * chiffre du décompte de fin de VSC (3, 2, 1) fait clignoter la rampe.
+ */
+function stepFor(app, k) {
+  const s = app.session;
+  if (k === 'lights') return app.cu?.status?.start ?? 0;
+  if (k === 'vsc' && s?.vscCountdown) return s.vscCountdown;
+  return null;
+}
 
 /**
  * À appeler régulièrement : envoie la couleur à la rampe quand la scène change.
@@ -35,10 +47,20 @@ export function syncLights(app, { force = false } = {}) {
   if (!L?.connected || !app.lightSync?.enabled) { last = null; return; }
   const k = sceneFor(app.session);
   if (!k) return;
-  if (k === last && !force) return;
-  last = k;
+  const step = stepFor(app, k);
+  const key = step === null ? k : `${k}:${step}`;
+  if (key === last && !force) return;
+  const blink = step !== null && last !== null && key !== last && !force;
+  last = key;
   const scene = LIGHT_SCENES.find((x) => x.k === k);
-  L.setColor(...scene.c);
+  clearTimeout(blinkTimer);
+  if (blink) {
+    // flash : éteint un court instant, puis la couleur revient
+    L.setColor(0, 0, 0);
+    blinkTimer = setTimeout(() => { if (last === key) L.setColor(...scene.c); }, 300);
+  } else {
+    L.setColor(...scene.c);
+  }
 }
 
 export function resetLightSync() { last = null; }
