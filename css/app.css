@@ -347,7 +347,6 @@ input[type=checkbox] { accent-color: var(--accent); width: 18px; height: 18px; }
 .menu-tile:active { transform: scale(.98); }
 .menu-tile .menu-ico { font-size: 1.8rem; line-height: 1; display: inline-flex; align-items: center; }
 .menu-tile .menu-name { font-size: 1.05rem; }
-.menu-tile.quick { border-color: var(--accent); background: rgba(225,6,0,.12); }
 .menu-card {
   display: grid; justify-items: center; gap: 6px; padding: 26px 18px; border-radius: 16px; cursor: pointer;
   background: var(--panel); border: 1px solid var(--line); transition: transform .12s, border-color .12s;
