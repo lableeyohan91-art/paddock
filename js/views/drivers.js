@@ -177,7 +177,7 @@ export function editDriver(d, onSaved) {
       <h3 style="margin:0 0 8px">Statistiques</h3>
       <div class="row" style="gap:8px;flex-wrap:wrap">
         <button class="btn small ghost" id="pClearLaps" title="Remet à zéro ses tours et son temps de roulage (garde les records SmartRace importés)">🧹 Effacer les tours roulés</button>
-        <button class="btn small ghost" id="pResetResults">🏁 Remettre à zéro courses / victoires et qualifs / poles (tous les pilotes)</button>
+        <button class="btn small ghost" id="pResetResults">🏁 Remettre à zéro ses courses / victoires et qualifs / poles</button>
       </div>
     </div>`}
     <div class="row" style="justify-content:flex-end;margin-top:16px">
@@ -231,11 +231,12 @@ export function editDriver(d, onSaved) {
   };
   const rr = $('#pResetResults', el);
   if (rr) rr.onclick = async () => {
-    const list = (await app.db.all('sessions')).filter((x) => x.type === 'race' || x.type === 'qualifying');
-    if (!list.length) { toast('Aucune course ni qualif enregistrée'); return; }
-    if (!(await confirmBox(`Effacer définitivement les ${list.length} courses et qualifs enregistrées ? Les compteurs courses / victoires et qualifs / poles de tous les pilotes repartent de zéro. Les tours, temps de roulage et records sont conservés.`))) return;
-    for (const x of list) await app.db.remove('sessions', x.id);
-    toast('Courses et qualifs remises à zéro');
+    if (!(await confirmBox(`Remettre à zéro les compteurs courses / victoires et qualifs / poles de ${d.name} ? Seulement pour ce pilote : les autres pilotes, ses tours, son temps de roulage et ses records ne changent pas.`))) return;
+    // seules les séances après cette date compteront pour ce pilote
+    const fresh = app.driver(d.id) || d;
+    await app.db.put('drivers', { ...fresh, resultsResetAt: Date.now() });
+    await app.loadData();
+    toast(`Compteurs de ${d.name} remis à zéro`);
     done();
   };
   setTimeout(() => $('#pName', el).focus(), 50);

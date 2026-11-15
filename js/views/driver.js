@@ -45,7 +45,8 @@ async function compute(d) {
   const mine = sessions.filter((s) => s.state === 'finished' &&
     (lapSessions.has(s.id) || (s.entries || []).some((e) => e.driverId === d.id)));
   // courses / qualifs : seulement celles allées à leur terme (une séance interrompue ne compte pas)
-  const ofType = (t) => mine.filter((s) => s.type === t && (t === 'practice' || s.completed !== false));
+  const ofType = (t) => mine.filter((s) => s.type === t && (t === 'practice' || s.completed !== false)
+    && (!d.resultsResetAt || (s.date || 0) > d.resultsResetAt)); // remise à zéro propre à ce pilote
   const first = (s) => s.results?.[0]?.driverId === d.id;
 
   // Records par circuit (meilleur tour, hors drapeau jaune)
