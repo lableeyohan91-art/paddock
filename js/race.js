@@ -107,6 +107,8 @@ export class RaceSession extends EventTarget {
 
   arm() {
     this._startChangedAt = performance.now();
+    this._prevStart = null;
+    this._relaunchAt = performance.now();
     this.falseStart = false;
     this.setState('armed');
   }
@@ -144,6 +146,8 @@ export class RaceSession extends EventTarget {
     if (this.flag !== 'red') return;
     this.redResuming = true;
     this._startChangedAt = performance.now();
+    this._prevStart = null;
+    this._relaunchAt = performance.now();
     this._sawRedLights = false;
     this._sawAllRedLights = false;
     this.emit('update');
@@ -189,7 +193,9 @@ export class RaceSession extends EventTarget {
 
     // Faux départ pendant les feux : la séquence repart en arrière (la CU a tout arrêté)
     const lightsPhase = this.state === 'armed' || (this.flag === 'red' && this.redResuming);
-    if (lightsPhase && prev != null && prev >= 2 && st.start !== 0 && st.start < prev) {
+    // (pas juste après un appui sur START de l'appli : la CU repasse alors par 1 normalement)
+    const justPressed = now - (this._relaunchAt || 0) < 2500;
+    if (lightsPhase && !justPressed && prev != null && prev >= 2 && st.start !== 0 && st.start < prev) {
       this._sawLights = this._sawAllLights = this._sawRedLights = this._sawAllRedLights = false;
       this.falseStart = true;
       this.emit('falsestart');

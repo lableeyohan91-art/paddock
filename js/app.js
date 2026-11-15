@@ -807,6 +807,8 @@ export const app = {
     s.falseStart = false;
     s._sawLights = s._sawAllLights = s._sawRedLights = s._sawAllRedLights = false;
     s._startChangedAt = performance.now();
+    s._prevStart = null;      // la séquence repart de zéro : pas de faux « faux départ »
+    s._relaunchAt = performance.now();
     await cu.pressStart();
     setTimeout(() => { if (cu.status?.start === 1 && (s.state === 'armed' || s.redResuming)) cu.pressStart(); }, 1500);
     s.emit('update');
