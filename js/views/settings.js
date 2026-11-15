@@ -243,22 +243,48 @@ function bindDevTabs() {
 }
 
 /** Case commune aux deux onglets : les couleurs en course valent pour toutes les lampes. */
+let scenesOpen = false; // case « Couleurs en course » dépliée ?
+const toHex = (c) => '#' + c.map((v) => Math.round(v * 2.55).toString(16).padStart(2, '0')).join('');
+const fromHex = (h) => [1, 3, 5].map((i) => Math.round(parseInt(h.slice(i, i + 2), 16) / 2.55));
+
+/** Pastille cliquable : ouvre le sélecteur de couleur du téléphone pour cette situation. */
+const swatch = (slot) => `<label class="scene-pick" title="Changer la couleur"><input type="color" value="${toHex(paletteColor(app, slot))}" data-slot="${slot}"><i style="background:${cssOf(paletteColor(app, slot))}"></i></label>`;
+
 function scenesPanel() {
   return `
   <section class="panel" style="margin-top:14px">
-    <div class="row" style="justify-content:space-between">
-      <h2 style="margin:0">Couleurs en course</h2>
-      <label class="switch"><input type="checkbox" id="lSync" ${app.lightSync.enabled ? 'checked' : ''}><span></span> ${app.lightSync.enabled ? 'Activé' : 'Désactivé'}</label>
-    </div>
-    <p class="muted" style="font-size:.85rem;margin:8px 0 10px">Pendant une course, des essais libres ou une qualification, <b>toutes les lampes connectées</b> (rampe Chihiros et autres lampes) prennent la couleur de la situation :</p>
+  <details class="color-box" id="scenesBox" ${scenesOpen ? 'open' : ''}>
+    <summary>
+      <h2>Couleurs en course</h2>
+      <label class="switch" id="lSyncWrap"><input type="checkbox" id="lSync" ${app.lightSync.enabled ? 'checked' : ''}><span></span> ${app.lightSync.enabled ? 'Activé' : 'Désactivé'}</label>
+    </summary>
+    <p class="muted" style="font-size:.85rem;margin:8px 0 10px">Pendant une course, des essais libres ou une qualification, <b>toutes les lampes connectées</b> (rampe Chihiros et autres lampes) prennent la couleur de la situation. <b>Touche une pastille</b> pour choisir une autre couleur.</p>
     <div class="light-scenes">
-      ${LIGHT_SCENES.map((x) => `<div class="light-scene"><i style="background:${sceneCss(app, x)}"></i><span>${x.label}</span></div>`).join('')}
+      ${LIGHT_SCENES.map((x) => `<div class="light-scene">${x.alt ? x.alt.map(swatch).join('') : swatch(x.c)}<span>${x.label}</span></div>`).join('')}
     </div>
+  </details>
   </section>`;
 }
 function bindScenesPanel() {
+  const box = $('#scenesBox', root);
+  if (box) box.addEventListener('toggle', () => { scenesOpen = box.open; });
+  // l'interrupteur ne doit pas replier / déplier la case
+  const wrap = $('#lSyncWrap', root);
+  if (wrap) wrap.addEventListener('click', (e) => e.stopPropagation());
   const sync = $('#lSync', root);
   if (sync) sync.onchange = async (e) => { await app.saveLightSync({ enabled: e.target.checked }); renderDevices(); bindTabs(); };
+  root.querySelectorAll('[data-slot]').forEach((inp) => {
+    inp.addEventListener('input', () => {
+      inp.nextElementSibling.style.background = inp.value;
+      testColor(fromHex(inp.value)); // aperçu en direct sur les lampes
+    });
+    inp.addEventListener('change', async () => {
+      const c = fromHex(inp.value);
+      await app.saveLightSync({ palette: { ...(app.lightSync.palette || {}), ['s:' + inp.dataset.slot]: c } });
+      toast('Couleur enregistrée', 1200);
+      renderDevices(); bindTabs();
+    });
+  });
 }
 
 /** Onglet « Autres lampes » : rechercher n'importe quelle lampe Bluetooth reconnue. */
