@@ -248,6 +248,7 @@ export class ChihirosLight extends EventTarget {
       await this.setColor(0, 0, 0);
       await wait(450);
     }
+    await this.setColor(100, 100, 100); // on finit allumée
   }
 
   disconnect() {
