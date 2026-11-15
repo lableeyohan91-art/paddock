@@ -55,7 +55,7 @@ const HELP = {
 HELP.devices = `
     <p>Les appareils que Paddock peut piloter en plus du circuit.</p>
     <ul>
-      <li><b>Chihiros</b> : une rampe LED <b>Chihiros WRGB II</b> en Bluetooth. Pendant une séance, elle prend la couleur de la situation : vert en course, jaune au drapeau jaune, orange en VSC, rouge au drapeau rouge, blanc à l'arrivée (interrupteur « Couleurs en course »).</li>
+      <li><b>Chihiros</b> : une rampe LED <b>Chihiros WRGB II</b> en Bluetooth. Pendant une séance, elle prend la couleur de la situation : vert au départ, orange en VSC, rouge au drapeau rouge, blanc à l'arrivée (interrupteur « Couleurs en course »).</li>
       <li><b>Autres lampes</b> : rubans LED, ampoules et lampes Bluetooth des marques courantes (ELK-BLEDOM / LEDnet, Triones / HappyLighting, Govee). Bouton « Rechercher une lampe » : Paddock reconnaît sa marque et lui applique les mêmes couleurs en course que la rampe.</li>
       <li>La rampe se connecte depuis ce téléphone en Bluetooth, en même temps que la Control Unit. Ferme l'appli « My Chihiros » avant, sinon elle garde la rampe pour elle.</li>
     </ul>`;
@@ -155,7 +155,7 @@ function renderVsc() {
 
 /** Réglages → Appareils connectés : onglets « Chihiros » (rampe) et « Autres lampes ». */
 let devTab = 'lights';
-let selColor = 'yellow'; // couleur de la palette en cours de réglage
+let selColor = 'white'; // couleur de la palette en cours de réglage
 
 /** Envoie une couleur d'essai à toutes les lampes connectées. */
 function testColor(c) {
@@ -173,7 +173,7 @@ function colorsPanel() {
   return `
   <section class="panel" style="margin-top:14px">
     <h2>Couleurs</h2>
-    <p class="muted" style="font-size:.85rem;margin:-4px 0 10px">Touche une couleur pour l'essayer, puis règle-la avec les curseurs : elle est enregistrée et servira en course (ex. le jaune du drapeau jaune).</p>
+    <p class="muted" style="font-size:.85rem;margin:-4px 0 10px">Touche une couleur pour l'essayer, puis règle-la avec les curseurs : elle est enregistrée et servira en course (ex. l'orange du VSC).</p>
     <div class="light-presets">
       ${Object.keys(DEFAULT_PALETTE).map((k) => `<button class="light-chip ${selColor === k ? 'sel' : ''}" data-preset="${k}"><i style="background:${cssOf(paletteColor(app, k))}"></i>${PALETTE_NAMES[k]}</button>`).join('')}
       <button class="light-chip ${selColor === 'off' ? 'sel' : ''}" data-preset="off"><i style="background:#222"></i>Éteint</button>

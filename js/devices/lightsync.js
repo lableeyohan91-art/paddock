@@ -5,14 +5,13 @@
 // (r, g, b de 0 à 100). Les séquences, elles, ne changent pas.
 export const DEFAULT_PALETTE = {
   red: [100, 0, 0],
-  yellow: [100, 60, 0],
   orange: [100, 30, 0],
   green: [0, 100, 0],
   blue: [0, 0, 100],
   white: [100, 100, 100],
 };
 export const PALETTE_NAMES = {
-  red: 'Rouge', yellow: 'Jaune', orange: 'Orange (VSC)', green: 'Vert', blue: 'Bleu', white: 'Blanc',
+  red: 'Rouge', orange: 'Orange (VSC)', green: 'Vert', blue: 'Bleu', white: 'Blanc',
 };
 
 /** Couleur d'un nom de la palette, en tenant compte des réglages de l'utilisateur. */
@@ -26,7 +25,6 @@ export const LIGHT_SCENES = [
   { k: 'lights', label: 'Feux de départ', c: 'red' },
   { k: 'green', label: 'Départ / reprise (2 secondes)', c: 'green' },
   { k: 'racing', label: 'Course en cours (rien de spécial)', c: 'white' },
-  { k: 'yellow', label: 'Drapeau jaune', c: 'yellow' },
   { k: 'vsc', label: 'VSC', c: 'orange' },
   { k: 'red', label: 'Drapeau rouge', c: 'red' },
   { k: 'twoLaps', label: 'Deux tours restants : 2 clignotements rapides blanc / bleu', alt: ['white', 'blue'] },
@@ -58,8 +56,7 @@ export function sceneFor(session) {
   }
   if (s.flag === 'red') return s.redResuming ? 'lights' : 'red'; // reprise : suit les feux de la CU comme au départ
   if (s.flag === 'vsc') return 'vsc';
-  if (s.flag === 'yellow') return 'yellow';
-  // départ ou reprise (fin de drapeau jaune, de VSC, de drapeau rouge) : vert 2 secondes, puis blanc
+  // départ ou reprise (fin de VSC, de drapeau rouge) : vert 2 secondes, puis blanc
   if (greenFor !== s || greenSince === null) { greenFor = s; greenSince = performance.now(); }
   return performance.now() - greenSince < GREEN_MS ? 'green' : 'racing';
 }

@@ -91,7 +91,6 @@ function flagInfo() {
   if (d.state === 'finished') return ['chequered', '🏁 Terminé'];
   if (d.flag === 'red') return ['red', d.redResuming ? '🚦 Reprise : attention aux feux' : '🚩 Drapeau rouge : tout le monde s\'arrête'];
   if (d.flag === 'vsc') return ['vsc', d.vscCountdown ? `Fin du VSC dans ${d.vscCountdown}` : 'VSC · vitesse limitée'];
-  if (d.flag === 'yellow') return ['yellow', '🟡 Drapeau jaune'];
   if (d.state === 'finishing') return ['chequered', '🏁 Dernier tour'];
   return ['green', 'Course en cours'];
 }

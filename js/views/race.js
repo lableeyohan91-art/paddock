@@ -174,14 +174,11 @@ function renderControls() {
     if (!connected) html += `<button class="btn big" id="bConn">Connecter le circuit</button>`;
   }
   if (['running', 'finishing'].includes(s.state)) {
-    // raccourcis en icônes carrées : drapeau jaune/vert, drapeau rouge, terminer, garage
+    // raccourcis en icônes carrées : VSC, drapeau rouge, terminer, garage
     if (s.flag === 'red') {
       html += `<button class="btn go big" id="bRed" ${s.redResuming ? 'disabled' : ''}>${s.redResuming ? '🚦 Reprise en cours…' : '🟢 Reprendre la course'}</button>`;
     }
     html += `<div class="ico-row">`;
-    html += s.flag === 'yellow'
-      ? `<button class="btn go icon-sq" id="bYellow" title="Drapeau vert : la course reprend" aria-label="Drapeau vert">⚑</button>`
-      : `<button class="btn yellow icon-sq" id="bYellow" title="Drapeau jaune : ralentissement" aria-label="Drapeau jaune" ${s.flag === 'red' ? 'disabled' : ''}>⚑</button>`;
     html += s.flag === 'vsc' && s.vscCountdown
       ? `<button class="btn icon-sq vsc-btn vsc-count" id="bVsc" disabled aria-label="Fin du VSC dans ${s.vscCountdown}">${s.vscCountdown}</button>`
       : s.flag === 'vsc'
@@ -204,7 +201,6 @@ function renderControls() {
   const on = (id, fn) => { const b = $('#' + id, el); if (b) b.onclick = fn; };
   on('bStart', () => app.startSession());
   on('bConn', () => app.openConnectDialog());
-  on('bYellow', () => { app.toggleYellow(); renderControls(); });
   on('bVsc', () => { app.toggleVsc(); renderControls(); });
   on('bRed', async () => { await app.toggleRed(); renderControls(); });
   on('bStop', async () => { if (await confirmBox('Terminer la session maintenant ?')) s.stop(); });
@@ -331,7 +327,7 @@ export function tick() {
   // Drapeau
   const fb = $('#flagbar', root);
   fb.className = 'flagbar ' + (s.state === 'finishing' || s.state === 'finished' ? 'chequered'
-    : s.flag === 'red' ? 'red' : s.flag === 'yellow' ? 'yellow' : s.flag === 'vsc' ? 'vsc' : s.state === 'running' ? '' : 'idle');
+    : s.flag === 'red' ? 'red' : s.flag === 'vsc' ? 'vsc' : s.state === 'running' ? '' : 'idle');
 
   renderLights();
   renderBoard();

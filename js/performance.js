@@ -1,6 +1,6 @@
 // Moteur de performance : calcule en continu la vitesse et le freinage de
 // chaque voiture à partir de son réglage de base et d'une liste d'effets
-// (météo, drapeau jaune, et plus tard pneus, carburant, dégâts...).
+// (météo, VSC, panne sèche, et plus tard pneus, dégâts...).
 //
 //   valeur envoyée à la CU = arrondi(base × produit des facteurs), bornée 0..15
 //
@@ -111,16 +111,6 @@ export class PerformanceEngine extends EventTarget {
 
 const clamp = (v) => Math.max(0, Math.min(15, v));
 
-/** Drapeau jaune : toutes les voitures ralenties. */
-export function yellowFlagModifier(getFlag, factor = 0.55) {
-  return {
-    id: 'flag',
-    label: 'Drapeau jaune',
-    compute() {
-      return getFlag() === 'yellow' ? { speed: factor, brake: 1, note: 'Drapeau jaune' } : null;
-    },
-  };
-}
 
 /** Vitesse imposée sous VSC (0..15) pour un pourcentage de la vitesse max du circuit. */
 export const vscSpeed = (pct) => Math.max(0, Math.min(15, Math.round((15 * pct) / 100)));

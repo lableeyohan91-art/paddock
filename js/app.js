@@ -3,7 +3,7 @@
 import { ControlUnit } from './cu/controlunit.js';
 import { BleConnection, bluetoothSupported } from './cu/ble.js';
 import { SimulatorConnection } from './cu/simulator.js';
-import { PerformanceEngine, yellowFlagModifier, vscModifier } from './performance.js';
+import { PerformanceEngine, vscModifier } from './performance.js';
 import { ChihirosLight } from './devices/chihiros.js';
 import { GenericLight } from './devices/generic-light.js';
 import { syncLights, resetLightSync, flashTwoLaps } from './devices/lightsync.js';
@@ -637,7 +637,6 @@ export const app = {
     perf.removeModifier('weather');
     perf.removeModifier('flag');
     if (!s.quick) perf.addModifier(weather.modifier()); // pas de météo en course rapide
-    perf.addModifier(yellowFlagModifier(() => this.session?.flag));
     perf.removeModifier('vsc');
     perf.addModifier(vscModifier(() => this.session?.flag, () => this.vscCfg.speedPct, (a) => perf.bases.get(a)?.speed, (a) => this.isOutOfFuel(a)));
     perf.removeModifier('fuel');
@@ -816,7 +815,7 @@ export const app = {
     if (s.flag !== 'red') {
       this.cancelVscCountdown();
       if (s.flag === 'vsc') this.vscResendUntil = performance.now() + 5000;
-      if (s.flag === 'yellow' || s.flag === 'vsc') { s.setFlag('green'); perf.update(); }
+      if (s.flag === 'vsc') { s.setFlag('green'); perf.update(); }
       s.redFlag();
       await cu.pressStart();
       say('Drapeau rouge ! Tout le monde s\'arrête', { priority: true });
@@ -876,13 +875,6 @@ export const app = {
     s.vscCountdown = null;
   },
 
-  toggleYellow() {
-    const s = this.session;
-    if (!s || !['running', 'finishing'].includes(s.state)) return;
-    s.setFlag(s.flag === 'yellow' ? 'green' : 'yellow');
-    perf.update();
-    say(s.flag === 'yellow' ? 'Drapeau jaune ! Ralentissez' : 'Drapeau vert, la course reprend', { priority: true });
-  },
 };
 
 // ---------- Indicateur de connexion ----------
