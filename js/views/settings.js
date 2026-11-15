@@ -164,12 +164,27 @@ const PRESETS = [
 
 function renderDevices() {
   const L = app.lights;
+  const enableSwitch = (on) => `<label class="switch"><input type="checkbox" id="lEnable" ${on ? 'checked' : ''}><span></span> ${on ? 'Activée' : 'Désactivée'}</label>`;
+  const bindEnable = () => {
+    $('#lEnable', root).onchange = async (e) => { await app.saveLightSync({ chihiros: e.target.checked }); renderDevices(); bindTabs(); };
+  };
+  // rampe non activée (cas de tous ceux qui n'en ont pas) : juste l'interrupteur
+  if (!app.lightSync.chihiros) {
+    root.innerHTML = sectionHead() + `
+    <div class="subtabs small"><button class="on" data-devtab="lights">💡 Éclairage</button></div>
+    <section class="panel">
+      <div class="row" style="justify-content:space-between"><h2 style="margin:0">Rampe LED Chihiros</h2>${enableSwitch(false)}</div>
+      <p class="muted" style="margin:10px 0 0">Tu as une rampe LED Chihiros (WRGB II) ? Active-la : Paddock s'y connectera à chaque lancement et elle prendra la couleur des drapeaux en course.</p>
+    </section>`;
+    bindEnable();
+    return;
+  }
   const st = L.status;
   const c = L.color || { r: 100, g: 100, b: 100 };
   root.innerHTML = sectionHead() + `
   <div class="subtabs small"><button class="on" data-devtab="lights">💡 Éclairage</button></div>
   <section class="panel">
-    <h2>Rampe LED Chihiros</h2>
+    <div class="row" style="justify-content:space-between;margin-bottom:10px"><h2 style="margin:0">Rampe LED Chihiros</h2>${enableSwitch(true)}</div>
     ${!L.supported ? '<p class="warn-note">Bluetooth indisponible dans ce navigateur : utilise Chrome sur le téléphone ou le PC.</p>' : ''}
     <p id="lightState" class="light-state ${st}">${
       st === 'on' ? `✅ Connectée : <b>${esc(L.name)}</b>`
@@ -226,6 +241,7 @@ function renderDevices() {
   if (re) re.onclick = () => act(() => L.reconnect());
   const off = $('#lOff', root);
   if (off) off.onclick = () => act(() => L.disconnect());
+  bindEnable();
   $('#lSync', root).onchange = async (e) => { await app.saveLightSync({ enabled: e.target.checked }); renderDevices(); bindTabs(); };
   root.querySelectorAll('[data-preset]').forEach((b) => (b.onclick = () => {
     const p = PRESETS.find((x) => x.k === b.dataset.preset);

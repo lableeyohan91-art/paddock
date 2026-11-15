@@ -240,6 +240,16 @@ export class ChihirosLight extends EventTarget {
 
   off() { return this.setColor(0, 0, 0); }
 
+  /** Signal de connexion : la rampe clignote 3 fois (allumée / éteinte). */
+  async hello() {
+    for (let i = 0; i < 3; i++) {
+      await this.setColor(100, 100, 100);
+      await wait(450);
+      await this.setColor(0, 0, 0);
+      await wait(450);
+    }
+  }
+
   disconnect() {
     this._manualOff = true; // déconnexion voulue : pas de reconnexion automatique
     clearTimeout(this._retry);

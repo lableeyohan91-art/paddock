@@ -44,7 +44,8 @@ function stepFor(app, k) {
  */
 export function syncLights(app, { force = false } = {}) {
   const L = app.lights;
-  if (!L?.connected || !app.lightSync?.enabled) { last = null; return; }
+  if (!L?.connected || !app.lightSync?.enabled || !app.lightSync?.chihiros) { last = null; return; }
+  if (app.lightHello) return; // la rampe fait son signal de connexion
   const k = sceneFor(app.session);
   if (!k) return;
   const step = stepFor(app, k);

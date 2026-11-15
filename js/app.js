@@ -193,10 +193,15 @@ export const app = {
 
   fuelCfg: defaultFuelConfig(),
   lights: new ChihirosLight(), // rampe LED Chihiros (Réglages → Appareils connectés → Éclairage)
-  lightSync: { enabled: true }, // la rampe suit les drapeaux en séance
+  lightSync: { enabled: true, chihiros: false }, // chihiros : rampe activée (seulement chez qui en a une) ; enabled : elle suit les drapeaux
 
   async saveLightSync(values) {
+    const wasOn = this.lightSync.chihiros;
     this.lightSync = { ...this.lightSync, ...values };
+    if ('chihiros' in values && values.chihiros !== wasOn) {
+      if (values.chihiros) autoConnectLights();
+      else { this.lights.disconnect(); $('#lightBar').classList.add('hidden'); }
+    }
     await db.setSetting('lightSync', this.lightSync);
     resetLightSync();
     syncLights(this, { force: true });
@@ -937,7 +942,7 @@ function updateLiveBar() {
 // ---------- Rampe LED : connexion automatique au lancement ----------
 // La rampe déjà choisie une fois se reconnecte seule. Si le navigateur ne le
 // permet pas, un bandeau propose de la reconnecter d'un seul appui.
-async function autoConnectLights() {
+export async function autoConnectLights() {
   const L = app.lights;
   let r = 'none';
   try { r = await L.autoConnect(); } catch { r = L.savedName ? 'unsupported' : 'none'; }
@@ -1045,10 +1050,21 @@ async function init() {
   app.vscCfg = { ...DEFAULT_VSC, ...(await db.getSetting('vsc', {})) };
   app.lightSync = { enabled: true, ...(await db.getSetting('lightSync', {})) };
   // rampe qui (re)vient : elle reprend tout de suite la couleur de la séance
-  app.lights.addEventListener('change', () => {
-    if (app.lights.connected) { resetLightSync(); syncLights(app, { force: true }); $('#lightBar').classList.add('hidden'); }
+  let lightWasOn = false;
+  app.lights.addEventListener('change', async () => {
+    const on = app.lights.connected;
+    if (on && !lightWasOn) {
+      // vient de se connecter : 3 clignotements pour le signaler, puis la couleur de la séance
+      lightWasOn = true;
+      $('#lightBar').classList.add('hidden');
+      app.lightHello = true;
+      try { await app.lights.hello(); } catch { /* ignore */ }
+      app.lightHello = false;
+      resetLightSync();
+      syncLights(app, { force: true });
+    } else if (!on) lightWasOn = false;
   });
-  autoConnectLights();
+  if (app.lightSync.chihiros) autoConnectLights(); // rampe activée dans Réglages → Éclairage
   // Une seule fois : on installe le réglage équilibré (validé par simulation 50 et 100 tours)
   // et on l'enregistre comme setup nommé.
   if (!(await db.getSetting('fuelBalancedApplied', false))) {
