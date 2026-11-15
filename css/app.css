@@ -786,6 +786,8 @@ h1 .vsc-ico { width: 40px; height: 40px; font-size: .7rem; }
 .calc-l { display: flex; align-items: baseline; gap: 8px; white-space: nowrap; min-width: 0; }
 .calc-l em { font-style: normal; font-size: .78rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; margin-left: auto; }
 .table-wrap { overflow-x: auto; }
+.calc-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; max-width: 520px; }
+.calc-actions .btn { white-space: normal; line-height: 1.2; font-size: .9rem; padding-left: 8px; padding-right: 8px; }
 .dev-banner { background: var(--accent); color: #fff; font-weight: 900; font-size: 1.15rem; text-align: center; text-transform: uppercase; letter-spacing: .04em; padding: 14px 12px; border-radius: 12px; margin-bottom: 14px; }
 .sheet-track { gap: 10px; margin: 12px 0 4px; font-weight: 700; }
 .sheet-track select { flex: 1; max-width: 320px; }

@@ -337,9 +337,9 @@ function calcResultHtml() {
           <td class="num ${x.gap < -0.05 ? 'good' : x.gap > 0.05 ? 'bad' : ''}">${x.name === 'Nominale' ? '—' : (x.gap >= 0 ? '+' : '−') + sec(Math.abs(x.gap))}</td></tr>`).join('')}</tbody>
       </table></div>
       <p class="muted" style="font-size:.8rem;margin:6px 0 10px">Pilote régulier, sans sortie de piste ni VSC : à vérifier sur la piste. Les fourchettes non gardées seront désactivées.</p>
-      <div class="row" style="gap:8px;flex-wrap:wrap">
+      <div class="calc-actions">
         <button class="btn primary" id="calcApply">✅ Appliquer ces réglages</button>
-        ${r.applied ? '<button class="btn" id="calcSave">💾 Sauvegarder ce setup</button>' : ''}
+        <button class="btn" id="calcSave">💾 Sauvegarder ce setup</button>
       </div>
     </div>`;
 }
@@ -399,6 +399,7 @@ function bindApply() {
   };
   const sv = $('#calcSave', el);
   if (sv) sv.onclick = async () => {
+    if (!calcResult?.applied) { toast("⚠️ Veuillez d'abord appliquer les réglages", 2500); return; }
     const v = calcInputs();
     const name = await promptBox('Nom du setup', `${v.laps} tours · ${v.stops} arrêt${v.stops > 1 ? 's' : ''}`, 'Ex. Course 50 tours, Soirée entre amis…');
     if (!name) return;
