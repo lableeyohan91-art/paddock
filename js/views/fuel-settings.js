@@ -240,16 +240,21 @@ function rows() {
 /** Temps médian d'un pilote : sa case du profil, sinon calculé sur ses tours de course. */
 function driverMedian(d) {
   if (d.raceMedian > 0) return { sec: d.raceMedian, src: 'profil' };
-  const r = raceMedianOf(lapsCache, d.id, app.setup?.trackId);
+  const r = raceMedianOf(lapsCache, d.id, calcTrack());
   return r ? { sec: r.sec, src: `${r.laps} tours` } : null;
 }
 
 /** Valeurs automatiques : record du circuit, temps médian des pilotes cochés. */
+/** Circuit du calcul : celui choisi ici, sinon celui de la préparation de course. */
+function calcTrack() {
+  return app.track(calc.trackId) ? calc.trackId : app.setup?.trackId;
+}
+
 function calcAuto() {
   const present = calc.drivers || (app.setup?.slots || []).filter((s) => s.active && s.driverId).map((s) => s.driverId);
   const meds = app.data.drivers.filter((d) => present.includes(d.id)).map((d) => driverMedian(d)?.sec);
   const m = median(meds);
-  return { present, record: trackRecord(lapsCache, app.setup?.trackId), median: m === null ? null : Math.round(m * 100) / 100 };
+  return { present, record: trackRecord(lapsCache, calcTrack()), median: m === null ? null : Math.round(m * 100) / 100 };
 }
 
 function calcInputs() {
@@ -274,6 +279,9 @@ function calcHtml() {
     <details class="calc-box" id="calcBox" ${calcOpen ? 'open' : ''}>
     <summary><h2 style="margin:0">🧮 Calcul automatique des valeurs</h2></summary>
     <p class="muted" style="margin:10px 0 12px;font-size:.88rem">Il propose les fourchettes, les consommations et la vitesse de remplissage les plus équilibrées pour ton circuit : au rythme nominal, le plein impose le nombre d'arrêts voulu ; attaquer coûte de l'essence, économiser ne paie pas. Il utilise le plus de fourchettes possible (jusqu'à 4 rapides et 4 lentes).</p>
+    <label class="row calc-track">📍 Circuit
+      <select id="calcTrack">${app.data.tracks.map((t) => `<option value="${esc(t.id)}" ${t.id === calcTrack() ? 'selected' : ''}>${esc(t.name)}</option>`).join('')}</select>
+    </label>
     <details class="calc-pick" id="calcPick" ${driversOpen ? 'open' : ''}>
       <summary>
         <span>Pilotes présents <b>(${a.present.filter((id) => app.driver(id)).length})</b></span>
@@ -283,6 +291,8 @@ function calcHtml() {
         ${app.data.drivers.map((d) => `<label class="calc-drv" style="--dc:${esc(d.color)}"><input type="checkbox" data-cd="${esc(d.id)}" ${a.present.includes(d.id) ? 'checked' : ''}><span>${esc(d.name)}</span></label>`).join('') || '<span class="muted">Aucun pilote</span>'}
       </div>
     </details>
+    <button class="btn small calc-fill" id="calcAuto">⚡ Remplissage automatique</button>
+    <p class="muted" style="font-size:.8rem;margin:4px 0 12px">Choisis le circuit et coche les pilotes présents, puis touche ce bouton : le record et le temps médian se remplissent tout seuls avec leurs tours enregistrés.</p>
     <div class="calc-grid">
       <label class="field"><span class="calc-l">Record du circuit (s)<em>cale les fourchettes rapides</em></span>
         <input type="number" step="0.01" min="1" max="60" data-ci="record" value="${fmtS(v.record)}" placeholder="${a.record ? 'auto : ' + fmtS(a.record) : 'à saisir'}">
@@ -300,7 +310,6 @@ function calcHtml() {
     </div>
     <div class="row" style="gap:8px;margin-top:12px">
       <button class="btn primary" id="calcGo">🧮 Calculer</button>
-      <button class="btn small ghost" id="calcAuto" title="Effacer tes saisies du record et du temps médian">↺ Valeurs automatiques</button>
     </div>
     <div id="calcRes">${calcResultHtml()}</div>
     </details>
@@ -350,7 +359,17 @@ function bindCalc() {
     await saveCalc();
     draw();
   }));
-  $('#calcAuto', el).onclick = async () => { calc.record = null; calc.median = null; await saveCalc(); draw(); };
+  $('#calcTrack', el).onchange = async (e) => { calc.trackId = e.target.value; await saveCalc(); draw(); };
+  $('#calcAuto', el).onclick = async () => {
+    // reprend les valeurs calculées sur les tours enregistrés (circuit + pilotes cochés)
+    calc.record = null;
+    calc.median = null;
+    await saveCalc();
+    draw();
+    const a = calcAuto();
+    if (!a.record && !a.median) toast('Aucun tour enregistré pour ce circuit et ces pilotes', 2500);
+    else toast(`⚡ Rempli : ${a.record ? 'record ' + fmtS(a.record) + ' s' : 'pas de record'} · ${a.median ? 'temps médian ' + fmtS(a.median) + ' s' : 'pas de temps médian'}`, 2500);
+  };
   $('#calcGo', el).onclick = () => {
     $('#calcRes', el).innerHTML = '<p class="muted" style="margin-top:12px">Calcul en cours…</p>';
     setTimeout(() => { // laisse l'écran afficher « Calcul en cours » avant de calculer
