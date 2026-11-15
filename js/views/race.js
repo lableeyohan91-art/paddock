@@ -158,7 +158,7 @@ async function renderLive() {
 }
 
 /** Séquence des feux bloquée (rien ne bouge depuis 6 s) ou faux départ : on propose de relancer. */
-function lightsStuck(s) {
+export function lightsStuck(s) {
   return !!s.falseStart || performance.now() - (s._startChangedAt || performance.now()) > 6000;
 }
 

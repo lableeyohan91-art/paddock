@@ -679,7 +679,7 @@ export const app = {
     });
     // faux départ : la CU a coupé la séquence des feux
     session.addEventListener('falsestart', () => {
-      say('Faux départ', { priority: true });
+      // la voix « Faux départ » est dite quand le bouton « Nouvelle relance » apparaît (écran de course)
       toast('⚠️ Faux départ : appuie sur « Nouvelle relance »', 5000);
       this.log('Faux départ détecté pendant les feux');
     });
@@ -1247,6 +1247,14 @@ async function init() {
   });
 
   // Horloge de l'interface
+  // « Faux départ » annoncé quand le bouton « Nouvelle relance » apparaît (feux bloqués / faux départ)
+  let stuckSaid = false;
+  setInterval(() => {
+    const s = app.session;
+    const stuck = !!s && (s.state === 'armed' || s.redResuming) && raceView.lightsStuck(s);
+    if (stuck && !stuckSaid) say('Faux départ', { priority: true });
+    stuckSaid = stuck;
+  }, 200);
   setInterval(() => {
     app.session?.tick();
     app.refuelTick(200);
