@@ -168,7 +168,7 @@ function render() {
           ${tankLocked() ? '' : '<p class="muted" style="font-size:.8rem;margin:4px 0 0">Même réservoir pour toutes les voitures de la course.</p>'}
         </div>
       </div>` : '<p class="muted" style="margin:8px 0 0">Pas de consommation : les voitures roulent sans jamais s\'arrêter.</p>'}
-      ${prefs.fuelOn && tankLocked() ? '' : `<p class="warn-note">${PLACE_CARS_MSG}</p>`}
+      ${prefs.fuelOn && !tankLocked() ? `<p class="warn-note">${PLACE_CARS_MSG}</p>` : ''}
     </section>
 
     ${isRace() ? `
