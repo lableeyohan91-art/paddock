@@ -6,7 +6,7 @@ import { SimulatorConnection } from './cu/simulator.js';
 import { PerformanceEngine, vscModifier } from './performance.js';
 import { ChihirosLight } from './devices/chihiros.js';
 import { GenericLight } from './devices/generic-light.js';
-import { syncLights, resetLightSync, flashTwoLaps } from './devices/lightsync.js';
+import { syncLights, resetLightSync } from './devices/lightsync.js';
 import { Weather, SKY } from './weather.js';
 import { RaceSession, TYPES, fmtTime, fmtClock } from './race.js';
 import * as db from './db.js';
@@ -771,10 +771,9 @@ export const app = {
     if (s.cfg.type === 'race' && s.cfg.mode !== 'time' && comp.position === 1) {
       const left = s.cfg.laps - comp.laps;
       if (left === 2 && !s._twoLapsDone) {
-        // à deux tours de l'arrivée : annonce + 2 clignotements rapides blanc / bleu
+        // à deux tours de l'arrivée : annonce vocale
         s._twoLapsDone = true;
         say('Deux tours restants', { priority: true });
-        flashTwoLaps(this);
       }
       if (left === 1) say('Dernier tour !');
     }

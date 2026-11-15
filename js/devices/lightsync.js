@@ -20,8 +20,6 @@ export const COLOR_SLOTS = [
   { k: 'racing', label: 'Course en cours', base: 'white' },
   { k: 'vsc', label: 'VSC', base: 'orange' },
   { k: 'red', label: 'Drapeau rouge', base: 'red' },
-  { k: 'twoLapsA', label: 'Deux tours restants (1re couleur)', base: 'white' },
-  { k: 'twoLapsB', label: 'Deux tours restants (2e couleur)', base: 'blue' },
   { k: 'finish', label: 'Arrivée', base: 'blue' },
   { k: 'end', label: 'Fin de séance', base: 'white' },
 ];
@@ -48,7 +46,6 @@ export const LIGHT_SCENES = [
   { k: 'racing', label: 'Course en cours (rien de spécial)', c: 'racing' },
   { k: 'vsc', label: 'VSC', c: 'vsc' },
   { k: 'red', label: 'Drapeau rouge', c: 'red' },
-  { k: 'twoLaps', label: 'Deux tours restants : 2 clignotements rapides blanc / bleu', alt: ['twoLapsA', 'twoLapsB'] },
   { k: 'finish', label: 'Arrivée : bleu fixe 5 s', c: 'finish' },
   { k: 'end', label: 'Ensuite (fin de séance)', c: 'end' },
 ];
@@ -107,34 +104,7 @@ function stepFor(app, k) {
  * À appeler régulièrement : envoie la couleur à la rampe quand la scène change.
  * force : renvoie même si rien n'a changé (rampe qui vient de se connecter…).
  */
-let flashing = false; // un clignotement ponctuel est en cours (deux tours restants…)
-
-/**
- * Clignotement ponctuel par-dessus la scène en cours, puis retour à la scène.
- * Deux tours restants : blanc / bleu, deux fois, rapidement.
- */
-export async function flashTwoLaps(app) {
-  const outs = app.lightOutputs ? app.lightOutputs() : [];
-  if (!outs.length || !app.lightSync?.enabled || flashing) return;
-  flashing = true;
-  clearTimeout(blinkTimer);
-  const [a, b] = LIGHT_SCENES.find((x) => x.k === 'twoLaps').alt.map((n) => paletteColor(app, n));
-  try {
-    for (let i = 0; i < 2; i++) {
-      for (const c of [a, b]) {
-        outs.forEach((o) => o.setColor(...c));
-        await new Promise((r) => setTimeout(r, 250));
-      }
-    }
-  } finally {
-    flashing = false;
-    last = null;
-    syncLights(app, { force: true }); // retour à la scène de la course
-  }
-}
-
 export function syncLights(app, { force = false } = {}) {
-  if (flashing) return;
   // toutes les lampes connectées (rampe Chihiros + autres lampes) reçoivent la même scène
   const outs = app.lightOutputs ? app.lightOutputs() : [];
   if (!outs.length || !app.lightSync?.enabled) { last = null; return; }
