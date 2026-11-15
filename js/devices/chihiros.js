@@ -13,6 +13,8 @@ const HM10_SERVICE = '0000ffe0-0000-1000-8000-00805f9b34fb';
 const HM10_CHAR = '0000ffe1-0000-1000-8000-00805f9b34fb';
 const CMD = 0x5a;
 const GAP_MS = 30; // pause entre deux trames (comme l'appli d'origine)
+const SAVED_ID = 'paddock.lightId';
+const SAVED_NAME = 'paddock.lightName';
 
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -64,18 +66,20 @@ export class ChihirosLight extends EventTarget {
   }
 
   /** Choisir et connecter la rampe (doit partir d'un appui de l'utilisateur). */
-  async connect({ showAll = false } = {}) {
+  async connect({ showAll = false, name = null } = {}) {
     if (!this.supported) throw new Error('Bluetooth non disponible dans ce navigateur (utilise Chrome).');
     this._set('connecting');
     try {
       const opts = showAll
         ? { acceptAllDevices: true, optionalServices: [UART_SERVICE, HM10_SERVICE] }
-        : { filters: [{ namePrefix: 'DY' }, { services: [UART_SERVICE] }], optionalServices: [UART_SERVICE, HM10_SERVICE] };
+        : name
+          ? { filters: [{ name }], optionalServices: [UART_SERVICE, HM10_SERVICE] } // seulement la rampe habituelle
+          : { filters: [{ namePrefix: 'DY' }, { services: [UART_SERVICE] }], optionalServices: [UART_SERVICE, HM10_SERVICE] };
       const device = await navigator.bluetooth.requestDevice(opts);
-      this.device = device;
-      this.name = device.name || 'Rampe Chihiros';
-      device.addEventListener('gattserverdisconnected', () => { this.rx = null; this._set('off'); });
+      this._manualOff = false;
+      this._adopt(device);
       await this._open();
+      this._remember();
       return this.name;
     } catch (e) {
       const msg = /cancel|chosen/i.test(e?.message || '') ? 'Aucun appareil choisi' : (e?.message || String(e));
@@ -84,9 +88,82 @@ export class ChihirosLight extends EventTarget {
     }
   }
 
+  /** Mémorise la rampe choisie, pour la reconnecter seule au prochain lancement. */
+  _remember() {
+    try {
+      localStorage.setItem(SAVED_ID, this.device.id);
+      localStorage.setItem(SAVED_NAME, this.device.name || '');
+    } catch { /* stockage indisponible */ }
+  }
+
+  /** Nom de la rampe utilisée la dernière fois (ou null). */
+  get savedName() {
+    try { return localStorage.getItem(SAVED_NAME) || null; } catch { return null; }
+  }
+
+  /**
+   * Au lancement : reconnecte la rampe déjà autorisée, sans rien demander.
+   * Renvoie 'on', 'waiting' (on attend qu'elle soit allumée / à portée),
+   * 'none' (aucune rampe enregistrée) ou 'unsupported' (navigateur sans cette fonction).
+   */
+  async autoConnect() {
+    if (!this.supported || !navigator.bluetooth.getDevices) return this.savedName ? 'unsupported' : 'none';
+    let id = null;
+    try { id = localStorage.getItem(SAVED_ID); } catch { /* ignore */ }
+    const devices = await navigator.bluetooth.getDevices();
+    const d = devices.find((x) => x.id === id) || devices.find((x) => /^DY/i.test(x.name || ''));
+    if (!d) return this.savedName ? 'unsupported' : 'none';
+    this._adopt(d);
+    try {
+      this._set('connecting');
+      await this._open();
+      return 'on';
+    } catch {
+      this._set('off');
+      this._waitAdvert();
+      return 'waiting';
+    }
+  }
+
+  /** Attend que la rampe émette (allumée, à portée) pour s'y connecter. */
+  _waitAdvert() {
+    const d = this.device;
+    if (!d?.watchAdvertisements || this._watching) { this._retryLater(); return; }
+    this._watching = true;
+    const ac = new AbortController();
+    d.addEventListener('advertisementreceived', async () => {
+      ac.abort();
+      this._watching = false;
+      try { this._set('connecting'); await this._open(); } catch { this._set('off'); this._retryLater(); }
+    }, { once: true });
+    d.watchAdvertisements({ signal: ac.signal }).catch(() => { this._watching = false; this._retryLater(); });
+  }
+
+  /** Nouvel essai de connexion dans 10 s (rampe coupée, hors de portée…). */
+  _retryLater() {
+    clearTimeout(this._retry);
+    if (this._manualOff || !this.device) return;
+    this._retry = setTimeout(async () => {
+      if (this.connected || this._manualOff) return;
+      try { this._set('connecting'); await this._open(); } catch { this._set('off'); this._retryLater(); }
+    }, 10000);
+  }
+
+  _adopt(device) {
+    if (this.device === device) return;
+    this.device = device;
+    this.name = device.name || 'Rampe Chihiros';
+    device.addEventListener('gattserverdisconnected', () => {
+      this.rx = null;
+      this._set('off');
+      this._retryLater(); // coupure imprévue : on la reconnecte seule
+    });
+  }
+
   /** Reconnexion à la rampe déjà choisie (sans redemander). */
   async reconnect() {
     if (!this.device) throw new Error('Aucune rampe choisie');
+    this._manualOff = false;
     this._set('connecting');
     try { await this._open(); } catch (e) { this._set('error', e?.message || String(e)); throw e; }
   }
@@ -163,6 +240,8 @@ export class ChihirosLight extends EventTarget {
   off() { return this.setColor(0, 0, 0); }
 
   disconnect() {
+    this._manualOff = true; // déconnexion voulue : pas de reconnexion automatique
+    clearTimeout(this._retry);
     try { this.device?.gatt?.disconnect(); } catch { /* ignore */ }
     this.rx = null;
     this._set('off');

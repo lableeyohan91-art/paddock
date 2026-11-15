@@ -934,6 +934,26 @@ function updateLiveBar() {
   if (bar.innerHTML !== html) bar.innerHTML = html;
 }
 
+// ---------- Rampe LED : connexion automatique au lancement ----------
+// La rampe déjà choisie une fois se reconnecte seule. Si le navigateur ne le
+// permet pas, un bandeau propose de la reconnecter d'un seul appui.
+async function autoConnectLights() {
+  const L = app.lights;
+  let r = 'none';
+  try { r = await L.autoConnect(); } catch { r = L.savedName ? 'unsupported' : 'none'; }
+  if (r === 'on') { toast(`💡 Rampe connectée : ${L.name}`); return; }
+  if (r === 'waiting') app.log(`Rampe ${L.name} : en attente (allume-la ou rapproche-toi)`);
+  if (r === 'unsupported') {
+    const bar = $('#lightBar');
+    bar.innerHTML = `<span>💡</span><span>Rampe ${esc(L.savedName)} non connectée</span><b>Connecter</b>`;
+    bar.classList.remove('hidden');
+    bar.onclick = async () => {
+      try { await L.connect({ name: L.savedName }); toast('💡 Rampe connectée'); bar.classList.add('hidden'); }
+      catch (e) { toast(e.message || String(e), 3000); }
+    };
+  }
+}
+
 // ---------- Nouvelle version disponible ----------
 // Le serveur local indique la date de dernière modification de l'appli.
 // Si elle change, on propose de recharger (sans jamais interrompre une session).
@@ -1019,7 +1039,10 @@ async function init() {
   app.vscCfg = { ...DEFAULT_VSC, ...(await db.getSetting('vsc', {})) };
   app.lightSync = { enabled: true, ...(await db.getSetting('lightSync', {})) };
   // rampe qui (re)vient : elle reprend tout de suite la couleur de la séance
-  app.lights.addEventListener('change', () => { if (app.lights.connected) { resetLightSync(); syncLights(app, { force: true }); } });
+  app.lights.addEventListener('change', () => {
+    if (app.lights.connected) { resetLightSync(); syncLights(app, { force: true }); $('#lightBar').classList.add('hidden'); }
+  });
+  autoConnectLights();
   // Une seule fois : on installe le réglage équilibré (validé par simulation 50 et 100 tours)
   // et on l'enregistre comme setup nommé.
   if (!(await db.getSetting('fuelBalancedApplied', false))) {

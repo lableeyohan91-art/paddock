@@ -724,3 +724,9 @@ h1 .vsc-ico { width: 40px; height: 40px; font-size: .7rem; }
 .light-scenes { display: grid; gap: 6px; }
 .light-scene { display: flex; align-items: center; gap: 10px; font-size: .9rem; }
 .light-scene i { width: 16px; height: 16px; border-radius: 4px; border: 1px solid rgba(255,255,255,.3); flex: none; }
+/* Bandeau « rampe non connectée » au lancement */
+.lightbar { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 16px; border: 0; cursor: pointer;
+  background: #2a2410; color: var(--yellow); font-weight: 700; font-size: .9rem; text-align: left; }
+.lightbar span:nth-child(2) { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lightbar b { white-space: nowrap; background: rgba(250,204,21,.18); padding: 4px 10px; border-radius: 6px; }
+.lightbar.hidden { display: none; }
