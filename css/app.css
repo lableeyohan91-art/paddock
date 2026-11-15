@@ -730,3 +730,4 @@ h1 .vsc-ico { width: 40px; height: 40px; font-size: .7rem; }
 .lightbar span:nth-child(2) { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .lightbar b { white-space: nowrap; background: rgba(250,204,21,.18); padding: 4px 10px; border-radius: 6px; }
 .lightbar.hidden { display: none; }
+.q-start-note { margin: 4px 0 0; text-align: center; }
