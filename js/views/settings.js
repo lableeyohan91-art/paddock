@@ -5,6 +5,7 @@ import { audio, say } from '../audio.js';
 import { MODE } from '../cu/protocol.js';
 import { renderFuel } from './fuel-settings.js';
 import { vscSpeed } from '../performance.js';
+import { LIGHT_SCENES } from '../devices/lightsync.js';
 import { openImport, importDone, removeImport } from './import-records.js';
 
 let app;
@@ -53,7 +54,7 @@ const HELP = {
 HELP.devices = `
     <p>Les appareils que Paddock peut piloter en plus du circuit.</p>
     <ul>
-      <li><b>Éclairage</b> : une rampe LED <b>Chihiros WRGB II</b> en Bluetooth. Paddock change sa couleur. Prochaine étape : la couleur suit la course (jaune au drapeau jaune, rouge au drapeau rouge…).</li>
+      <li><b>Éclairage</b> : une rampe LED <b>Chihiros WRGB II</b> en Bluetooth. Pendant une séance, elle prend la couleur de la situation : vert en course, jaune au drapeau jaune, orange en VSC, rouge au drapeau rouge, blanc à l'arrivée (interrupteur « Couleurs en course »).</li>
       <li>La rampe se connecte depuis ce téléphone en Bluetooth, en même temps que la Control Unit. Ferme l'appli « My Chihiros » avant, sinon elle garde la rampe pour elle.</li>
     </ul>`;
 
@@ -198,6 +199,17 @@ function renderDevices() {
       <span class="bar-v num">${c[k]} %</span>
     </div>`).join('')}
     <div class="light-preview" id="lPreview"></div>
+  </section>
+
+  <section class="panel" style="margin-top:14px">
+    <div class="row" style="justify-content:space-between">
+      <h2 style="margin:0">Couleurs en course</h2>
+      <label class="switch"><input type="checkbox" id="lSync" ${app.lightSync.enabled ? 'checked' : ''}><span></span> ${app.lightSync.enabled ? 'Activé' : 'Désactivé'}</label>
+    </div>
+    <p class="muted" style="font-size:.85rem;margin:8px 0 10px">Pendant une course, des essais libres ou une qualification, la rampe prend la couleur de la situation :</p>
+    <div class="light-scenes">
+      ${LIGHT_SCENES.map((x) => `<div class="light-scene"><i style="background:${x.css}"></i><span>${x.label}</span></div>`).join('')}
+    </div>
   </section>`;
 
   const preview = () => {
@@ -214,6 +226,7 @@ function renderDevices() {
   if (re) re.onclick = () => act(() => L.reconnect());
   const off = $('#lOff', root);
   if (off) off.onclick = () => act(() => L.disconnect());
+  $('#lSync', root).onchange = async (e) => { await app.saveLightSync({ enabled: e.target.checked }); renderDevices(); bindTabs(); };
   root.querySelectorAll('[data-preset]').forEach((b) => (b.onclick = () => {
     const p = PRESETS.find((x) => x.k === b.dataset.preset);
     L.setColor(...p.c);

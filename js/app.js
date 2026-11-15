@@ -5,6 +5,7 @@ import { BleConnection, bluetoothSupported } from './cu/ble.js';
 import { SimulatorConnection } from './cu/simulator.js';
 import { PerformanceEngine, yellowFlagModifier, vscModifier } from './performance.js';
 import { ChihirosLight } from './devices/chihiros.js';
+import { syncLights, resetLightSync } from './devices/lightsync.js';
 import { Weather, SKY } from './weather.js';
 import { RaceSession, TYPES, fmtTime, fmtClock } from './race.js';
 import * as db from './db.js';
@@ -76,6 +77,7 @@ export const app = {
     this.setup = await db.getSetting('setup', null) || defaultSetup(this);
     this.fuelCfg = sanitize(await db.getSetting('fuel', defaultFuelConfig()));
     this.vscCfg = { ...DEFAULT_VSC, ...(await db.getSetting('vsc', {})) };
+    this.lightSync = { enabled: true, ...(await db.getSetting('lightSync', {})) };
     audio.voice = await db.getSetting('voice', true);
     audio.sounds = await db.getSetting('sounds', true);
     if (!this.isRacing) this.go(this.view);
@@ -191,6 +193,14 @@ export const app = {
 
   fuelCfg: defaultFuelConfig(),
   lights: new ChihirosLight(), // rampe LED Chihiros (Réglages → Appareils connectés → Éclairage)
+  lightSync: { enabled: true }, // la rampe suit les drapeaux en séance
+
+  async saveLightSync(values) {
+    this.lightSync = { ...this.lightSync, ...values };
+    await db.setSetting('lightSync', this.lightSync);
+    resetLightSync();
+    syncLights(this, { force: true });
+  },
   vscCfg: { ...DEFAULT_VSC },
 
   async saveVscCfg(values) {
@@ -1007,6 +1017,9 @@ async function init() {
   audio.sounds = await db.getSetting('sounds', true);
   app.fuelCfg = sanitize(await db.getSetting('fuel', defaultFuelConfig()));
   app.vscCfg = { ...DEFAULT_VSC, ...(await db.getSetting('vsc', {})) };
+  app.lightSync = { enabled: true, ...(await db.getSetting('lightSync', {})) };
+  // rampe qui (re)vient : elle reprend tout de suite la couleur de la séance
+  app.lights.addEventListener('change', () => { if (app.lights.connected) { resetLightSync(); syncLights(app, { force: true }); } });
   // Une seule fois : on installe le réglage équilibré (validé par simulation 50 et 100 tours)
   // et on l'enregistre comme setup nommé.
   if (!(await db.getSetting('fuelBalancedApplied', false))) {
@@ -1047,6 +1060,8 @@ async function init() {
     if (!s || !cu.connected || !['running', 'finishing'].includes(s.state)) return;
     if (s.flag === 'vsc' || performance.now() < (app.vscResendUntil || 0)) perf.resendSpeeds();
   }, 500);
+  // Éclairage : la rampe prend la couleur du drapeau en cours
+  setInterval(() => syncLights(app), 300);
   $('#liveBar').onclick = () => app.go('race');
   checkVersion();
   setInterval(checkVersion, 15000);
