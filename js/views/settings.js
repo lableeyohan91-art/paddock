@@ -1,6 +1,6 @@
 // Réglages : connexion, sons, sauvegarde, diagnostic.
 
-import { esc, $, toast, download, confirmBox } from '../ui.js';
+import { esc, $, toast, download, confirmBox, modal } from '../ui.js';
 import { audio, say } from '../audio.js';
 import { MODE } from '../cu/protocol.js';
 import { renderFuel } from './fuel-settings.js';
@@ -17,6 +17,43 @@ const SECTIONS = [
   { k: 'vsc', ico: '<span class="vsc-ico">VSC</span>', name: 'VSC' }, // même icône que le bouton en course
 ];
 let tab = 'menu';
+
+// Aide de chaque tuile (bouton « ? ») : à quoi sert la fonction et comment elle marche
+const HELP = {
+  general: `
+    <p>Les réglages de base de l'appli.</p>
+    <ul>
+      <li><b>Circuit</b> : connecter ou déconnecter la Control Unit (Bluetooth AppConnect ou simulateur), voir sa version et ce qu'elle détecte (mode carburant, voie des stands).</li>
+      <li><b>Seuil anti-rebond</b> : un passage plus court que ce temps est ignoré (évite qu'une voiture compte deux tours d'un coup sur la ligne).</li>
+      <li><b>Sons et annonces</b> : bips et annonces vocales (départ, meilleurs tours, drapeaux, VSC…).</li>
+      <li><b>Sauvegarde</b> : exporter / importer toutes les données, effacer les statistiques, importer des records SmartRace.</li>
+      <li><b>Diagnostic</b> : ce que la Control Unit répond, en direct. Utile si les tours ne se comptent pas.</li>
+    </ul>`,
+  fuel: `
+    <p>L'appli <b>simule l'essence</b> de chaque voiture pendant la course : plus on roule vite, plus on consomme.</p>
+    <ul>
+      <li><b>Consommation</b> : chaque tour retire un pourcentage selon le temps au tour (9 fourchettes, de très rapide à très lent).</li>
+      <li><b>Stand</b> : une voiture arrêtée dans la voie des stands fait le plein (15 % par seconde par défaut).</li>
+      <li><b>Panne sèche</b> : à 0 %, la voiture est bridée (en % de sa vitesse ou à une vitesse fixe) jusqu'à ce qu'elle ravitaille.</li>
+      <li><b>Setups</b> : enregistre tes réglages (ex. « Équilibré 50/100 tours », « Sprint 30 tours ») et recharge-les d'un clic.</li>
+    </ul>
+    <p class="muted">En course, l'essence s'active ou se désactive dans la case Essence de l'écran de préparation, avec la taille du réservoir.</p>`,
+  vsc: `
+    <p>Le <b>Virtual Safety Car</b> neutralise la course sans l'arrêter, par exemple après une sortie de piste.</p>
+    <ul>
+      <li>En course, le bouton <b>VSC</b> met <b>toutes les voitures à la même vitesse fixe</b>, quel que soit leur réglage du garage. Ce réglage fixe cette vitesse, en % de la vitesse max (20 % = vitesse 3/15).</li>
+      <li>Une voiture <b>en panne sèche</b> garde sa vitesse de panne sèche : le VSC ne s'y ajoute pas.</li>
+      <li>La vitesse est <b>renvoyée deux fois par seconde</b> : une voiture remise en piste ralentit tout de suite.</li>
+      <li>Un second appui lance un <b>décompte de 3 secondes</b> (« Fin du VSC dans 3, 2, 1, Go ! ») puis chacun retrouve sa vitesse.</li>
+      <li>Les pilotes peuvent aussi le déclencher depuis leur <b>vue pilote</b> (QR code).</li>
+    </ul>`,
+};
+
+function showHelp(k) {
+  const sec = SECTIONS.find((x) => x.k === k);
+  modal(`<h2 style="margin-top:0">${sec.ico} ${sec.name}</h2><div class="help-body">${HELP[k] || ''}</div>
+    <div class="row" style="justify-content:flex-end;margin-top:12px"><button class="btn primary" data-close>Compris</button></div>`);
+}
 let openFuelNext = false;
 
 export function mount(main, a) {
@@ -39,6 +76,7 @@ function sectionHead() {
 
 function bindTabs() {
   root.querySelectorAll('[data-tab]').forEach((b) => (b.onclick = () => { tab = b.dataset.tab; render(); window.scrollTo(0, 0); }));
+  root.querySelectorAll('[data-help]').forEach((b) => (b.onclick = () => showHelp(b.dataset.help)));
   const back = root.querySelector('[data-back]');
   if (back) back.onclick = () => { tab = 'menu'; render(); window.scrollTo(0, 0); };
 }
@@ -49,7 +87,10 @@ function render() {
     <div class="race-menu">
       <h1 class="menu-title">Réglages</h1>
       <div class="menu-grid">
-        ${SECTIONS.map((x) => `<button class="menu-tile" data-tab="${x.k}"><span class="menu-ico">${x.ico}</span><span class="menu-name">${x.name}</span></button>`).join('')}
+        ${SECTIONS.map((x) => `<div class="tile-wrap">
+          <button class="menu-tile" data-tab="${x.k}"><span class="menu-ico">${x.ico}</span><span class="menu-name">${x.name}</span></button>
+          <button class="tile-help" data-help="${x.k}" title="À quoi sert ${x.name} ?" aria-label="Aide : ${x.name}">?</button>
+        </div>`).join('')}
       </div>
     </div>`;
     bindTabs();

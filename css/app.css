@@ -705,3 +705,10 @@ h1 .vsc-ico { width: 40px; height: 40px; font-size: .7rem; }
 .live-code { margin: 8px 0 0; font-size: .9rem; color: var(--muted); }
 .live-code b { color: var(--text); letter-spacing: .15em; font-size: 1.05rem; }
 @media (max-width: 480px) { .live-panel { flex-direction: column; text-align: center; } .live-qr { width: 190px; height: 190px; } }
+/* Aide « ? » en haut à droite des tuiles Réglages */
+.tile-wrap { position: relative; }
+.tile-help { position: absolute; top: 6px; right: 6px; width: 24px; height: 24px; border-radius: 50%; cursor: pointer;
+  border: 1px solid var(--line); background: var(--panel); color: var(--muted); font-weight: 800; font-size: .8rem; line-height: 1; padding: 0; }
+.tile-help:hover { color: var(--text); border-color: var(--muted); }
+.help-body ul { padding-left: 18px; margin: 8px 0; display: grid; gap: 6px; }
+.help-body p { margin: 6px 0; }
