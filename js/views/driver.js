@@ -108,6 +108,7 @@ async function render(d) {
           <span class="sheet-color" style="background:${esc(d.color)}"></span>
           <button class="btn small" id="edit">✎ Modifier</button>
           <button class="btn small ghost danger" id="del">🗑 Supprimer</button>
+          <button class="btn small ghost" id="clearLaps" title="Remet à zéro ses tours et son temps de roulage (garde les records SmartRace importés)">🧹 Effacer les tours roulés</button>
         </div>
       </div>
     </header>
@@ -155,6 +156,14 @@ async function render(d) {
 
   $('#back', root).onclick = () => app.go('drivers');
   $('#edit', root).onclick = () => editDriver(d, () => refresh());
+  $('#clearLaps', root).onclick = async () => {
+    const mine = (await app.db.all('laps')).filter((l) => l.driverId === d.id && !l.imported);
+    if (!mine.length) { toast('Aucun tour roulé à effacer'); return; }
+    if (!(await confirmBox(`Effacer définitivement les ${mine.length} tours roulés par ${d.name} ? Ses tours effectués, son temps de roulage et ses records faits dans Paddock repartent de zéro. Ses records SmartRace importés sont conservés.`))) return;
+    for (const l of mine) await app.db.remove('laps', l.id);
+    toast(`Tours de ${d.name} effacés`);
+    refresh();
+  };
   $('#del', root).onclick = async () => {
     if (!(await confirmBox(`Supprimer ${d.name} ? Ses tours déjà enregistrés restent dans les statistiques.`))) return;
     await app.db.remove('drivers', d.id);

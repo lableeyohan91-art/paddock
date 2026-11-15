@@ -539,6 +539,7 @@ function renderGeneral() {
       </div>
       <h3>Statistiques</h3>
       <p class="muted" style="margin:0 0 8px;font-size:.85rem">Les tours faits avec le simulateur ne sont jamais enregistrés.</p>
+      <button class="btn" id="resetResults" style="margin-bottom:8px">🏁 Remettre à zéro courses / victoires et qualifs / poles</button><br>
       <button class="btn danger" id="clearStats">🗑 Réinitialiser les statistiques</button>
       <h3>Records SmartRace</h3>
       <div class="row">
@@ -592,6 +593,13 @@ function renderGeneral() {
     if (!(await confirmBox('Retirer les records SmartRace importés ? Les pilotes et voitures créés à l\'import restent.'))) return;
     const n = await removeImport(app);
     toast(`${n} records retirés`);
+  };
+  $('#resetResults', root).onclick = async () => {
+    const list = (await app.db.all('sessions')).filter((x) => x.type === 'race' || x.type === 'qualifying');
+    if (!list.length) { toast('Aucune course ni qualif enregistrée'); return; }
+    if (!(await confirmBox(`Effacer définitivement les ${list.length} courses et qualifs enregistrées ? Les compteurs courses / victoires et qualifs / poles de tous les pilotes repartent de zéro. Les tours, temps de roulage et records sont conservés.`))) return;
+    for (const x of list) await app.db.remove('sessions', x.id);
+    toast('Courses et qualifs remises à zéro');
   };
   $('#clearStats', root).onclick = async () => {
     if (!(await confirmBox('Effacer définitivement tous les tours et sessions enregistrés ? Les pilotes, voitures et réglages du garage sont conservés. Pense à exporter une sauvegarde avant si besoin.'))) return;
