@@ -5,7 +5,7 @@ import { audio, say } from '../audio.js';
 import { MODE } from '../cu/protocol.js';
 import { renderFuel } from './fuel-settings.js';
 import { vscSpeed } from '../performance.js';
-import { LIGHT_SCENES, DEFAULT_PALETTE, PALETTE_NAMES, paletteColor, sceneCss, cssOf, playFinish } from '../devices/lightsync.js';
+import { LIGHT_SCENES, DEFAULT_PALETTE, PALETTE_NAMES, paletteColor, sceneCss, cssOf } from '../devices/lightsync.js';
 import { GenericLight, PROTOCOLS } from '../devices/generic-light.js';
 import { openImport, importDone, removeImport } from './import-records.js';
 
@@ -158,14 +158,10 @@ let devTab = 'lights';
 let selColor = 'yellow'; // couleur de la palette en cours de réglage
 
 /** Envoie une couleur d'essai à toutes les lampes connectées. */
-function lampOuts() {
+function testColor(c) {
   const outs = [];
   if (app.lightSync.chihiros && app.lights.connected) outs.push(app.lights);
   if (app.lightSync.others) app.extraLights.forEach((l) => { if (l.connected) outs.push(l); });
-  return outs;
-}
-function testColor(c) {
-  const outs = lampOuts();
   outs.forEach((o) => o.setColor(...c));
   return outs.length;
 }
@@ -191,10 +187,7 @@ function colorsPanel() {
       <span class="bar-v num">${c[i]} %</span>
     </div>`).join('')}`}
     <div class="light-preview" id="lPreview" style="background:${cssOf(c)}"></div>
-    <div class="row" style="gap:8px;flex-wrap:wrap;margin-top:10px">
-      <button class="btn small" id="lFinish">🏁 Tester l'arrivée (bleu / blanc)</button>
-      <button class="btn small ghost" id="lReset" ${edited ? '' : 'disabled'}>↺ Revenir aux couleurs d'origine</button>
-    </div>
+    <button class="btn small ghost" id="lReset" style="margin-top:10px" ${edited ? '' : 'disabled'}>↺ Revenir aux couleurs d'origine</button>
   </section>`;
 }
 
@@ -222,15 +215,6 @@ function bindColorsPanel() {
       if (rs) rs.disabled = false;
     }, 400);
   }));
-  const fin = $('#lFinish', root);
-  if (fin) fin.onclick = async () => {
-    if (!lampOuts().length) { toast('Aucune lampe connectée', 2000); return; }
-    fin.disabled = true;
-    fin.textContent = '🏁 Arrivée en cours…';
-    await playFinish(app, (c) => testColor(c));
-    fin.disabled = false;
-    fin.textContent = "🏁 Tester l'arrivée (bleu / blanc)";
-  };
   const reset = $('#lReset', root);
   if (reset) reset.onclick = async () => {
     if (!(await confirmBox('Revenir aux couleurs d\'origine pour toutes les couleurs ?'))) return;
