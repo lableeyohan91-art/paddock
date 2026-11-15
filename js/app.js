@@ -675,17 +675,17 @@ export const app = {
     });
     // reprise après drapeau rouge : même bip aigu qu'au départ
     session.addEventListener('flag', (e) => {
-      if (e.detail?.resumed) { beep(1320, 500); say('Reprise !'); }
+      if (e.detail?.resumed) beep(1320, 500); // juste le bip, sans voix
     });
     // faux départ : la CU a coupé la séquence des feux
     session.addEventListener('falsestart', () => {
-      say('Faux départ ! Relance les feux', { priority: true });
-      toast('⚠️ Faux départ : appuie sur « Reprise »', 5000);
+      say('Faux départ', { priority: true });
+      toast('⚠️ Faux départ : appuie sur « Nouvelle relance »', 5000);
       this.log('Faux départ détecté pendant les feux');
     });
     // course arrêtée par la CU après le départ : drapeau rouge, on relance avec « Reprendre »
     session.addEventListener('halt', () => {
-      say('Course arrêtée par la Control Unit. Faux départ ?', { priority: true });
+      say('Faux départ', { priority: true });
       toast('🚩 Course arrêtée par la Control Unit : appuie sur « Reprendre la course »', 6000);
       this.log('La Control Unit a arrêté la course (faux départ ?) : drapeau rouge');
     });
@@ -809,7 +809,6 @@ export const app = {
     s._startChangedAt = performance.now();
     await cu.pressStart();
     setTimeout(() => { if (cu.status?.start === 1 && (s.state === 'armed' || s.redResuming)) cu.pressStart(); }, 1500);
-    say('Relance des feux', { priority: true });
     s.emit('update');
   },
 
@@ -850,13 +849,12 @@ export const app = {
       if (s.flag === 'vsc') { s.setFlag('green'); perf.update(); }
       s.redFlag();
       await cu.pressStart();
-      say('Drapeau rouge ! Tout le monde s\'arrête', { priority: true });
+      say('Drapeau rouge, drapeau rouge', { priority: true });
     } else if (!s.redResuming) {
       s.resumeFromRed();
       await cu.pressStart();
       // certaines CU demandent un 2e appui pour lancer la séquence des feux
       setTimeout(() => { if (s.flag === 'red' && s.redResuming && cu.status?.start === 1) cu.pressStart(); }, 1500);
-      say('Reprise de la course, attention aux feux', { priority: true });
     }
   },
 
