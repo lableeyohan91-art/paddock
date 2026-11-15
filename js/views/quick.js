@@ -150,13 +150,13 @@ function render() {
           <button data-qfm="fixed" class="${app.fuelCfg.mode === 'fixed' ? 'on' : ''}">Fixe</button>
         </div>
         <span class="muted" style="font-size:.8rem">${app.fuelCfg.mode === 'fixed'
-          ? `Chaque tour consomme ${String(app.fuelCfg.nominalPct).replace('.', ',')} %, quel que soit le temps.`
+          ? `Chaque tour consomme ${String(app.fuelCfg.nominalPct).replace('.', ',')} % d'essence, quel que soit le temps. <a href="#" id="qFuelNom">Se change dans Réglages → Essence</a>.`
           : 'Plus on roule vite, plus on consomme (fourchettes de temps de référence).'}</span>
       </div>
       <div class="q-fuel">
-        <label class="field"><span>Setup d'essence <button class="q-gear" id="qFuelCfg" title="Réglages essence">⚙</button></span>
+        ${app.fuelCfg.mode === 'fixed' ? '' : `<label class="field"><span>Setup d'essence <button class="q-gear" id="qFuelCfg" title="Réglages essence">⚙</button></span>
           <select id="qSetup">${setups.length ? setups.map((s) => `<option value="${esc(s.id)}" ${s.id === activeSetup ? 'selected' : ''}>${esc(s.name)}</option>`).join('')
-            : '<option value="">Réglage actuel</option>'}</select></label>
+            : '<option value="">Réglage actuel</option>'}</select></label>`}
         <div>
           <div class="bar" style="--c:var(--blue);--p:${pct15(prefs.tank15)}%">
             <span class="bar-l">Réservoir</span>
@@ -244,6 +244,8 @@ function bind() {
   };
   const gear = $('#qFuelCfg', root);
   if (gear) gear.onclick = (e) => { e.preventDefault(); app.openFuelSettings(); };
+  const nomLink = $('#qFuelNom', root);
+  if (nomLink) nomLink.onclick = (e) => { e.preventDefault(); app.openFuelSettings(); };
 
   $$('[data-laps]', root).forEach((b) => (b.onclick = () => { prefs.laps = +b.dataset.laps; savePrefs(); render(); }));
   const ql = $('#qLaps', root);
