@@ -538,11 +538,8 @@ export const app = {
     this.seen[address] = performance.now();
     const slot = this.setup?.slots?.[address];
     // détection automatique dans tous les modes : une voiture qui passe la ligne ajoute sa
-    // manette aux participants ; en essais libres / qualification, une manette retirée à la
-    // main (✕) n'est pas rajoutée tant qu'on ne l'a pas remise soi-même
-    const prep = this.quickMode || this.setup?.prepMode;
-    const removed = ['practice', 'qualifying'].includes(prep) && slot?.removedByHand;
-    if (slot && !slot.active && !removed) {
+    // manette aux participants, quel que soit le mode (course, qualification, essais libres)
+    if (slot && !slot.active) {
       slot.active = true;
       this.saveSetup();
       this.applyTune(address);

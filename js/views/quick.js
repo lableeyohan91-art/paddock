@@ -218,7 +218,6 @@ function bind() {
     }));
     $('[data-del]', row).onclick = () => {
       slot.active = false;
-      slot.removedByHand = true; // essais / qualif : pas de nouvel ajout automatique
       app.saveSetup();
       render();
     };
@@ -229,7 +228,6 @@ function bind() {
     const slot = app.setup.slots.find((s) => !s.active);
     if (!slot) return;
     slot.active = true;
-    slot.removedByHand = false;
     app.saveSetup();
     app.applyTune(slot.address);
     render();
