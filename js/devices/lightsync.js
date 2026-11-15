@@ -122,3 +122,22 @@ export function syncLights(app, { force = false } = {}) {
 }
 
 export function resetLightSync() { last = null; }
+
+/**
+ * Essai de l'arrivée depuis les réglages : joue la même alternance qu'en course
+ * (bleu 2 s / blanc 1 s pendant 5 s, puis blanc) sur les lampes données.
+ */
+export async function playFinish(app, setColor) {
+  const [a, b] = SCENES_BY_KEY.finish.alt.map((n) => paletteColor(app, n));
+  let t = 0;
+  let i = 0;
+  while (t < FINISH_MS) {
+    const ms = Math.min(ALT_STEPS[i % 2], FINISH_MS - t);
+    setColor(i % 2 ? b : a);
+    await new Promise((r) => setTimeout(r, ms));
+    t += ms;
+    i++;
+  }
+  setColor(paletteColor(app, SCENES_BY_KEY.end.c));
+}
+const SCENES_BY_KEY = Object.fromEntries(LIGHT_SCENES.map((x) => [x.k, x]));
