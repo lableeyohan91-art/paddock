@@ -157,6 +157,11 @@ async function renderLive() {
   drawQr($('#liveQr', el), url).catch((e) => { $('#liveQr', el).textContent = e.message; });
 }
 
+/** Séquence des feux bloquée (rien ne bouge depuis 6 s) ou faux départ : on propose de relancer. */
+function lightsStuck(s) {
+  return !!s.falseStart || performance.now() - (s._startChangedAt || performance.now()) > 6000;
+}
+
 function renderControls() {
   if (!root) return;
   renderLive();
@@ -176,7 +181,9 @@ function renderControls() {
   if (['running', 'finishing'].includes(s.state)) {
     // raccourcis en icônes carrées : VSC, drapeau rouge, terminer, garage
     if (s.flag === 'red') {
-      html += `<button class="btn go big" id="bRed" ${s.redResuming ? 'disabled' : ''}>${s.redResuming ? '🚦 Reprise en cours…' : '🟢 Reprendre la course'}</button>`;
+      html += s.redResuming && lightsStuck(s)
+        ? `<button class="btn yellow big" id="bRelaunch">↻ Relancer les feux</button>`
+        : `<button class="btn go big" id="bRed" ${s.redResuming ? 'disabled' : ''}>${s.redResuming ? '🚦 Reprise en cours…' : '🟢 Reprendre la course'}</button>`;
     }
     html += `<div class="ico-row">`;
     html += s.flag === 'vsc' && s.vscCountdown
@@ -188,6 +195,9 @@ function renderControls() {
     html += `<button class="btn icon-sq" id="bStop" title="Terminer la session" aria-label="Terminer la session">🏁</button>`;
     html += `<button class="btn icon-sq" id="bGarage" title="Garage : régler les voitures sans arrêter la session" aria-label="Garage">🔧</button>`;
     html += `</div>`;
+  }
+  if (s.state === 'armed' && lightsStuck(s)) {
+    html += `<button class="btn yellow" id="bRelaunch">↻ Relancer les feux</button>`;
   }
   if (s.state === 'armed') {
     html += `<button class="btn icon-sq" id="bGarage" title="Garage : régler les voitures sans arrêter la session" aria-label="Garage">🔧</button>`;
@@ -203,6 +213,7 @@ function renderControls() {
   on('bConn', () => app.openConnectDialog());
   on('bVsc', () => { app.toggleVsc(); renderControls(); });
   on('bRed', async () => { await app.toggleRed(); renderControls(); });
+  on('bRelaunch', async () => { await app.relaunchLights(); renderControls(); });
   on('bStop', async () => { if (await confirmBox('Terminer la session maintenant ?')) s.stop(); });
   on('bAgain', () => app.prepareSession(app.lastPrepare || {}));
   on('bResults', () => showResults(app));
@@ -295,6 +306,8 @@ function renderLights() {
 let lastState = null;
 let lastFlag = null;
 let lastCount = null;
+let lastStuck = false;
+let lastResuming = false;
 let lastConn = null;
 
 export function tick() {
@@ -302,7 +315,10 @@ export function tick() {
   if (!root || !app.session || !$('#controls', root)) return;
   const s = app.session;
 
-  if (s.state !== lastState || s.flag !== lastFlag || s.vscCountdown !== lastCount || app.cu.connected !== lastConn) {
+  const stuck = (s.state === 'armed' || s.redResuming) && lightsStuck(s);
+  if (s.state !== lastState || s.flag !== lastFlag || s.vscCountdown !== lastCount || app.cu.connected !== lastConn || stuck !== lastStuck || s.redResuming !== lastResuming) {
+    lastStuck = stuck;
+    lastResuming = s.redResuming;
     lastCount = s.vscCountdown;
     lastState = s.state;
     lastFlag = s.flag;

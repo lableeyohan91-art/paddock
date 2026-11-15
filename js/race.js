@@ -106,6 +106,8 @@ export class RaceSession extends EventTarget {
   }
 
   arm() {
+    this._startChangedAt = performance.now();
+    this.falseStart = false;
     this.setState('armed');
   }
 
@@ -141,6 +143,7 @@ export class RaceSession extends EventTarget {
   resumeFromRed() {
     if (this.flag !== 'red') return;
     this.redResuming = true;
+    this._startChangedAt = performance.now();
     this._sawRedLights = false;
     this._sawAllRedLights = false;
     this.emit('update');
@@ -148,6 +151,8 @@ export class RaceSession extends EventTarget {
 
   _endRed() {
     this.redResuming = false;
+    this.falseStart = false;
+    this._goStart = undefined; // nouvelle référence après la reprise
     this.flag = 'green';
     this.emit('flag', { flag: 'green', resumed: true });
     this.emit('update');
@@ -177,9 +182,38 @@ export class RaceSession extends EventTarget {
   }
 
   onStatus(st) {
+    const now = performance.now();
+    if (st.start !== this._prevStart) this._startChangedAt = now;
+    const prev = this._prevStart;
+    this._prevStart = st.start;
+
+    // Faux départ pendant les feux : la séquence repart en arrière (la CU a tout arrêté)
+    const lightsPhase = this.state === 'armed' || (this.flag === 'red' && this.redResuming);
+    if (lightsPhase && prev != null && prev >= 2 && st.start !== 0 && st.start < prev) {
+      this._sawLights = this._sawAllLights = this._sawRedLights = this._sawAllRedLights = false;
+      this.falseStart = true;
+      this.emit('falsestart');
+      this.emit('update');
+      return;
+    }
+
+    // Course lancée mais la CU s'est arrêtée d'elle-même (faux départ repéré après
+    // l'extinction des feux, START appuyé sur le boîtier…) : on passe en drapeau rouge
+    if (this.state === 'running' && this.flag !== 'red') {
+      if (this._goStart === undefined) this._goStart = st.start; // valeur juste après le départ
+      else if (st.start === 0) this._goStart = 0;
+      else if (st.start !== this._goStart && (st.start <= 6 || st.start >= 8) && now - this.startedAt > 1000) {
+        this._goStart = st.start;
+        this.redFlag();
+        this.emit('halt');
+        return;
+      }
+    }
+
     // Feux : départ quand la séquence de la CU se termine
     if (this.state === 'armed') {
       if (st.start > 0) this._sawLights = true;
+      if (st.start >= 2) this.falseStart = false; // les feux repartent : alerte levée
       // après le 5e feu (valeur 6), le premier changement = extinction des feux = départ
       // (certaines CU ne repassent pas tout de suite à 0)
       if (this._sawAllLights && st.start !== 6) this.go();

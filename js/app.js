@@ -673,6 +673,18 @@ export const app = {
           : `Fin de la session. ${c.driver.name} termine premier`, { priority: true });
       }
     });
+    // faux départ : la CU a coupé la séquence des feux
+    session.addEventListener('falsestart', () => {
+      say('Faux départ ! Relance les feux', { priority: true });
+      toast('⚠️ Faux départ : appuie sur « Relancer les feux »', 5000);
+      this.log('Faux départ détecté pendant les feux');
+    });
+    // course arrêtée par la CU après le départ : drapeau rouge, on relance avec « Reprendre »
+    session.addEventListener('halt', () => {
+      say('Course arrêtée par la Control Unit. Faux départ ?', { priority: true });
+      toast('🚩 Course arrêtée par la Control Unit : appuie sur « Reprendre la course »', 6000);
+      this.log('La Control Unit a arrêté la course (faux départ ?) : drapeau rouge');
+    });
     session.addEventListener('pit', (e) => {
       if (e.detail.in) this.log(`${e.detail.comp.driver.name} entre au stand`);
     });
@@ -779,6 +791,22 @@ export const app = {
       if (left === 1) say('Dernier tour !');
     }
     raceView.flashRow?.(comp.address);
+  },
+
+  /**
+   * Relance les feux (séquence bloquée, faux départ) : nouvel appui sur START,
+   * et 2e appui si la CU reste en attente.
+   */
+  async relaunchLights() {
+    const s = this.session;
+    if (!s || !cu.connected) return;
+    s.falseStart = false;
+    s._sawLights = s._sawAllLights = s._sawRedLights = s._sawAllRedLights = false;
+    s._startChangedAt = performance.now();
+    await cu.pressStart();
+    setTimeout(() => { if (cu.status?.start === 1 && (s.state === 'armed' || s.redResuming)) cu.pressStart(); }, 1500);
+    say('Relance des feux', { priority: true });
+    s.emit('update');
   },
 
   async startSession() {
