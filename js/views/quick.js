@@ -143,6 +143,16 @@ function render() {
         <label class="switch"><input type="checkbox" id="qFuel" ${prefs.fuelOn ? 'checked' : ''}><span></span> ${prefs.fuelOn ? 'Activée' : 'Désactivée'}</label>
       </div>
       ${prefs.fuelOn ? `
+      <div class="q-fuel-mode">
+        <span class="muted" style="font-size:.85rem">Calcul de la consommation</span>
+        <div class="seg" id="qFuelMode">
+          <button data-qfm="bands" class="${app.fuelCfg.mode === 'bands' ? 'on' : ''}">Selon le temps au tour</button>
+          <button data-qfm="fixed" class="${app.fuelCfg.mode === 'fixed' ? 'on' : ''}">Fixe</button>
+        </div>
+        <span class="muted" style="font-size:.8rem">${app.fuelCfg.mode === 'fixed'
+          ? `Chaque tour consomme ${String(app.fuelCfg.nominalPct).replace('.', ',')} %, quel que soit le temps.`
+          : 'Plus on roule vite, plus on consomme (fourchettes de temps de référence).'}</span>
+      </div>
       <div class="q-fuel">
         <label class="field"><span>Setup d'essence <button class="q-gear" id="qFuelCfg" title="Réglages essence">⚙</button></span>
           <select id="qSetup">${setups.length ? setups.map((s) => `<option value="${esc(s.id)}" ${s.id === activeSetup ? 'selected' : ''}>${esc(s.name)}</option>`).join('')
@@ -254,6 +264,11 @@ function bind() {
   if (qm) qm.onchange = (e) => { prefs.minutes = Math.max(1, Math.min(600, parseInt(e.target.value, 10) || 1)); savePrefs(); render(); };
 
   $('#qFuel', root).onchange = (e) => { prefs.fuelOn = e.target.checked; savePrefs(); render(); };
+  // calcul de la consommation : même réglage que dans Réglages → Essence
+  $$('[data-qfm]', root).forEach((b) => (b.onclick = async () => {
+    await app.saveFuelCfg({ ...app.fuelCfg, mode: b.dataset.qfm });
+    render();
+  }));
   const av = $('#qAutoVsc', root);
   if (av) av.onchange = (e) => { prefs.autoVsc = e.target.checked; savePrefs(); render(); };
   const ty = $('#qTyres', root);
