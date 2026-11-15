@@ -712,3 +712,12 @@ h1 .vsc-ico { width: 40px; height: 40px; font-size: .7rem; }
 .tile-help:hover { color: var(--text); border-color: var(--muted); }
 .help-body ul { padding-left: 18px; margin: 8px 0; display: grid; gap: 6px; }
 .help-body p { margin: 6px 0; }
+/* Réglages → Appareils connectés → Éclairage */
+.light-state { margin: 0 0 12px; }
+.light-state.on { color: var(--green); }
+.light-state.error { color: var(--yellow); }
+.light-presets { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.light-chip { display: flex; align-items: center; gap: 8px; padding: 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel-2); color: var(--text); font-weight: 700; cursor: pointer; }
+.light-chip:disabled { opacity: .4; cursor: default; }
+.light-chip i { width: 18px; height: 18px; border-radius: 50%; border: 1px solid rgba(255,255,255,.3); flex: none; }
+.light-preview { height: 26px; border-radius: 8px; margin-top: 10px; border: 1px solid var(--line); }

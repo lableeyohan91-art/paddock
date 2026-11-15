@@ -4,6 +4,7 @@ import { ControlUnit } from './cu/controlunit.js';
 import { BleConnection, bluetoothSupported } from './cu/ble.js';
 import { SimulatorConnection } from './cu/simulator.js';
 import { PerformanceEngine, yellowFlagModifier, vscModifier } from './performance.js';
+import { ChihirosLight } from './devices/chihiros.js';
 import { Weather, SKY } from './weather.js';
 import { RaceSession, TYPES, fmtTime, fmtClock } from './race.js';
 import * as db from './db.js';
@@ -189,6 +190,7 @@ export const app = {
   // ---------- Essence simulée ----------
 
   fuelCfg: defaultFuelConfig(),
+  lights: new ChihirosLight(), // rampe LED Chihiros (Réglages → Appareils connectés → Éclairage)
   vscCfg: { ...DEFAULT_VSC },
 
   async saveVscCfg(values) {

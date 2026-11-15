@@ -15,6 +15,7 @@ const SECTIONS = [
   { k: 'general', ico: '⚙️', name: 'Général' },
   { k: 'fuel', ico: '⛽', name: 'Essence' },
   { k: 'vsc', ico: '<span class="vsc-ico">VSC</span>', name: 'VSC' }, // même icône que le bouton en course
+  { k: 'devices', ico: '🔌', name: 'Appareils connectés' },
 ];
 let tab = 'menu';
 
@@ -48,6 +49,13 @@ const HELP = {
       <li>Les pilotes peuvent aussi le déclencher depuis leur <b>vue pilote</b> (QR code).</li>
     </ul>`,
 };
+
+HELP.devices = `
+    <p>Les appareils que Paddock peut piloter en plus du circuit.</p>
+    <ul>
+      <li><b>Éclairage</b> : une rampe LED <b>Chihiros WRGB II</b> en Bluetooth. Paddock change sa couleur. Prochaine étape : la couleur suit la course (jaune au drapeau jaune, rouge au drapeau rouge…).</li>
+      <li>La rampe se connecte depuis ce téléphone en Bluetooth, en même temps que la Control Unit. Ferme l'appli « My Chihiros » avant, sinon elle garde la rampe pour elle.</li>
+    </ul>`;
 
 function showHelp(k) {
   const sec = SECTIONS.find((x) => x.k === k);
@@ -101,6 +109,11 @@ function render() {
     bindTabs();
     return;
   }
+  if (tab === 'devices') {
+    renderDevices();
+    bindTabs();
+    return;
+  }
   if (tab === 'fuel') {
     root.innerHTML = sectionHead() + '<div id="fuelRoot"></div>';
     bindTabs();
@@ -135,6 +148,90 @@ function renderVsc() {
   r.oninput = () => show(+r.value);
   r.onchange = async () => { await app.saveVscCfg({ speedPct: +r.value }); toast('VSC : ' + r.value + ' %', 1200); };
   $('#vscReset', root).onclick = async () => { await app.saveVscCfg({ speedPct: 20 }); renderVsc(); bindTabs(); };
+}
+
+/** Réglages → Appareils connectés : pour l'instant un onglet Éclairage (rampe Chihiros). */
+let devTab = 'lights';
+const PRESETS = [
+  { k: 'red', label: 'Rouge', c: [100, 0, 0], css: '#e10600' },
+  { k: 'yellow', label: 'Jaune', c: [100, 60, 0], css: '#facc15' },
+  { k: 'green', label: 'Vert', c: [0, 100, 0], css: '#22c55e' },
+  { k: 'blue', label: 'Bleu', c: [0, 0, 100], css: '#3b82f6' },
+  { k: 'white', label: 'Blanc', c: [100, 100, 100], css: '#ffffff' },
+  { k: 'off', label: 'Éteint', c: [0, 0, 0], css: '#222' },
+];
+
+function renderDevices() {
+  const L = app.lights;
+  const st = L.status;
+  const c = L.color || { r: 100, g: 100, b: 100 };
+  root.innerHTML = sectionHead() + `
+  <div class="subtabs small"><button class="on" data-devtab="lights">💡 Éclairage</button></div>
+  <section class="panel">
+    <h2>Rampe LED Chihiros</h2>
+    ${!L.supported ? '<p class="warn-note">Bluetooth indisponible dans ce navigateur : utilise Chrome sur le téléphone ou le PC.</p>' : ''}
+    <p id="lightState" class="light-state ${st}">${
+      st === 'on' ? `✅ Connectée : <b>${esc(L.name)}</b>`
+        : st === 'connecting' ? '⏳ Connexion…'
+          : st === 'error' ? `⚠️ ${esc(L.error || 'Erreur')}`
+            : L.name ? `Déconnectée (${esc(L.name)})` : 'Aucune rampe connectée.'}</p>
+    <div class="row" style="gap:8px;flex-wrap:wrap">
+      ${st === 'on'
+        ? '<button class="btn" id="lOff">Déconnecter</button>'
+        : `<button class="btn primary" id="lConn" ${L.supported ? '' : 'disabled'}>🔗 Connecter ma rampe</button>
+           ${L.device ? '<button class="btn" id="lRe">↻ Reconnecter</button>' : ''}
+           <button class="btn ghost small" id="lAll" ${L.supported ? '' : 'disabled'}>Rampe introuvable ? Afficher tous les appareils</button>`}
+    </div>
+    <p class="muted" style="font-size:.85rem;margin:10px 0 0">Allume la rampe et <b>ferme l'appli My Chihiros</b> (une rampe n'accepte qu'une seule connexion à la fois). Le nom d'une WRGB II commence en général par <b>DY</b> (ex. DYWRGB…, DYNW…).</p>
+  </section>
+
+  <section class="panel" style="margin-top:14px">
+    <h2>Essai des couleurs</h2>
+    <div class="light-presets">
+      ${PRESETS.map((p) => `<button class="light-chip" data-preset="${p.k}" ${st === 'on' ? '' : 'disabled'}><i style="background:${p.css}"></i>${p.label}</button>`).join('')}
+    </div>
+    <h3>Couleur sur mesure</h3>
+    ${[['r', 'Rouge', '#e10600'], ['g', 'Vert', '#22c55e'], ['b', 'Bleu', '#3b82f6']].map(([k, l, col]) => `
+    <div class="bar" style="--c:${col};--p:${c[k]}%">
+      <span class="bar-l">${l}</span>
+      <input type="range" min="0" max="100" step="5" value="${c[k]}" data-rgb="${k}" ${st === 'on' ? '' : 'disabled'} aria-label="${l}">
+      <span class="bar-v num">${c[k]} %</span>
+    </div>`).join('')}
+    <div class="light-preview" id="lPreview"></div>
+  </section>`;
+
+  const preview = () => {
+    const v = (k) => +$(`[data-rgb="${k}"]`, root).value;
+    $('#lPreview', root).style.background = `rgb(${v('r') * 2.55},${v('g') * 2.55},${v('b') * 2.55})`;
+  };
+  preview();
+  const act = async (fn) => { try { await fn(); } catch (e) { toast(e.message || String(e), 3500); } renderDevices(); bindTabs(); };
+  const conn = $('#lConn', root);
+  if (conn) conn.onclick = () => act(async () => { await L.connect(); toast('💡 Rampe connectée'); });
+  const all = $('#lAll', root);
+  if (all) all.onclick = () => act(async () => { await L.connect({ showAll: true }); toast('💡 Rampe connectée'); });
+  const re = $('#lRe', root);
+  if (re) re.onclick = () => act(() => L.reconnect());
+  const off = $('#lOff', root);
+  if (off) off.onclick = () => act(() => L.disconnect());
+  root.querySelectorAll('[data-preset]').forEach((b) => (b.onclick = () => {
+    const p = PRESETS.find((x) => x.k === b.dataset.preset);
+    L.setColor(...p.c);
+    ['r', 'g', 'b'].forEach((k, i) => {
+      const r = $(`[data-rgb="${k}"]`, root);
+      r.value = p.c[i];
+      r.parentElement.style.setProperty('--p', p.c[i] + '%');
+      r.parentElement.querySelector('.bar-v').textContent = p.c[i] + ' %';
+    });
+    preview();
+  }));
+  root.querySelectorAll('[data-rgb]').forEach((r) => r.addEventListener('input', () => {
+    r.parentElement.style.setProperty('--p', r.value + '%');
+    r.parentElement.querySelector('.bar-v').textContent = r.value + ' %';
+    preview();
+    const v = (k) => +$(`[data-rgb="${k}"]`, root).value;
+    L.setColor(v('r'), v('g'), v('b'));
+  }));
 }
 
 /** Ouvre directement Réglages → Essence (depuis un autre écran). */
