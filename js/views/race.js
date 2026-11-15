@@ -113,10 +113,13 @@ function renderMenu() {
     const t = b.dataset.go;
     // les 4 modes partagent le même écran de préparation pour l'instant
     // mode mémorisé dans le setup (synchronisé) : tous les appareils connectés le respectent
-    app.quickMode = t;
-    app.setup.prepMode = t;
-    app.saveSetup();
-    app.go('quick');
+    // circuit (ou simulateur) connecté avant d'entrer dans un mode de jeu
+    app.requireConnection(() => {
+      app.quickMode = t;
+      app.setup.prepMode = t;
+      app.saveSetup();
+      app.go('quick');
+    }, 'Connecte le circuit (ou le simulateur) avant de préparer la séance : les voitures sont détectées et réglées dès la préparation.');
   }));
   const l = $('#mLast', root);
   if (l) l.onclick = () => { app.raceMenu = false; app.go('race'); };
@@ -228,7 +231,7 @@ function renderControls() {
   on('bResults', () => showResults(app));
   on('bSetup', () => { app.raceMenu = true; app.go('race'); });
   on('bEdit', () => app.go('quick'));
-  on('bGarage', () => app.go('garage'));
+  on('bGarage', () => app.requireConnection(() => app.go('garage'), 'Connecte le circuit (ou le simulateur) avant d\'entrer au garage : les réglages sont envoyés aux voitures.'));
 }
 
 export function flashRow(address) {

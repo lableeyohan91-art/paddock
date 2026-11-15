@@ -643,7 +643,18 @@ export const app = {
     }
   },
 
-  openConnectDialog() {
+  /**
+   * Circuit (ou simulateur) obligatoire avant d'aller plus loin : s'il est connecté, on
+   * continue tout de suite ; sinon la fenêtre de connexion s'ouvre et on continue dès que
+   * la connexion est faite (rien si on annule).
+   */
+  requireConnection(next, reason = 'Connecte le circuit (ou le simulateur) pour continuer.') {
+    if (cu.conn && cu.running) { next(); return; }
+    this._afterConnect = next;
+    this.openConnectDialog({ reason });
+  },
+
+  openConnectDialog({ reason } = {}) {
     if (cu.conn) {
       const m = modal(`
         <h2>${cu.reconnecting ? 'Reconnexion en cours…' : 'Connecté'} : ${esc(cu.conn.name)}</h2>
@@ -674,6 +685,7 @@ export const app = {
     const bt = bluetoothSupported();
     const m = modal(`
       <h2>Connexion au circuit</h2>
+      ${reason ? `<p class="warnbox" style="margin:-4px 0 12px">${esc(reason)}</p>` : ''}
       <div class="choice">
         <button id="cBle" ${bt ? '' : 'disabled'}>
           <strong>🔵 Carrera AppConnect (Bluetooth)</strong>
@@ -690,7 +702,12 @@ export const app = {
       </div>
       <div class="row" style="justify-content:flex-end;margin-top:12px">
         ${this.logLines.length ? '<button class="btn ghost" id="diagBtn">📋 Copier le diagnostic</button>' : ''}
-        <button class="btn ghost" data-close>Annuler</button></div>`);
+        <button class="btn ghost" data-close>Annuler</button></div>`, {
+      // fermée sans choisir de connexion : on ne va pas plus loin
+      onClose: () => { if (!chosen) this._afterConnect = null; },
+    });
+    let chosen = false;
+    m.el.querySelectorAll('.choice button').forEach((b) => b.addEventListener('click', () => { chosen = true; }, true));
     const dg = m.el.querySelector('#diagBtn');
     if (dg) dg.onclick = () => this.copyDiagnostic();
     m.el.querySelector('#cBle').onclick = () => { m.close(); this.connect(new BleConnection()); };
@@ -714,8 +731,13 @@ export const app = {
     try {
       await cu.connect(conn);
       await db.setSetting('lastConnection', conn.kind);
+      // connexion demandée avant d'entrer dans un mode de jeu ou au garage : on y va
+      const next = this._afterConnect;
+      this._afterConnect = null;
+      next?.();
     } catch (e) {
       setConn('', 'Non connecté');
+      this._afterConnect = null;
       if (e.name !== 'NotFoundError') toast('Connexion impossible : ' + e.message, 5000);
       this.log('Erreur de connexion : ' + e.message);
     }
@@ -1444,7 +1466,10 @@ async function init() {
 
   $('#tabs').addEventListener('click', (e) => {
     const b = e.target.closest('button[data-view]');
-    if (b) app.go(b.dataset.view);
+    if (!b) return;
+    // garage : réglages envoyés aux voitures, circuit connecté obligatoire
+    if (b.dataset.view === 'garage') app.requireConnection(() => app.go('garage'), 'Connecte le circuit (ou le simulateur) avant d\'entrer au garage : les réglages sont envoyés aux voitures.');
+    else app.go(b.dataset.view);
   });
   $('#connBtn').onclick = () => app.openConnectDialog();
   window.addEventListener('hashchange', () => {
