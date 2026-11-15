@@ -316,7 +316,7 @@ function calcHtml() {
         <small class="muted">${a.median ? 'Auto : ' + fmtS(a.median) + ' s (pilotes cochés)' : 'Coche des pilotes ou saisis-le'}</small></label>
       <label class="field"><span class="calc-l">Tour avec arrêt au stand (s)<em>calcule le coût d’un arrêt</em></span>
         <input type="number" step="0.01" min="1" max="60" data-ci="pitLap" value="${fmtS(v.pitLap)}" placeholder="à saisir">
-        <small class="muted">${pitLoss !== null ? `Un passage au stand ajoute <b>${pitLoss.toFixed(2)} s</b> au tour (hors remplissage)` : 'Tour avec passage et arrêt minimal au stand'}</small></label>
+        <small class="muted">Chronomètre un tour où tu passes par les stands, t'arrêtes et repars aussitôt, <b>sans attendre le plein</b> : le temps de remplissage est calculé à part (essence à remettre ÷ vitesse de remplissage).${pitLoss !== null ? ` Ici, passer par les stands coûte <b>${pitLoss.toFixed(2)} s</b> de plus qu'un tour normal.` : ''}</small></label>
       <label class="field"><span class="calc-l">Nombre de tours<em>règle la taille du plein</em></span>
         <input type="number" step="1" min="5" max="500" data-ci="laps" value="${v.laps}"></label>
       <label class="field"><span class="calc-l">Arrêts souhaités<em>au rythme nominal</em></span>
@@ -339,7 +339,7 @@ function calcResultHtml() {
   const v = calcInputs();
   return `
     <div class="calc-res">
-      <p style="margin:12px 0 8px">Pour <b>${v.laps} tours</b> : plein en <b>${r.cfg.refuelPerSec} % / s</b>, passage au stand <b>+${r.pitLoss.toFixed(2)} s</b>. Temps de course de chaque rythme, s'il est tenu toute la course :</p>
+      <p style="margin:12px 0 8px">Pour <b>${v.laps} tours</b> : plein en <b>${r.cfg.refuelPerSec} % / s</b>, chaque arrêt coûte <b>${r.pitLoss.toFixed(2)} s</b> de passage par les stands + le temps de remplissage. Temps de course de chaque rythme, s'il est tenu toute la course :</p>
       <div class="table-wrap"><table class="calc-table">
         <thead><tr><th>Rythme</th><th>Temps au tour</th><th>Conso</th><th>Tours / plein</th><th>Arrêts</th><th>Course</th><th>Écart</th></tr></thead>
         <tbody>${r.rows.map((x) => `<tr class="${x.name === 'Nominale' ? 'nom' : ''}">
