@@ -9,8 +9,14 @@ export const LIGHT_SCENES = [
   { k: 'yellow', label: 'Drapeau jaune', c: [100, 60, 0], css: '#facc15' },
   { k: 'vsc', label: 'VSC', c: [100, 30, 0], css: '#fb923c' },
   { k: 'red', label: 'Drapeau rouge', c: [100, 0, 0], css: '#e10600' },
-  { k: 'end', label: 'Damier (fin)', c: [100, 100, 100], css: '#ffffff' },
+  { k: 'finish', label: 'Arrivée : bleu / blanc pendant 5 s', alt: [[0, 0, 100], [100, 100, 100]], css: 'linear-gradient(90deg,#3b82f6 50%,#ffffff 50%)' },
+  { k: 'end', label: 'Ensuite (fin de séance)', c: [100, 100, 100], css: '#ffffff' },
 ];
+
+const FINISH_MS = 5000; // alternance bleu / blanc à l'arrivée
+const ALT_MS = 400;     // durée de chaque couleur dans une alternance
+let endSince = null;    // début de l'arrivée
+let endFor = null;
 
 /** Scène lumineuse correspondant à l'état de la séance (null : on ne touche à rien). */
 export function sceneFor(session) {
@@ -18,7 +24,11 @@ export function sceneFor(session) {
   if (!s) return null;
   if (s.state === 'ready') return 'ready';
   if (s.state === 'armed') return 'lights';
-  if (s.state === 'finishing' || s.state === 'finished') return 'end';
+  if (s.state === 'finishing' || s.state === 'finished') {
+    // arrivée : 5 secondes d'alternance bleu / blanc, puis blanc
+    if (endFor !== s) { endFor = s; endSince = performance.now(); }
+    return performance.now() - endSince < FINISH_MS ? 'finish' : 'end';
+  }
   if (s.flag === 'red') return s.redResuming ? 'lights' : 'red'; // reprise : suit les feux de la CU comme au départ
   if (s.flag === 'vsc') return 'vsc';
   if (s.flag === 'yellow') return 'yellow';
@@ -60,19 +70,22 @@ export function syncLights(app, { force = false } = {}) {
   const k = sceneFor(app.session);
   if (!k) return;
   noteScene(k);
+  const scene = LIGHT_SCENES.find((x) => x.k === k);
   const step = stepFor(app, k);
-  const key = step === null ? k : `${k}:${step}`;
+  // alternance de deux couleurs (arrivée) : la couleur change toutes les ALT_MS
+  const phase = scene.alt ? Math.floor((performance.now() - endSince) / ALT_MS) % 2 : null;
+  const key = step !== null ? `${k}:${step}` : phase !== null ? `${k}~${phase}` : k;
   if (key === last && !force) return;
   const blink = step !== null && last !== null && key !== last && !force;
   last = key;
-  const scene = LIGHT_SCENES.find((x) => x.k === k);
+  const color = scene.alt ? scene.alt[phase] : scene.c;
   clearTimeout(blinkTimer);
   if (blink) {
     // flash : éteint un court instant, puis la couleur revient
     L.setColor(0, 0, 0);
-    blinkTimer = setTimeout(() => { if (last === key) L.setColor(...scene.c); }, 300);
+    blinkTimer = setTimeout(() => { if (last === key) L.setColor(...color); }, 300);
   } else {
-    L.setColor(...scene.c);
+    L.setColor(...color);
   }
 }
 
