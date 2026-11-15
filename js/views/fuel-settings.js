@@ -159,10 +159,7 @@ function consoHtml() {
   return `
   <div class="grid grid-2">
     <section class="panel">
-      <h2>Essence simulée</h2>
-      <label class="row"><input type="checkbox" id="fEnabled" ${cfg.enabled ? 'checked' : ''}> Activer la gestion de l'essence pendant les sessions</label>
-      <p class="muted" style="font-size:.85rem">Chaque voiture part avec le <b>réservoir</b> réglé au garage (barre bleue) et consomme à chaque tour. La jauge s'affiche sur l'écran de course.</p>
-      <h3>Calcul de la consommation</h3>
+      <h2>Calcul de la consommation</h2>
       <div class="seg" id="fMode">
         <button data-mode="bands" class="${cfg.mode === 'bands' ? 'on' : ''}">Selon le temps au tour</button>
         <button data-mode="fixed" class="${cfg.mode === 'fixed' ? 'on' : ''}">Fixe</button>
@@ -218,7 +215,6 @@ function consoHtml() {
 }
 
 function bindConso() {
-  $('#fEnabled', el).onchange = (e) => { cfg.enabled = e.target.checked; save(); };
   $$('[data-mode]', el).forEach((b) => (b.onclick = () => { cfg.mode = b.dataset.mode; save(); draw(); }));
   const setNom = (v) => {
     cfg.nominalPct = Math.round(Math.min(LIMITS.pMax, Math.max(LIMITS.pMin, +v || LIMITS.pMin)) * 2) / 2;
