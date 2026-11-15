@@ -3,10 +3,10 @@
 import { ControlUnit } from './cu/controlunit.js';
 import { BleConnection, bluetoothSupported } from './cu/ble.js';
 import { SimulatorConnection } from './cu/simulator.js';
-import { PerformanceEngine, vscModifier } from './performance.js';
+import { PerformanceEngine, vscModifier, vscSpeed } from './performance.js';
 import { ChihirosLight } from './devices/chihiros.js';
 import { checkAutoVsc, shouldEndVsc } from './autovsc.js';
-import { tyreCfg, freshTyres, tyreFactor, wearLap, COMPOUND_INFO } from './tyres.js';
+import { tyreCfg, freshTyres, tyreTarget, tyreHealth, wearLap, COMPOUND_INFO } from './tyres.js';
 import { GenericLight } from './devices/generic-light.js';
 import { syncLights, resetLightSync } from './devices/lightsync.js';
 import { Weather, SKY } from './weather.js';
@@ -256,18 +256,30 @@ export const app = {
     return !!this.session?.cfg.tyres?.enabled;
   },
 
-  /** Effet des pneus sur la vitesse (pas pendant un VSC ni en panne sèche : vitesses imposées). */
+  /**
+   * Effet des pneus : crans retirés à la programmation du pilote sur SA voiture
+   * (vitesse et freinage), chute de grip, crevaison. Sous VSC et en panne sèche, la vitesse
+   * imposée l'emporte (sauf crevaison, si elle est plus lente que le VSC).
+   */
   tyreModifier() {
     return {
       id: 'tyres',
       label: 'Pneus',
       compute: (address) => {
         const s = this.session;
-        if (!this.tyresOn() || !s || s.flag === 'vsc' || this.isOutOfFuel(address)) return null;
+        if (!this.tyresOn() || !s) return null;
         const c = s.comps.get(address);
-        if (!c?.tyre) return null;
-        const f = tyreFactor(this.tyres, c.tyre);
-        return { speed: f, note: `🛞 ${COMPOUND_INFO[c.tyre.compound].label} ${Math.round(c.tyre.wear)} %` };
+        const base = perf.bases.get(address);
+        if (!c?.tyre || !base) return null;
+        const t = tyreTarget(this.tyres, c.tyre, base);
+        const brake = base.brake ? t.brake / base.brake : 1;
+        const note = `🛞 ${COMPOUND_INFO[c.tyre.compound].label} ${Math.round(tyreHealth(c.tyre))} %${c.tyre.punctured ? ' 💥 crevaison' : ''}`;
+        if (this.isOutOfFuel(address)) return { brake, note };
+        if (s.flag === 'vsc') {
+          const v = vscSpeed(this.vscCfg.speedPct);
+          return { speed: c.tyre.punctured && v ? Math.min(1, t.speed / v) : 1, brake, note };
+        }
+        return { speed: base.speed ? t.speed / base.speed : 1, brake, note };
       },
     };
   },
@@ -280,10 +292,25 @@ export const app = {
     const s = this.session;
     const c = s?.comps.get(address);
     if (!c || !COMPOUND_INFO[compound] || s.state === 'finished') return;
-    if (!['running', 'finishing'].includes(s.state)) c.tyre = freshTyres(compound);
+    if (!['running', 'finishing'].includes(s.state)) c.tyre = freshTyres(compound, compound, this.tyres);
     else c.tyre.next = compound;
     perf.update();
     s.emit('update');
+  },
+
+  /** Passage sur la ligne : usure, puis annonce de la chute de grip ou de la crevaison. */
+  tyreLap(comp) {
+    const ev = wearLap(this.tyres, comp.tyre);
+    perf.update();
+    const name = comp.driver?.name || `Voiture ${comp.address + 1}`;
+    if (ev === 'puncture') {
+      say(`${name}, crevaison ! Passe au stand`, { priority: true });
+      toast(`💥 ${name} : crevaison`, 3000);
+      this.log(`Crevaison : ${name}`);
+    } else if (ev === 'cliff') {
+      say(`${name}, pneus usés`);
+      this.log(`Pneus usés : ${name}`);
+    }
   },
 
   /** Changement de pneus : voiture immobile assez longtemps dans la voie des stands. */
@@ -297,7 +324,7 @@ export const app = {
       if (c._pitSince == null) c._pitSince = now;
       if (!c._tyreDone && now - c._pitSince >= this.tyres.changeSec * 1000) {
         c._tyreDone = true;
-        c.tyre = freshTyres(c.tyre.next || c.tyre.compound);
+        c.tyre = freshTyres(c.tyre.next || c.tyre.compound, undefined, this.tyres);
         perf.update();
         toast(`🛞 ${c.driver?.name || 'Voiture ' + (c.address + 1)} : pneus ${COMPOUND_INFO[c.tyre.compound].label}`, 2000);
         this.log(`Pneus changés : ${c.driver?.name} → ${COMPOUND_INFO[c.tyre.compound].label}`);
@@ -723,7 +750,7 @@ export const app = {
     const tankOf = (c) => s.fuel?.tank15 ?? this.getTune(c.driver.id, c.car.id).fuel;
     for (const c of session.comps.values()) this.fillTank(c, tankOf(c));
     // pneus : tout le monde part avec la gomme de départ (modifiable sur la vue pilote avant le GO)
-    for (const c of session.comps.values()) c.tyre = freshTyres(this.tyres.start);
+    for (const c of session.comps.values()) c.tyre = freshTyres(this.tyres.start, undefined, this.tyres);
     perf.start();
     if (cu.connected) for (const c of session.comps.values()) cu.setFuel(c.address, tankOf(c));
 
@@ -767,7 +794,7 @@ export const app = {
       c.car.speed = t.speed;
       c.car.brake = t.brake;
       if (session.cfg.fuel?.enabled ?? this.fuelOn()) this.fillTank(c, session.cfg.fuel?.tank15 ?? t.fuel);
-      c.tyre = freshTyres(this.tyres.start);
+      c.tyre = freshTyres(this.tyres.start, undefined, this.tyres);
       perf.setBase(c.address, t.speed, t.brake); // bridage VSC, panne sèche… s'appliquent aussi
       this.log(`Manette ${c.address + 1} ajoutée en cours de séance`);
     });
@@ -858,7 +885,7 @@ export const app = {
     const s = this.session;
     const p = perf.current.get(comp.address);
     const fuelUsed = this.burnFuel(comp, lap.time);
-    if (this.tyresOn() && comp.tyre) { wearLap(this.tyres, comp.tyre); perf.update(); } // usure des pneus
+    if (this.tyresOn() && comp.tyre) this.tyreLap(comp); // usure des pneus, chute de grip, crevaison
     if (!(s.simulated ?? this.isSim)) db.put('laps', {
       fuelUsed,
       fuelLeft: comp.fuelPct,

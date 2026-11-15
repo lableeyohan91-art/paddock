@@ -6,7 +6,7 @@ import { SKY } from '../weather.js';
 import { MODE } from '../cu/protocol.js';
 import { avatar } from './drivers.js';
 import { live, startLive, pilotUrl, drawQr } from '../live.js';
-import { COMPOUNDS, COMPOUND_INFO, tyreState } from '../tyres.js';
+import { COMPOUNDS, COMPOUND_INFO, tyreState, tyreHealth } from '../tyres.js';
 
 let app;
 let root;
@@ -256,7 +256,7 @@ function tyreCell(c) {
   const nx = t.next && t.next !== t.compound ? COMPOUND_INFO[t.next] : null;
   return `<div class="tyre-cell" data-tyre="${c.address}" title="Toucher pour choisir la gomme suivante">
     <span class="tyre-dot" style="--tc:${g.color}">${g.short}</span>
-    <span class="num tyre-wear ${st}">${Math.round(t.wear)} %</span>${st === 'cold' ? ' ❄️' : st === 'worn' ? ' ⚠️' : ''}
+    <span class="num tyre-wear ${st}" title="Santé du pneu">${Math.round(tyreHealth(t))} %</span>${st === 'cold' ? ' ❄️' : st === 'worn' ? ' ⚠️' : st === 'puncture' ? ' 💥' : ''}
     ${nx ? `<span class="tyre-next" style="--tc:${nx.color}">→ ${nx.short}</span>` : ''}</div>`;
 }
 

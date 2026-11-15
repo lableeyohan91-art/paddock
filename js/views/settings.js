@@ -59,9 +59,10 @@ const HELP = {
 HELP.tyres = `
     <p>Trois gommes aux comportements bien marqués (mode arcade).</p>
     <ul>
-      <li><b>Tendre</b> : la plus rapide, s'use vite. <b>Medium</b> : entre les deux. <b>Dur</b> : plus lent, dure longtemps.</li>
-      <li><b>Usure</b> : à chaque tour. Au-delà de l'<b>usure critique</b>, la voiture ralentit nettement jusqu'à la vitesse « usée ».</li>
-      <li><b>Chauffe</b> : après un changement, la voiture est un peu bridée pendant les tours de chauffe.</li>
+      <li>Chaque gomme retire des <b>crans</b> à la programmation du pilote sur <b>sa</b> voiture : <b>Tendre</b> = sa programmation, <b>Medium</b> = 1 cran en dessous, <b>Dur</b> = 2 crans en dessous et un freinage moins fort. Le Tendre s'use vite, le Dur dure longtemps.</li>
+      <li><b>Chute de grip</b> : elle arrive au hasard quand il reste entre 25 % et 15 % de santé. La voiture ne garde alors que 50 % de sa programmation (réglée à 8 → roule à 4).</li>
+      <li><b>Crevaison</b> : sous 15 % de santé, risque à chaque passage sur la ligne (20 %, puis 50 % sous 7 %). À 0 %, c'est la crevaison. Une voiture crevée roule à la vitesse choisie (comme le VSC) jusqu'au stand.</li>
+      <li><b>Chauffe</b> : après un changement, la voiture perd un cran pendant les tours de chauffe.</li>
       <li><b>Changement</b> : rester immobile quelques secondes dans la voie des stands. Chaque pilote choisit sa gomme sur sa <b>vue pilote</b> (ou on la choisit sur l'écran de course).</li>
       <li>Les pneus s'activent course par course sur l'écran de préparation. Pas d'effet pendant un VSC ou une panne sèche.</li>
     </ul>`;
@@ -241,18 +242,27 @@ function renderVsc() {
   bindVscTabs();
 }
 
-/** Réglages → Pneus : tout se règle par gomme (valeurs en % de la vitesse du garage). */
+/** Réglages → Pneus : par gomme, des crans retirés à la programmation du pilote. */
 const TYRE_FIELDS = [
-  ['newPct', 'Vitesse neufs', '%', 10, 100, 5],
-  ['wearPerLap', 'Usure par tour', '%', 0, 100, 1],
-  ['cliffPct', 'Usure critique', '%', 0, 100, 5],
-  ['wornPct', 'Vitesse usés', '%', 0, 100, 5],
+  ['speedOff', 'Vitesse', 'crans en moins', 0, 15, 1],
+  ['brakeOff', 'Freinage', 'crans en moins', 0, 15, 1],
+  ['wearPerLap', 'Usure par tour', '%', 0, 100, 0.5],
   ['warmLaps', 'Tours de chauffe', 'tours', 0, 10, 1],
-  ['coldPct', 'Vitesse à froid', '%', 10, 100, 5],
+  ['coldOff', 'À froid', 'crans en moins', 0, 15, 1],
+];
+const TYRE_WEAR_FIELDS = [
+  ['cliffFrom', 'Chute de grip : de', '% de santé', 0, 100, 1],
+  ['cliffTo', 'à', '% de santé', 0, 100, 1],
+  ['cliffKeep', 'Après la chute, la voiture garde', '% de sa programmation', 0, 100, 5],
+  ['punctA', 'Risque de crevaison sous', '% de santé', 0, 100, 1],
+  ['punctAChance', 'Risque à chaque passage', '%', 0, 100, 5],
+  ['punctB', 'Gros risque sous', '% de santé', 0, 100, 1],
+  ['punctBChance', 'Risque à chaque passage', '%', 0, 100, 5],
 ];
 function renderTyres() {
   const t = app.tyres;
-  const lapsTo = (g) => (g.wearPerLap ? Math.ceil(g.cliffPct / g.wearPerLap) : '∞');
+  const lapsTo = (h, g) => (g.wearPerLap ? Math.floor((100 - h) / g.wearPerLap) : '∞');
+  const ex = (b) => Math.round((b * t.cliffKeep) / 100);
   root.innerHTML = sectionHead() + `
   <section class="panel">
     <h2>Arrêt au stand</h2>
@@ -263,6 +273,19 @@ function renderTyres() {
     </div>
     <p class="muted" style="margin:8px 0 0;font-size:.85rem">La voiture doit rester immobile ce temps-là dans la voie des stands pour repartir avec la gomme choisie. La gomme de départ peut être changée par chaque pilote sur sa vue pilote avant le GO.</p>
   </section>
+  <section class="panel" style="margin-top:14px">
+    <h2>Usure et crevaison</h2>
+    <div class="tyre-grid">
+      ${TYRE_WEAR_FIELDS.map(([f, l, u, mn, mx, st]) => `<label class="field">${l} (${u})<input type="number" data-tyg="${f}" min="${mn}" max="${mx}" step="${st}" value="${t[f]}"></label>`).join('')}
+    </div>
+    <p class="muted" style="margin:8px 0 0;font-size:.85rem">Exemple : une voiture programmée à 8 roule à ${ex(8)} après la chute de grip, à 12 elle roule à ${ex(12)}. À 0 % de santé, la crevaison est sûre.</p>
+    <div class="row" style="gap:14px;margin-top:14px">
+      <label class="field" style="flex:1">Vitesse en crevaison
+        <input type="range" id="tyPunct" min="0" max="100" step="5" value="${t.punctSpeedPct}"></label>
+      <span class="vsc-pct num" id="tyPunctV">${t.punctSpeedPct} %<small>cran ${vscSpeed(t.punctSpeedPct)}/15</small></span>
+    </div>
+    <p class="muted" style="font-size:.85rem;margin:4px 0 0">Comme le VSC : % de la vitesse max du circuit, la même pour toutes les voitures crevées (0 % = voiture arrêtée).</p>
+  </section>
   ${COMPOUNDS.map((k) => {
     const g = t[k];
     return `
@@ -271,7 +294,7 @@ function renderTyres() {
     <div class="tyre-grid">
       ${TYRE_FIELDS.map(([f, l, u, mn, mx, st]) => `<label class="field">${l} (${u})<input type="number" data-ty="${k}.${f}" min="${mn}" max="${mx}" step="${st}" value="${g[f]}"></label>`).join('')}
     </div>
-    <p class="muted" style="margin:8px 0 0;font-size:.8rem">≈ ${lapsTo(g)} tours avant l'usure critique.</p>
+    <p class="muted" style="margin:8px 0 0;font-size:.8rem">Chute de grip entre le ${lapsTo(t.cliffFrom, g)}e et le ${lapsTo(t.cliffTo, g)}e tour ; risque de crevaison à partir du ${lapsTo(t.punctA, g)}e tour.</p>
   </section>`;
   }).join('')}
   <button class="btn small ghost" id="tyReset" style="margin-top:14px">↺ Revenir aux réglages d'origine</button>`;
@@ -279,6 +302,14 @@ function renderTyres() {
   const save = async (patch) => { await app.saveTyres({ ...app.tyres, ...patch }); };
   $('#tyChange', root).onchange = async (e) => { await save({ changeSec: +e.target.value }); toast('Enregistré', 1000); };
   $('#tyStart', root).onchange = async (e) => { await save({ start: e.target.value }); toast('Enregistré', 1000); };
+  root.querySelectorAll('[data-tyg]').forEach((inp) => (inp.onchange = async () => {
+    await save({ [inp.dataset.tyg]: +inp.value });
+    renderTyres(); bindTabs();
+    toast('Enregistré', 1000);
+  }));
+  const pr = $('#tyPunct', root);
+  pr.oninput = () => { $('#tyPunctV', root).innerHTML = `${pr.value} %<small>cran ${vscSpeed(+pr.value)}/15</small>`; };
+  pr.onchange = async () => { await save({ punctSpeedPct: +pr.value }); toast('Crevaison : ' + pr.value + ' %', 1200); };
   root.querySelectorAll('[data-ty]').forEach((inp) => (inp.onchange = async () => {
     const [k, f] = inp.dataset.ty.split('.');
     await save({ [k]: { ...app.tyres[k], [f]: +inp.value } });

@@ -181,14 +181,14 @@ function tyresPanel(d, c) {
   const g = TYRES[t.c];
   const before = !['running', 'finishing'].includes(d.state);
   const want = before ? t.c : (t.n || t.c);
-  const st = t.st === 'cold' ? '❄️ Froids' : t.st === 'worn' ? '⚠️ Usés' : '✅ OK';
+  const st = t.st === 'puncture' ? '💥 Crevaison ! Passe au stand' : t.st === 'cold' ? '❄️ Froids' : t.st === 'worn' ? '⚠️ Usés' : '✅ OK';
   return `
     <section class="panel pv-tyres">
       <h2 style="margin-bottom:8px">🛞 Mes pneus</h2>
       <div class="pv-tyre-now">
         <span class="tyre-dot" style="--tc:${g.color}">${g.short}</span>
         <b>${g.label}</b><span class="muted">${st}</span>
-        <div class="fuelg-bar" style="flex:1"><i style="width:${100 - t.w}%;background:${t.st === 'worn' ? 'var(--accent)' : 'var(--green)'}"></i></div>
+        <div class="fuelg-bar" style="flex:1"><i style="width:${100 - t.w}%;background:${['worn', 'puncture'].includes(t.st) ? 'var(--accent)' : 'var(--green)'}"></i></div>
         <b class="num">${100 - t.w} %</b>
       </div>
       <p class="muted" style="margin:10px 0 6px;font-size:.85rem">${before ? 'Pneus de départ :' : 'Gomme pour le prochain arrêt au stand :'}</p>
