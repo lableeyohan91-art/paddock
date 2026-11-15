@@ -44,7 +44,7 @@ let blinkTimer = null;
 function stepFor(app, k) {
   const s = app.session;
   if (k === 'lights') return app.cu?.status?.start ?? 0;
-  if (k === 'vsc' && s?.vscCountdown) return s.vscCountdown;
+  if (k === 'vsc' && typeof s?.vscCountdown === 'number' && s.vscCountdown > 0) return s.vscCountdown; // 3, 2, 1
   return null;
 }
 

@@ -804,19 +804,22 @@ export const app = {
       return;
     }
     // Fin du VSC : décompte de 3 secondes (affiché et annoncé), puis vitesse normale
+    // « Fin de VSC dans… » puis 3, 2, 1, Go à une seconde d'intervalle,
+    // chaque chiffre avec le même bip que les feux de départ de la Control Unit
     const steps = [
-      { n: 3, text: 'Fin du VSC dans 3', at: 0 },
-      { n: 2, text: '2', at: 1400 },
-      { n: 1, text: '1', at: 2400 },
-      { n: 0, text: 'Go !', at: 3400 },
+      { n: '…', text: 'Fin de VSC dans', at: 0 },
+      { n: 3, text: '3', at: 1300 },
+      { n: 2, text: '2', at: 2300 },
+      { n: 1, text: '1', at: 3300 },
+      { n: 0, text: 'Go !', at: 4300 },
     ];
-    s.vscCountdown = 3;
+    s.vscCountdown = '…';
     s.emit('update');
     s._vscTimers = steps.map((st) => setTimeout(() => {
       // annulé entre-temps (drapeau rouge, fin de session…)
       if (s.flag !== 'vsc' || !['running', 'finishing'].includes(s.state)) { this.cancelVscCountdown(); return; }
       say(st.text, { priority: true });
-      beep(st.n ? 660 : 990, st.n ? 150 : 400);
+      if (typeof st.n === 'number') beep(st.n ? 660 : 990, st.n ? 220 : 500);
       s.vscCountdown = st.n;
       if (st.n === 0) {
         s.vscCountdown = null;
