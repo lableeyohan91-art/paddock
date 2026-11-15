@@ -94,6 +94,11 @@ export class ControlUnit extends EventTarget {
     return new Promise((resolve) => this.commands.push({ cmd, resolve }));
   }
 
+  /** Les prochaines commandes passent en priorité pendant ms (déclenchement du VSC…). */
+  urgent(ms = 1500) {
+    this.urgentUntil = performance.now() + ms;
+  }
+
   /** Remplace une commande "à clé" encore en attente (évite d'empiler les réglages). */
   sendKeyed(key, cmd) {
     const existing = this.commands.find((c) => c.key === key);
@@ -110,7 +115,9 @@ export class ControlUnit extends EventTarget {
     while (this.running && this.conn) {
       // une interrogation après chaque commande : les passages (tours) continuent
       // d'arriver même quand beaucoup de réglages sont envoyés (VSC renvoyé 2×/s…)
-      const item = lastWasCmd ? null : this.commands.shift();
+      // période « urgente » (VSC…) : les commandes passent d'abord, sans attendre d'interrogation
+      const urgent = performance.now() < (this.urgentUntil || 0);
+      const item = lastWasCmd && !urgent ? null : this.commands.shift();
       lastWasCmd = !!item;
       const cmd = item ? item.cmd : P.cmdPoll();
       try {

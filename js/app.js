@@ -867,6 +867,7 @@ export const app = {
     if (s.vscCountdown) return; // décompte déjà lancé
     if (s.flag !== 'vsc') {
       s.setFlag('vsc');
+      cu.urgent(); // les voitures sont bridées tout de suite (avant de relire les passages)
       perf.update();
       say('Virtual Safety Car ! Vitesse limitée', { priority: true });
       return;
@@ -892,6 +893,7 @@ export const app = {
       if (st.n === 0) {
         s.vscCountdown = null;
         s.setFlag('green');
+        cu.urgent(); // vitesse normale rendue tout de suite au « Go »
         perf.update();
         this.vscResendUntil = performance.now() + 5000; // voiture sortie pendant le VSC : elle retrouve aussi sa vitesse
       }
