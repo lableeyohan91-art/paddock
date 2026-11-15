@@ -10,11 +10,14 @@ export const DEFAULT_AUTO = { lapOn: false, lapSec: 12, sectorOn: false, sectorS
 
 export const autoCfg = (app) => ({ ...DEFAULT_AUTO, ...(app.vscCfg?.auto || {}) });
 
+/** Le VSC automatique (déclenchement et fin) ne fonctionne qu'en Course (pas en course rapide, qualif, essais). */
+export const autoAllowed = (s) => s?.cfg?.kind === 'race';
+
 /** Renvoie { comp, rule, secs } si une voiture doit déclencher le VSC, sinon null. */
 export function checkAutoVsc(app, now = performance.now()) {
   const s = app.session;
   const cfg = autoCfg(app);
-  if (!s || s.state !== 'running' || (!cfg.lapOn && !cfg.sectorOn)) return null;
+  if (!s || !autoAllowed(s) || s.state !== 'running' || (!cfg.lapOn && !cfg.sectorOn)) return null;
   if (s.flag === 'vsc' || s.flag === 'red' || s.vscCountdown) return null;
   const base = Math.max(s.greenSince || 0, s.startedAt || 0);
   for (const c of s.comps.values()) {
@@ -40,7 +43,7 @@ export function checkAutoVsc(app, now = performance.now()) {
 export function shouldEndVsc(app, now = performance.now()) {
   const s = app.session;
   const cfg = autoCfg(app);
-  if (!s || !cfg.endOn || s.state !== 'running') return false;
+  if (!s || !autoAllowed(s) || !cfg.endOn || s.state !== 'running') return false;
   if (s.flag !== 'vsc' || s.vscCountdown || !s.vscSince) return false;
   return (now - s.vscSince) / 1000 >= cfg.endSec;
 }
