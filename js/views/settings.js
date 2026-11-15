@@ -215,12 +215,6 @@ function renderVsc() {
     </div>
     <p class="muted" style="font-size:.85rem;margin:8px 0 0" id="vscEx"></p>
     <button class="btn small ghost" id="vscReset" style="margin-top:10px">Revenir à 20 % (nominal)</button>
-    <div class="auto-rule">
-      <div class="row" style="justify-content:space-between"><h3 style="margin:0">Vitesse de la panne sèche</h3>
-        <label class="switch"><input type="checkbox" id="vscEmpty" ${app.vscCfg.useEmpty ? 'checked' : ''}><span></span> ${app.vscCfg.useEmpty ? 'Appliquée' : 'Non'}</label></div>
-      <p class="muted" style="margin:6px 0 0;font-size:.85rem"><b>Essai</b> : au lieu de la vitesse ci-dessus, le VSC met le <b>carburant de chaque voiture à 0 sur la Control Unit</b>, qui applique alors sa propre vitesse de panne sèche (souvent plus lente que le cran 0). Les réservoirs sont rendus au « Go ».</p>
-      <p class="muted" style="margin:6px 0 0;font-size:.8rem" id="cuFuelMode"></p>
-    </div>
   </section>`;
   const r = $('#vscPct', root);
   const show = (v) => {
@@ -231,14 +225,6 @@ function renderVsc() {
   r.oninput = () => show(+r.value);
   r.onchange = async () => { await app.saveVscCfg({ speedPct: +r.value }); toast('VSC : ' + r.value + ' %', 1200); };
   $('#vscReset', root).onclick = async () => { await app.saveVscCfg({ speedPct: 20 }); renderVsc(); bindTabs(); };
-  $('#vscEmpty', root).onchange = async (e) => { await app.saveVscCfg({ useEmpty: e.target.checked }); renderVsc(); bindTabs(); };
-  const fm = $('#cuFuelMode', root);
-  if (fm) {
-    const st = app.cu.status;
-    fm.innerHTML = !app.cu.connected ? 'Connecte le circuit pour voir si le mode carburant de la Control Unit est activé (il est nécessaire).'
-      : st && (st.mode & MODE.FUEL) ? '✅ Mode carburant de la Control Unit activé.'
-        : '⚠️ Mode carburant de la Control Unit désactivé : active-le sur la CU, sinon cet essai ne ralentit pas les voitures.';
-  }
   bindVscTabs();
 }
 

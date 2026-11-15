@@ -644,7 +644,7 @@ export const app = {
     perf.removeModifier('flag');
     if (!s.quick) perf.addModifier(weather.modifier()); // pas de météo en course rapide
     perf.removeModifier('vsc');
-    perf.addModifier(vscModifier(() => (this.vscCfg.useEmpty ? 'off' : this.session?.flag), () => this.vscCfg.speedPct, (a) => perf.bases.get(a)?.speed, (a) => this.isOutOfFuel(a)));
+    perf.addModifier(vscModifier(() => this.session?.flag, () => this.vscCfg.speedPct, (a) => perf.bases.get(a)?.speed, (a) => this.isOutOfFuel(a)));
     perf.removeModifier('fuel');
     perf.addModifier(this.emptyTankModifier());
     entries.forEach((e) => perf.setBase(e.address, e.car.speed, e.car.brake));
@@ -697,7 +697,6 @@ export const app = {
       c.car.brake = t.brake;
       if (session.cfg.fuel?.enabled ?? this.fuelOn()) this.fillTank(c, session.cfg.fuel?.tank15 ?? t.fuel);
       perf.setBase(c.address, t.speed, t.brake); // bridage VSC, panne sèche… s'appliquent aussi
-      if (session._vscFuel) { session._vscFuel[c.address] = 15; cu.setFuel(c.address, 0); }
       this.log(`Manette ${c.address + 1} ajoutée en cours de séance`);
     });
     // faux départ : la CU a coupé la séquence des feux
@@ -872,7 +871,7 @@ export const app = {
     if (s.flag !== 'red') {
       this.cancelVscCountdown();
       if (s.flag === 'vsc') this.vscResendUntil = performance.now() + 5000;
-      if (s.flag === 'vsc') { this.vscEmptyOff(); s.setFlag('green'); perf.update(); }
+      if (s.flag === 'vsc') { s.setFlag('green'); perf.update(); }
       s.redFlag();
       await cu.pressStart();
       say('Drapeau rouge, drapeau rouge', { priority: true });
@@ -888,27 +887,6 @@ export const app = {
     }
   },
 
-  /**
-   * Essai « vitesse panne sèche » : pendant le VSC, le carburant de chaque voiture est mis
-   * à 0 sur la Control Unit, qui applique alors sa propre vitesse de panne sèche
-   * (il faut le mode carburant de la CU). Les réservoirs sont rendus à la fin du VSC.
-   */
-  vscEmptyOn() {
-    const s = this.session;
-    if (!s || !this.vscCfg.useEmpty || !cu.connected) return;
-    s._vscFuel = {};
-    for (const c of s.comps.values()) {
-      s._vscFuel[c.address] = c.cuFuel ?? 15;
-      cu.setFuel(c.address, 0);
-    }
-  },
-  vscEmptyOff() {
-    const s = this.session;
-    if (!s?._vscFuel) return;
-    for (const [a, v] of Object.entries(s._vscFuel)) cu.setFuel(+a, v);
-    s._vscFuel = null;
-  },
-
   /** Virtual Safety Car : toutes les voitures bridées à un % de leur vitesse max. */
   toggleVsc() {
     const s = this.session;
@@ -917,7 +895,6 @@ export const app = {
     if (s.flag !== 'vsc') {
       s.setFlag('vsc');
       s.vscSince = performance.now(); // pour la fin de VSC automatique
-      this.vscEmptyOn(); // essai : vitesse « panne sèche » de la Control Unit
       cu.urgent(); // les voitures sont bridées tout de suite (avant de relire les passages)
       perf.update();
       say('Virtual Safety Car ! Vitesse limitée', { priority: true });
@@ -943,7 +920,6 @@ export const app = {
       s.vscCountdown = st.n;
       if (st.n === 0) {
         s.vscCountdown = null;
-        this.vscEmptyOff(); // réservoirs de la CU rendus au Go
         s.setFlag('green');
         cu.urgent(); // vitesse normale rendue tout de suite au « Go »
         perf.update();
@@ -1335,8 +1311,6 @@ async function init() {
     const s = app.session;
     if (!s || !cu.connected || !['running', 'finishing'].includes(s.state)) return;
     if (s.flag === 'vsc' || performance.now() < (app.vscResendUntil || 0)) perf.resendSpeeds();
-    // essai panne sèche : carburant à 0 renvoyé aussi (voiture remise en piste)
-    if (s.flag === 'vsc' && s._vscFuel) for (const a of Object.keys(s._vscFuel)) cu.setFuel(+a, 0);
   }, 500);
   // Éclairage : la rampe prend la couleur du drapeau en cours
   setInterval(() => syncLights(app), 100); // 100 ms : alternances régulières
