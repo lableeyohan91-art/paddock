@@ -6,6 +6,7 @@ import { MODE } from '../cu/protocol.js';
 import { renderFuel } from './fuel-settings.js';
 import { vscSpeed } from '../performance.js';
 import { LIGHT_SCENES } from '../devices/lightsync.js';
+import { GenericLight, PROTOCOLS } from '../devices/generic-light.js';
 import { openImport, importDone, removeImport } from './import-records.js';
 
 let app;
@@ -54,7 +55,8 @@ const HELP = {
 HELP.devices = `
     <p>Les appareils que Paddock peut piloter en plus du circuit.</p>
     <ul>
-      <li><b>Éclairage</b> : une rampe LED <b>Chihiros WRGB II</b> en Bluetooth. Pendant une séance, elle prend la couleur de la situation : vert en course, jaune au drapeau jaune, orange en VSC, rouge au drapeau rouge, blanc à l'arrivée (interrupteur « Couleurs en course »).</li>
+      <li><b>Chihiros</b> : une rampe LED <b>Chihiros WRGB II</b> en Bluetooth. Pendant une séance, elle prend la couleur de la situation : vert en course, jaune au drapeau jaune, orange en VSC, rouge au drapeau rouge, blanc à l'arrivée (interrupteur « Couleurs en course »).</li>
+      <li><b>Autres lampes</b> : rubans LED, ampoules et lampes Bluetooth des marques courantes (ELK-BLEDOM / LEDnet, Triones / HappyLighting, Govee). Bouton « Rechercher une lampe » : Paddock reconnaît sa marque et lui applique les mêmes couleurs en course que la rampe.</li>
       <li>La rampe se connecte depuis ce téléphone en Bluetooth, en même temps que la Control Unit. Ferme l'appli « My Chihiros » avant, sinon elle garde la rampe pour elle.</li>
     </ul>`;
 
@@ -151,7 +153,7 @@ function renderVsc() {
   $('#vscReset', root).onclick = async () => { await app.saveVscCfg({ speedPct: 20 }); renderVsc(); bindTabs(); };
 }
 
-/** Réglages → Appareils connectés : pour l'instant un onglet Éclairage (rampe Chihiros). */
+/** Réglages → Appareils connectés : onglets « Chihiros » (rampe) et « Autres lampes ». */
 let devTab = 'lights';
 const PRESETS = [
   { k: 'red', label: 'Rouge', c: [100, 0, 0], css: '#e10600' },
@@ -162,7 +164,104 @@ const PRESETS = [
   { k: 'off', label: 'Éteint', c: [0, 0, 0], css: '#222' },
 ];
 
+/** Onglets d'Appareils connectés : la rampe Chihiros et les autres lampes. */
+function devTabs() {
+  return `<div class="subtabs small">
+    <button class="${devTab === 'lights' ? 'on' : ''}" data-devtab="lights">💡 Chihiros</button>
+    <button class="${devTab === 'others' ? 'on' : ''}" data-devtab="others">🔦 Autres lampes</button>
+  </div>`;
+}
+function bindDevTabs() {
+  root.querySelectorAll('[data-devtab]').forEach((b) => (b.onclick = () => { devTab = b.dataset.devtab; renderDevices(); bindTabs(); }));
+}
+
+/** Case commune aux deux onglets : les couleurs en course valent pour toutes les lampes. */
+function scenesPanel() {
+  return `
+  <section class="panel" style="margin-top:14px">
+    <div class="row" style="justify-content:space-between">
+      <h2 style="margin:0">Couleurs en course</h2>
+      <label class="switch"><input type="checkbox" id="lSync" ${app.lightSync.enabled ? 'checked' : ''}><span></span> ${app.lightSync.enabled ? 'Activé' : 'Désactivé'}</label>
+    </div>
+    <p class="muted" style="font-size:.85rem;margin:8px 0 10px">Pendant une course, des essais libres ou une qualification, <b>toutes les lampes connectées</b> (rampe Chihiros et autres lampes) prennent la couleur de la situation :</p>
+    <div class="light-scenes">
+      ${LIGHT_SCENES.map((x) => `<div class="light-scene"><i style="background:${x.css}"></i><span>${x.label}</span></div>`).join('')}
+    </div>
+  </section>`;
+}
+function bindScenesPanel() {
+  const sync = $('#lSync', root);
+  if (sync) sync.onchange = async (e) => { await app.saveLightSync({ enabled: e.target.checked }); renderDevices(); bindTabs(); };
+}
+
+/** Onglet « Autres lampes » : rechercher n'importe quelle lampe Bluetooth reconnue. */
+function renderOtherLights() {
+  const lights = app.extraLights;
+  root.innerHTML = sectionHead() + devTabs() + `
+  <section class="panel">
+    <h2>Autres lampes Bluetooth</h2>
+    <p class="muted" style="margin:-4px 0 12px;font-size:.9rem">Rubans LED, ampoules, lampes : Paddock les pilote comme la rampe et leur applique les mêmes couleurs en course.</p>
+    ${navigator.bluetooth ? '' : '<p class="warn-note">Bluetooth indisponible dans ce navigateur : utilise Chrome.</p>'}
+    <div class="other-lights">
+      ${lights.length ? lights.map((l) => `
+      <div class="other-light" data-lid="${esc(l.id)}">
+        <div class="ol-id"><b>${esc(l.name)}</b><span class="muted">${esc(l.protocol?.label || '')}</span></div>
+        <span class="ol-state ${l.status}">${l.status === 'on' ? '● connectée' : l.status === 'connecting' ? '⏳' : l.status === 'error' ? '⚠️ ' + esc(l.error || '') : 'déconnectée'}</span>
+        <div class="ol-act">
+          ${l.status === 'on'
+            ? `<button class="btn small" data-ltest>🎨 Tester</button><button class="btn small ghost" data-loff>Déconnecter</button>`
+            : `<button class="btn small" data-lre>↻ Reconnecter</button>`}
+          <button class="btn small ghost danger" data-ldel title="Retirer cette lampe">🗑</button>
+        </div>
+      </div>`).join('') : '<p class="muted">Aucune lampe ajoutée.</p>'}
+    </div>
+    <button class="btn primary" id="olSearch" style="margin-top:12px" ${navigator.bluetooth ? '' : 'disabled'}>🔍 Rechercher une lampe</button>
+    <details class="ghost-exp" style="margin-top:12px">
+      <summary>Lampes reconnues</summary>
+      <ul style="margin:8px 0 0;padding-left:18px;font-size:.85rem">
+        ${PROTOCOLS.map((x) => `<li>${esc(x.label)}</li>`).join('')}
+        <li>Rampe Chihiros : onglet « Chihiros »</li>
+      </ul>
+      <p class="muted" style="font-size:.8rem;margin:6px 0 0">Chaque marque a son propre langage Bluetooth : une lampe non reconnue peut être ajoutée plus tard si l'on connaît son protocole. Ferme l'appli de la lampe avant la recherche (une seule connexion à la fois).</p>
+    </details>
+  </section>` + scenesPanel();
+
+  bindDevTabs();
+  bindScenesPanel();
+  const again = () => { renderDevices(); bindTabs(); };
+  $('#olSearch', root).onclick = async () => {
+    try {
+      const l = await GenericLight.pick();
+      app.addExtraLight(l);
+      toast(`🔦 ${l.name} ajoutée (${l.protocol.label})`, 3000);
+    } catch (e) {
+      if (!/cancel|chosen/i.test(e?.message || '')) toast(e.message || String(e), 4500);
+    }
+    again();
+  };
+  root.querySelectorAll('[data-lid]').forEach((row) => {
+    const l = lights.find((x) => x.id === row.dataset.lid);
+    const on = (sel, fn) => { const b = row.querySelector(sel); if (b) b.onclick = fn; };
+    on('[data-ltest]', async () => {
+      // petit tour des couleurs pour vérifier que la lampe répond
+      for (const c of [[100, 0, 0], [0, 100, 0], [0, 0, 100], [100, 100, 100]]) { l.setColor(...c); await new Promise((r) => setTimeout(r, 700)); }
+    });
+    on('[data-loff]', () => { l.disconnect(); again(); });
+    on('[data-lre]', async () => {
+      try { await l.reconnect(); } catch (e) {
+        // lampe à re-sélectionner (nouveau lancement sans reconnexion automatique)
+        try { const n = await GenericLight.pick(); app.addExtraLight(n); } catch (e2) { if (!/cancel|chosen/i.test(e2?.message || '')) toast(e2.message || String(e2), 4000); }
+      }
+      again();
+    });
+    on('[data-ldel]', async () => { if (await confirmBox(`Retirer ${l.name} ?`)) { app.removeExtraLight(l.id); again(); } });
+    // l'écran se met à jour quand la lampe change d'état (connexion, perte…)
+    if (!l._uiBound) { l._uiBound = true; l.addEventListener('change', () => { if (root && tab === 'devices' && devTab === 'others') { renderDevices(); bindTabs(); } }); }
+  });
+}
+
 function renderDevices() {
+  if (devTab === 'others') { renderOtherLights(); return; }
   const L = app.lights;
   const enableSwitch = (on) => `<label class="switch"><input type="checkbox" id="lEnable" ${on ? 'checked' : ''}><span></span> ${on ? 'Activée' : 'Désactivée'}</label>`;
   const bindEnable = () => {
@@ -171,18 +270,19 @@ function renderDevices() {
   // rampe non activée (cas de tous ceux qui n'en ont pas) : juste l'interrupteur
   if (!app.lightSync.chihiros) {
     root.innerHTML = sectionHead() + `
-    <div class="subtabs small"><button class="on" data-devtab="lights">💡 Éclairage</button></div>
+    ${devTabs()}
     <section class="panel">
       <div class="row" style="justify-content:space-between"><h2 style="margin:0">Rampe LED Chihiros</h2>${enableSwitch(false)}</div>
       <p class="muted" style="margin:10px 0 0">Tu as une rampe LED Chihiros (WRGB II) ? Active-la : Paddock s'y connectera à chaque lancement et elle prendra la couleur des drapeaux en course.</p>
     </section>`;
     bindEnable();
+    bindDevTabs();
     return;
   }
   const st = L.status;
   const c = L.color || { r: 100, g: 100, b: 100 };
   root.innerHTML = sectionHead() + `
-  <div class="subtabs small"><button class="on" data-devtab="lights">💡 Éclairage</button></div>
+  ${devTabs()}
   <section class="panel">
     <div class="row" style="justify-content:space-between;margin-bottom:10px"><h2 style="margin:0">Rampe LED Chihiros</h2>${enableSwitch(true)}</div>
     ${!L.supported ? '<p class="warn-note">Bluetooth indisponible dans ce navigateur : utilise Chrome sur le téléphone ou le PC.</p>' : ''}
@@ -216,16 +316,8 @@ function renderDevices() {
     <div class="light-preview" id="lPreview"></div>
   </section>
 
-  <section class="panel" style="margin-top:14px">
-    <div class="row" style="justify-content:space-between">
-      <h2 style="margin:0">Couleurs en course</h2>
-      <label class="switch"><input type="checkbox" id="lSync" ${app.lightSync.enabled ? 'checked' : ''}><span></span> ${app.lightSync.enabled ? 'Activé' : 'Désactivé'}</label>
-    </div>
-    <p class="muted" style="font-size:.85rem;margin:8px 0 10px">Pendant une course, des essais libres ou une qualification, la rampe prend la couleur de la situation :</p>
-    <div class="light-scenes">
-      ${LIGHT_SCENES.map((x) => `<div class="light-scene"><i style="background:${x.css}"></i><span>${x.label}</span></div>`).join('')}
-    </div>
-  </section>`;
+` + scenesPanel();
+  bindDevTabs();
 
   const preview = () => {
     const v = (k) => +$(`[data-rgb="${k}"]`, root).value;
@@ -242,7 +334,7 @@ function renderDevices() {
   const off = $('#lOff', root);
   if (off) off.onclick = () => act(() => L.disconnect());
   bindEnable();
-  $('#lSync', root).onchange = async (e) => { await app.saveLightSync({ enabled: e.target.checked }); renderDevices(); bindTabs(); };
+  bindScenesPanel();
   root.querySelectorAll('[data-preset]').forEach((b) => (b.onclick = () => {
     const p = PRESETS.find((x) => x.k === b.dataset.preset);
     L.setColor(...p.c);

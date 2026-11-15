@@ -731,3 +731,12 @@ h1 .vsc-ico { width: 40px; height: 40px; font-size: .7rem; }
 .lightbar b { white-space: nowrap; background: rgba(250,204,21,.18); padding: 4px 10px; border-radius: 6px; }
 .lightbar.hidden { display: none; }
 .q-start-note { margin: 4px 0 0; text-align: center; }
+/* Réglages → Appareils connectés → Autres lampes */
+.other-lights { display: grid; gap: 8px; }
+.other-light { display: grid; grid-template-columns: 1fr auto; gap: 6px 10px; align-items: center; padding: 10px; border-radius: 10px; background: var(--panel-2); border: 1px solid var(--line); }
+.ol-id { display: grid; gap: 2px; min-width: 0; }
+.ol-id span { font-size: .78rem; }
+.ol-state { font-size: .8rem; color: var(--muted); }
+.ol-state.on { color: var(--green); }
+.ol-state.error { color: var(--yellow); }
+.ol-act { grid-column: 1 / -1; display: flex; gap: 6px; flex-wrap: wrap; }

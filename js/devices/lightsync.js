@@ -53,9 +53,10 @@ function stepFor(app, k) {
  * force : renvoie même si rien n'a changé (rampe qui vient de se connecter…).
  */
 export function syncLights(app, { force = false } = {}) {
-  const L = app.lights;
-  if (!L?.connected || !app.lightSync?.enabled || !app.lightSync?.chihiros) { last = null; return; }
-  if (app.lightHello) return; // la rampe fait son signal de connexion
+  // toutes les lampes connectées (rampe Chihiros + autres lampes) reçoivent la même scène
+  const outs = app.lightOutputs ? app.lightOutputs() : [];
+  if (!outs.length || !app.lightSync?.enabled) { last = null; return; }
+  const L = { setColor: (r, g, b) => outs.forEach((o) => o.setColor(r, g, b)) };
   const k = sceneFor(app.session);
   if (!k) return;
   noteScene(k);

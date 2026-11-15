@@ -5,6 +5,7 @@ import { BleConnection, bluetoothSupported } from './cu/ble.js';
 import { SimulatorConnection } from './cu/simulator.js';
 import { PerformanceEngine, yellowFlagModifier, vscModifier } from './performance.js';
 import { ChihirosLight } from './devices/chihiros.js';
+import { GenericLight } from './devices/generic-light.js';
 import { syncLights, resetLightSync } from './devices/lightsync.js';
 import { Weather, SKY } from './weather.js';
 import { RaceSession, TYPES, fmtTime, fmtClock } from './race.js';
@@ -193,6 +194,31 @@ export const app = {
 
   fuelCfg: defaultFuelConfig(),
   lights: new ChihirosLight(), // rampe LED Chihiros (Réglages → Appareils connectés → Éclairage)
+  extraLights: [],             // autres lampes Bluetooth (Réglages → Appareils connectés → Autres lampes)
+
+  /** Lampes qui reçoivent les scènes de course (celles qui font leur signal de connexion attendent). */
+  lightOutputs() {
+    const outs = [];
+    if (this.lightSync.chihiros && this.lights.connected && !this.lightHello) outs.push(this.lights);
+    this.extraLights.forEach((l) => { if (l.connected && !l.helloing) outs.push(l); });
+    return outs;
+  },
+
+  /** Ajoute une lampe trouvée par la recherche (et la garde pour les prochains lancements). */
+  addExtraLight(l) {
+    this.extraLights = this.extraLights.filter((x) => x.id !== l.id);
+    this.extraLights.push(l);
+    watchExtraLight(l, true);
+    saveExtraLights();
+    l.dispatchEvent(new Event('change'));
+  },
+
+  removeExtraLight(id) {
+    const l = this.extraLights.find((x) => x.id === id);
+    l?.disconnect();
+    this.extraLights = this.extraLights.filter((x) => x.id !== id);
+    saveExtraLights();
+  },
   lightSync: { enabled: true, chihiros: false }, // chihiros : rampe activée (seulement chez qui en a une) ; enabled : elle suit les drapeaux
 
   async saveLightSync(values) {
@@ -972,6 +998,26 @@ function updateLiveBar() {
   if (bar.innerHTML !== html) bar.innerHTML = html;
 }
 
+// ---------- Autres lampes Bluetooth ----------
+const EXTRA_KEY = 'paddock.extraLights'; // gardées sur ce téléphone (les lampes y sont appairées)
+function saveExtraLights() {
+  try { localStorage.setItem(EXTRA_KEY, JSON.stringify(app.extraLights.map((l) => l.toJSON()))); } catch { /* ignore */ }
+}
+/** Une lampe qui se connecte fait 2 clignotements, puis prend la couleur de la séance. */
+function watchExtraLight(l, fresh = false) {
+  if (l._watched) return;
+  l._watched = true;
+  let wasOn = fresh ? false : l.connected; // fresh : lampe tout juste ajoutée (elle fait son signal)
+  l.addEventListener('change', async () => {
+    if (l.connected && !wasOn) {
+      wasOn = true;
+      try { await l.hello(); } catch { /* ignore */ }
+      resetLightSync();
+      syncLights(app, { force: true });
+    } else if (!l.connected) wasOn = false;
+  });
+}
+
 // ---------- Rampe LED : connexion automatique au lancement ----------
 // La rampe déjà choisie une fois se reconnecte seule. Si le navigateur ne le
 // permet pas, un bandeau propose de la reconnecter d'un seul appui.
@@ -1098,6 +1144,11 @@ async function init() {
     } else if (!on) lightWasOn = false;
   });
   if (app.lightSync.chihiros) autoConnectLights(); // rampe activée dans Réglages → Éclairage
+  // autres lampes déjà ajoutées : reconnexion automatique quand le navigateur le permet
+  let savedLights = [];
+  try { savedLights = JSON.parse(localStorage.getItem(EXTRA_KEY) || '[]'); } catch { /* ignore */ }
+  app.extraLights = savedLights.map((x) => new GenericLight(x));
+  app.extraLights.forEach((l) => { watchExtraLight(l); l.autoConnect().catch(() => {}); });
   // Une seule fois : on installe le réglage équilibré (validé par simulation 50 et 100 tours)
   // et on l'enregistre comme setup nommé.
   if (!(await db.getSetting('fuelBalancedApplied', false))) {
