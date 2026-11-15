@@ -452,6 +452,7 @@ function renderGeneral() {
       <label class="row"><input type="checkbox" id="voice" ${audio.voice ? 'checked' : ''}> Annonces vocales (meilleurs tours, météo, drapeaux, arrivée)</label>
       <label class="row" style="margin-top:8px"><input type="checkbox" id="sounds" ${audio.sounds ? 'checked' : ''}> Bips des feux de départ</label>
       <button class="btn" style="margin-top:12px" id="testVoice">🔊 Tester la voix</button>
+      <button class="btn ghost" style="margin-top:12px;margin-left:6px" id="cuMute">🔇 Couper le son de la Control Unit</button>
     </section>
 
     <section class="panel">
@@ -492,6 +493,17 @@ function renderGeneral() {
   };
   $('#voice', root).onchange = (e) => { audio.voice = e.target.checked; app.db.setSetting('voice', audio.voice); };
   $('#sounds', root).onchange = (e) => { audio.sounds = e.target.checked; app.db.setSetting('sounds', audio.sounds); };
+  // Le son de la Control Unit ne se règle pas à distance : on explique la manipulation (manuel Carrera)
+  $('#cuMute', root).onclick = () => modal(`<h2 style="margin-top:0">🔇 Son de la Control Unit</h2>
+    <p>La Control Unit ne permet pas de couper son son depuis une appli : ça se fait sur le boîtier.</p>
+    <ol class="steps">
+      <li><b>Éteins</b> le circuit.</li>
+      <li><b>Maintiens</b> le bouton <b>START/ENTER</b> de la Control Unit enfoncé.</li>
+      <li><b>Rallume</b> le circuit sans lâcher le bouton.</li>
+      <li><b>Relâche</b> START/ENTER.</li>
+    </ol>
+    <p class="muted" style="font-size:.85rem">Coupe le bip des capteurs et le son des touches. Refais la même chose pour le remettre. Le bip de mise sous tension, lui, reste (manuel Carrera 30352).</p>
+    <div class="row" style="justify-content:flex-end;margin-top:12px"><button class="btn primary" data-close>Compris</button></div>`);
   $('#testVoice', root).onclick = () => say('Meilleur tour pour Pilote 1, 6 secondes 23', { priority: true });
   $('#exp', root).onclick = async () => {
     const data = await app.db.exportAll();
