@@ -337,7 +337,10 @@ function calcResultHtml() {
           <td class="num ${x.gap < -0.05 ? 'good' : x.gap > 0.05 ? 'bad' : ''}">${x.name === 'Nominale' ? '—' : (x.gap >= 0 ? '+' : '−') + sec(Math.abs(x.gap))}</td></tr>`).join('')}</tbody>
       </table></div>
       <p class="muted" style="font-size:.8rem;margin:6px 0 10px">Pilote régulier, sans sortie de piste ni VSC : à vérifier sur la piste. Les fourchettes non gardées seront désactivées.</p>
-      <button class="btn primary" id="calcApply">✅ Appliquer ces réglages</button>
+      <div class="row" style="gap:8px;flex-wrap:wrap">
+        <button class="btn primary" id="calcApply">✅ Appliquer ces réglages</button>
+        ${r.applied ? '<button class="btn" id="calcSave">💾 Sauvegarder ce setup</button>' : ''}
+      </div>
     </div>`;
 }
 
@@ -390,8 +393,22 @@ function bindApply() {
   b.onclick = async () => {
     if (!(await confirmBox('Remplacer tes fourchettes, tes consommations et la vitesse de remplissage par ce réglage ?'))) return;
     Object.assign(cfg, structuredClone(calcResult.cfg));
+    calcResult.applied = true; // le bouton « Sauvegarder ce setup » apparaît à droite
     save(true);
     toast('✅ Réglage du calculateur appliqué');
+  };
+  const sv = $('#calcSave', el);
+  if (sv) sv.onclick = async () => {
+    const v = calcInputs();
+    const name = await promptBox('Nom du setup', `${v.laps} tours · ${v.stops} arrêt${v.stops > 1 ? 's' : ''}`, 'Ex. Course 50 tours, Soirée entre amis…');
+    if (!name) return;
+    if (setups.some((s) => s.name.toLowerCase() === name.toLowerCase())
+      && !(await confirmBox(`Un setup « ${name} » existe déjà. Le remplacer ?`))) return;
+    clearTimeout(saveTimer);
+    await app.saveFuelCfg(cfg);   // réglages appliqués, enregistrés tout de suite
+    await app.saveFuelSetup(name);
+    toast(`💾 Setup « ${name} » enregistré`);
+    await refreshAll();
   };
 }
 
