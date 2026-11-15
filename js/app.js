@@ -884,6 +884,10 @@ export const app = {
     session.addEventListener('state', async (e) => {
       const st = e.detail.state;
       this.log('Session : ' + ({ armed: 'feux en cours', running: 'départ donné', finishing: 'dernier tour', finished: 'terminée' }[st] || st));
+      // GO : 2e envoi du plein (selon le temps au tour), voitures posées sur la grille
+      if (st === 'armed' && cu.connected && this.fuelOn() && this.fuelCfg.mode === 'bands') {
+        for (const c of session.comps.values()) cu.setFuel(c.address, 15);
+      }
       if (st === 'running') {
         beep(1320, 500);
         await this._saveSessionRecord('running');

@@ -161,16 +161,15 @@ function render() {
           <select id="qSetup">${setups.length ? setups.map((s) => `<option value="${esc(s.id)}" ${s.id === activeSetup ? 'selected' : ''}>${esc(s.name)}</option>`).join('')
             : '<option value="">Réglage actuel</option>'}</select></label>`}
         <div>
-          <div class="bar" style="--c:var(--blue);--p:${pct15(tank15())}%">
+          ${tankLocked() ? '' : `<div class="bar" style="--c:var(--blue);--p:${pct15(tank15())}%">
             <span class="bar-l">Réservoir</span>
             <input type="range" id="qTank" min="1" max="15" value="${tank15()}" ${tankLocked() ? 'disabled' : ''}>
             <span class="bar-v num" id="qTankV">${pct15(tank15())} %</span>
-          </div>
-          ${tankLocked() ? '<p class="muted" style="font-size:.8rem;margin:4px 0 0">🔒 Réservoir à 100 % : le calcul selon le temps au tour est réglé sur un plein. Toutes les voitures sont remises à 100 % au départ.</p>' : ''}
-          <p class="muted" style="font-size:.8rem;margin:4px 0 0">Même réservoir pour toutes les voitures de la course.</p>
+          </div>`}
+          ${tankLocked() ? '' : '<p class="muted" style="font-size:.8rem;margin:4px 0 0">Même réservoir pour toutes les voitures de la course.</p>'}
         </div>
       </div>` : '<p class="muted" style="margin:8px 0 0">Pas de consommation : les voitures roulent sans jamais s\'arrêter.</p>'}
-      <p class="warn-note">${PLACE_CARS_MSG}</p>
+      ${prefs.fuelOn && tankLocked() ? '' : `<p class="warn-note">${PLACE_CARS_MSG}</p>`}
     </section>
 
     ${isRace() ? `
