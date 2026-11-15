@@ -156,16 +156,16 @@ function renderVsc() {
     <p class="muted" style="margin-top:-4px">En course, le bouton <b>VSC</b> met immédiatement <b>toutes les voitures à la même vitesse fixe</b>, quel que soit leur réglage du garage (comme la panne sèche en vitesse fixe). Un second appui rend la course.</p>
     <div class="row" style="gap:14px;margin-top:14px">
       <label class="field" style="flex:1">Vitesse sous VSC
-        <input type="range" id="vscPct" min="5" max="100" step="5" value="${pct}"></label>
-      <span class="vsc-pct num" id="vscPctV">${pct} %</span>
+        <input type="range" id="vscPct" min="0" max="100" step="5" value="${pct}"></label>
+      <span class="vsc-pct num" id="vscPctV">${pct} %<small>cran ${vscSpeed(pct)}/15</small></span>
     </div>
     <p class="muted" style="font-size:.85rem;margin:8px 0 0" id="vscEx"></p>
     <button class="btn small ghost" id="vscReset" style="margin-top:10px">Revenir à 20 % (nominal)</button>
   </section>`;
   const r = $('#vscPct', root);
   const show = (v) => {
-    $('#vscPctV', root).textContent = v + ' %';
-    $('#vscEx', root).textContent = `${v} % de la vitesse max = vitesse ${vscSpeed(v)}/15 pour toutes les voitures (une voiture réglée plus lentement garde son allure).`;
+    $('#vscPctV', root).innerHTML = `${v} %<small>cran ${vscSpeed(v)}/15</small>`;
+    $('#vscEx', root).textContent = `${v} % de la vitesse max = cran ${vscSpeed(v)}/15 pour toutes les voitures${vscSpeed(v) === 0 ? ' (le plus lent que permet la Control Unit)' : ''}. Une voiture réglée plus lentement garde son allure.`;
   };
   show(pct);
   r.oninput = () => show(+r.value);
