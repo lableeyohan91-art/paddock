@@ -4,7 +4,7 @@
 //    chacune réglable (2-30 s, 1-40 %) et activable/désactivable.
 
 import { esc, $, $$, toast, confirmBox, promptBox } from '../ui.js';
-import { LIMITS, defaultFuelConfig, consumption, activeBands, balancedPreset } from '../fuel.js';
+import { LIMITS, activeBands } from '../fuel.js';
 import { optimizeFuel, trackRecord, raceMedianOf, median } from '../fuel-calc.js';
 
 let app;
@@ -436,28 +436,6 @@ function refHtml() {
       </div>`).join('')}
     </div>
     <div class="band-scale" id="bandScale"></div>
-
-    <div class="grid grid-2" style="margin-top:16px;gap:12px">
-      <div class="panel inner">
-        <h3 style="margin-top:0">Tester un temps</h3>
-        <div class="row"><input type="number" id="tryT" step="0.01" min="1" max="60" value="${((cfg.nominal.min + cfg.nominal.max) / 2).toFixed(2)}" style="width:110px"> s
-          <span id="tryRes" class="try-res"></span></div>
-      </div>
-      <div class="panel inner">
-        <h3 style="margin-top:0">Remplissage automatique</h3>
-        <p class="muted" style="font-size:.8rem;margin:0 0 8px">Recale les 8 fourchettes autour de la nominale, collées les unes aux autres, avec ce pas (les pourcentages ne changent pas).</p>
-        <div class="row"><input type="number" id="autoStep" step="0.05" min="0.05" max="5" value="0.1" style="width:90px"> s
-          <button class="btn small" id="autoFill">Recaler</button>
-          <button class="btn small ghost" id="resetBands">Valeurs par défaut</button></div>
-      </div>
-    </div>
-    <div class="panel inner" style="margin-top:12px">
-      <h3 style="margin-top:0">⚖️ Réglage équilibré (course)</h3>
-      <p class="muted" style="font-size:.85rem;margin:0 0 8px">Trouvé par simulation de courses de 100 tours (voie des stands 4 s, plein 15 % / s, pilotes irréguliers) :
-        rouler en nominale, en Rapide 1 ou en Rapide 3 se vaut à moins d'1 s ; attaquer à fond ou rouler lentement ne paie pas.
-        Fourchettes 3,1 → 6 s, consommations 8 / 7 / 7 / 6 / <b>5</b> / 4 / 3 / 2 / 1 %.</p>
-      <button class="btn small primary" id="balanced">Appliquer le réglage équilibré</button>
-    </div>
   </section>`;
 }
 
@@ -480,32 +458,9 @@ function bindRef() {
       });
     });
   });
-  $('#tryT', el).oninput = updateLive;
-  $('#autoFill', el).onclick = () => {
-    const step = Math.max(0.05, +$('#autoStep', el).value || 0.1);
-    const r2 = (x) => Math.round(x * 100) / 100;
-    let lo = cfg.nominal.min;
-    cfg.faster.forEach((b) => { b.max = r2(lo); b.min = r2(Math.max(LIMITS.tMin, lo - step)); lo = b.min; });
-    let hi = cfg.nominal.max;
-    cfg.slower.forEach((b, k) => { const w = step * (k < 2 ? 1 : k === 2 ? 3 : 10); b.min = r2(hi); b.max = r2(Math.min(LIMITS.tMax, hi + w)); hi = b.max; });
-    save(true);
-    toast('Fourchettes recalées autour de la nominale');
-  };
-  $('#balanced', el).onclick = async () => {
-    if (!(await confirmBox('Remplacer tes fourchettes, la consommation nominale et la vitesse de plein (15 % / s) par le réglage équilibré ?'))) return;
-    Object.assign(cfg, balancedPreset());
-    save(true);
-    toast('⚖️ Réglage équilibré appliqué');
-  };
-  $('#resetBands', el).onclick = async () => {
-    if (!(await confirmBox('Remettre les 9 fourchettes et la consommation nominale aux valeurs par défaut ?'))) return;
-    const d = defaultFuelConfig();
-    Object.assign(cfg, { nominal: d.nominal, nominalPct: d.nominalPct, faster: d.faster, slower: d.slower });
-    save(true);
-  };
 }
 
-/** Avertissements, échelle visuelle, autonomie, testeur : mis à jour sans tout redessiner. */
+/** Avertissements, échelle visuelle, autonomie : mis à jour sans tout redessiner. */
 function updateLive() {
   if (!el) return;
   const aut = $('#fAutonomy', el);
@@ -540,11 +495,4 @@ function updateLive() {
     } else sc.innerHTML = '';
   }
 
-  const t = $('#tryT', el);
-  if (t) {
-    const s = parseFloat(t.value);
-    $('#tryRes', el).innerHTML = Number.isFinite(s)
-      ? (() => { const r = consumption(cfg, s * 1000); return `→ <b>−${r.pct} %</b> <span class="muted">(${esc(r.band)})</span>`; })()
-      : '';
-  }
 }
