@@ -121,6 +121,9 @@ async function render(d) {
       <div class="kstat"><div class="v num">${st.quals} <small>/</small> <span class="purple">${st.poles}</span></div>
         <div class="l">Qualifs / pole positions</div><div class="s">${st.quals ? pct(st.poles, st.quals) + ' de poles' : ''}</div></div>
     </section>
+    <div class="row" style="justify-content:flex-end;margin-top:8px">
+      <button class="btn small ghost" id="resetResults">🏁 Remettre à zéro courses / victoires et qualifs / poles (tous les pilotes)</button>
+    </div>
 
     <section class="panel" style="margin-top:16px">
       <h2>Records par circuit</h2>
@@ -156,6 +159,14 @@ async function render(d) {
 
   $('#back', root).onclick = () => app.go('drivers');
   $('#edit', root).onclick = () => editDriver(d, () => refresh());
+  $('#resetResults', root).onclick = async () => {
+    const list = (await app.db.all('sessions')).filter((x) => x.type === 'race' || x.type === 'qualifying');
+    if (!list.length) { toast('Aucune course ni qualif enregistrée'); return; }
+    if (!(await confirmBox(`Effacer définitivement les ${list.length} courses et qualifs enregistrées ? Les compteurs courses / victoires et qualifs / poles de tous les pilotes repartent de zéro. Les tours, temps de roulage et records sont conservés.`))) return;
+    for (const x of list) await app.db.remove('sessions', x.id);
+    toast('Courses et qualifs remises à zéro');
+    refresh();
+  };
   $('#clearLaps', root).onclick = async () => {
     const mine = (await app.db.all('laps')).filter((l) => l.driverId === d.id && !l.imported);
     if (!mine.length) { toast('Aucun tour roulé à effacer'); return; }
