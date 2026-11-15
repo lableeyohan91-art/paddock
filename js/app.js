@@ -941,17 +941,23 @@ async function autoConnectLights() {
   const L = app.lights;
   let r = 'none';
   try { r = await L.autoConnect(); } catch { r = L.savedName ? 'unsupported' : 'none'; }
+  app.log(`Rampe LED au lancement : ${r}${L.savedName ? ' (' + L.savedName + ')' : ''}`);
   if (r === 'on') { toast(`💡 Rampe connectée : ${L.name}`); return; }
-  if (r === 'waiting') app.log(`Rampe ${L.name} : en attente (allume-la ou rapproche-toi)`);
-  if (r === 'unsupported') {
-    const bar = $('#lightBar');
-    bar.innerHTML = `<span>💡</span><span>Rampe ${esc(L.savedName)} non connectée</span><b>Connecter</b>`;
-    bar.classList.remove('hidden');
-    bar.onclick = async () => {
-      try { await L.connect({ name: L.savedName }); toast('💡 Rampe connectée'); bar.classList.add('hidden'); }
-      catch (e) { toast(e.message || String(e), 3000); }
-    };
-  }
+  if (r === 'none') return; // aucune rampe utilisée jusqu'ici
+  // pas connectée tout de suite (navigateur qui demande un appui, rampe éteinte…) :
+  // on continue d'essayer en arrière-plan ET on propose de la connecter d'un appui
+  const bar = $('#lightBar');
+  const name = L.savedName || L.name;
+  bar.innerHTML = `<span>💡</span><span>Rampe ${esc(name || '')} non connectée</span><b>Connecter</b>`;
+  bar.classList.remove('hidden');
+  bar.onclick = async () => {
+    try {
+      // un appui permet souvent de rouvrir la rampe déjà autorisée ; sinon on la redemande
+      if (L.device) { try { await L.reconnect(); } catch { await L.connect({ name }); } } else await L.connect({ name });
+      toast('💡 Rampe connectée');
+      bar.classList.add('hidden');
+    } catch (e) { toast(e.message || String(e), 3000); }
+  };
 }
 
 // ---------- Nouvelle version disponible ----------

@@ -117,6 +117,7 @@ export class ChihirosLight extends EventTarget {
     try {
       this._set('connecting');
       await this._open();
+      this._remember();
       return 'on';
     } catch {
       this._set('off');
@@ -165,7 +166,7 @@ export class ChihirosLight extends EventTarget {
     if (!this.device) throw new Error('Aucune rampe choisie');
     this._manualOff = false;
     this._set('connecting');
-    try { await this._open(); } catch (e) { this._set('error', e?.message || String(e)); throw e; }
+    try { await this._open(); this._remember(); } catch (e) { this._set('error', e?.message || String(e)); throw e; }
   }
 
   async _open() {
