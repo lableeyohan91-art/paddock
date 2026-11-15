@@ -3,7 +3,7 @@
 // (activée ou non, setup, réservoir commun à toutes les voitures).
 // Jamais de météo ni de pneus ici : c'est voulu.
 
-import { esc, $, $$, toast } from '../ui.js';
+import { esc, $, $$, toast, promptBox } from '../ui.js';
 import { avatar } from './drivers.js';
 
 let app;
@@ -28,6 +28,7 @@ export async function mount(main, a) {
     app.setup.slots.slice(0, min).forEach((s) => (s.active = true));
     app.saveSetup();
   }
+  if (!app.track(app.setup.trackId) && app.data.tracks[0]) { app.setup.trackId = app.data.tracks[0].id; app.saveSetup(); }
   prefs = { laps: 30, minutes: 5, pqByLaps: false, pqLaps: 5, raceByTime: false, raceMinutes: 10, fuelOn: true, tank15: 15, autoVsc: true, tyresOn: false, ...(await app.db.getSetting('quickRace', {})) };
   setups = await app.fuelSetups();
   activeSetup = await app.db.getSetting('fuelActiveSetup', null);
@@ -71,7 +72,18 @@ function render() {
       <span style="width:80px"></span>
     </div>
 
-    <section class="panel">
+    <section class="panel q-track">
+      <label class="row" style="gap:10px;flex-wrap:wrap">
+        <h2 style="margin:0">📍 Circuit</h2>
+        <select id="qTrack" style="flex:1;min-width:160px">
+          ${app.data.tracks.map((t) => `<option value="${esc(t.id)}" ${t.id === app.setup.trackId ? 'selected' : ''}>${esc(t.name)}</option>`).join('')}
+        </select>
+        <button class="btn small ghost" id="qTrackAdd" title="Ajouter un circuit">＋ Nouveau</button>
+      </label>
+      <p class="muted" style="margin:6px 0 0;font-size:.8rem">Les tours, records et statistiques de la séance seront rangés sur ce circuit.</p>
+    </section>
+
+    <section class="panel" style="margin-top:14px">
       <div class="row" style="justify-content:space-between">
         <h2 style="margin:0">1. Participants <span class="muted" style="font-weight:500">(${n})</span></h2>
         <span class="muted" style="font-size:.85rem" id="qLive"></span>
@@ -182,6 +194,18 @@ function render() {
 
 function bind() {
   $('#qBack', root).onclick = () => { app.raceMenu = true; app.go('race'); };
+  $('#qTrack', root).onchange = (e) => { app.setup.trackId = e.target.value; app.saveSetup(); toast('Circuit : ' + (app.track(e.target.value)?.name || ''), 1200); };
+  $('#qTrackAdd', root).onclick = async () => {
+    const name = await promptBox('Nouveau circuit', '', 'Ex. Circuit du salon, Grand ovale…');
+    if (!name) return;
+    const t = { id: app.db.uid(), name: name.trim().slice(0, 40), length: 0, created: Date.now() };
+    await app.db.put('tracks', t);
+    await app.loadData();
+    app.setup.trackId = t.id;
+    app.saveSetup();
+    toast(`Circuit « ${t.name} » ajouté`);
+    render();
+  };
 
   $$('.q-slot', root).forEach((row) => {
     const slot = app.setup.slots[+row.dataset.slot];

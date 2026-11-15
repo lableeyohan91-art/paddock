@@ -766,6 +766,8 @@ h1 .vsc-ico { width: 40px; height: 40px; font-size: .7rem; }
 .calc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; }
 .calc-grid input { width: 100%; }
 .table-wrap { overflow-x: auto; }
+.sheet-track { gap: 10px; margin: 12px 0 4px; font-weight: 700; }
+.sheet-track select { flex: 1; max-width: 320px; }
 .cu-log { font-size: .7rem; color: var(--muted); white-space: pre-wrap; word-break: break-word; max-height: 140px; overflow: auto; background: var(--panel-2); border-radius: 8px; padding: 6px 8px; margin: 0 0 12px; }
 .cu-log:empty { display: none; }
 .calc-table { width: 100%; border-collapse: collapse; font-size: .9rem; }

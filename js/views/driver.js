@@ -8,12 +8,15 @@ import { avatar, editDriver } from './drivers.js';
 
 let app;
 let root;
+let sheetTrack;  // circuit affiché sur la fiche ('' = tous les circuits)
 
 export function mount(main, a) {
   app = a;
   root = main;
   const d = app.driver(app.driverId);
   if (!d) { app.go('drivers'); return; }
+  // par défaut : le circuit en cours (celui de la préparation de course)
+  if (sheetTrack === undefined || (sheetTrack && !app.track(sheetTrack))) sheetTrack = app.setup?.trackId || '';
   render(d);
 }
 
@@ -39,8 +42,9 @@ function fmtDuration(ms) {
 const wet = (l) => (l.wetness ?? 0) >= 0.05;
 
 async function compute(d) {
-  const laps = await app.db.byIndex('laps', 'driverId', d.id);
-  const sessions = await app.db.all('sessions');
+  const onTrack = (x) => !sheetTrack || x.trackId === sheetTrack;
+  const laps = (await app.db.byIndex('laps', 'driverId', d.id)).filter(onTrack);
+  const sessions = (await app.db.all('sessions')).filter(onTrack);
   const lapSessions = new Set(laps.map((l) => l.sessionId));
   const mine = sessions.filter((s) => s.state === 'finished' &&
     (lapSessions.has(s.id) || (s.entries || []).some((e) => e.driverId === d.id)));
@@ -113,6 +117,14 @@ async function render(d) {
       </div>
     </header>
 
+    ${app.data.tracks.length > 1 ? `
+    <label class="row sheet-track">📍 Circuit
+      <select id="sheetTrack">
+        <option value="" ${!sheetTrack ? 'selected' : ''}>Tous les circuits</option>
+        ${app.data.tracks.map((t) => `<option value="${esc(t.id)}" ${t.id === sheetTrack ? 'selected' : ''}>${esc(t.name)}</option>`).join('')}
+      </select>
+    </label>` : ''}
+
     <section class="key-stats">
       <div class="kstat"><div class="v num">${st.totalLaps}</div><div class="l">Tours effectués</div></div>
       <div class="kstat"><div class="v num">${st.drivingMs ? fmtDuration(st.drivingMs) : '—'}</div><div class="l">Temps de roulage</div></div>
@@ -123,7 +135,7 @@ async function render(d) {
     </section>
 
     <section class="panel" style="margin-top:16px">
-      <h2>Records par circuit</h2>
+      <h2>${sheetTrack ? 'Record sur ce circuit' : 'Records par circuit'}</h2>
       ${st.records.length ? `
       <div class="records">
         ${st.records.map((r, i) => `
@@ -155,6 +167,8 @@ async function render(d) {
   </div>`;
 
   $('#back', root).onclick = () => app.go('drivers');
+  const tr = $('#sheetTrack', root);
+  if (tr) tr.onchange = () => { sheetTrack = tr.value; progTrack = null; render(d); };
   $('#edit', root).onclick = () => editDriver(d, () => refresh());
   $('#del', root).onclick = async () => {
     if (!(await confirmBox(`Supprimer ${d.name} ? Ses tours déjà enregistrés restent dans les statistiques.`))) return;
