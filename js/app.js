@@ -592,6 +592,47 @@ export const app = {
 
   // ---------- Connexion ----------
 
+  /** Texte de diagnostic de la connexion (à envoyer pour comprendre un souci). */
+  diagnosticText() {
+    const c = cu.conn;
+    const p = c?.out?.properties;
+    const lines = [
+      '=== Diagnostic Paddock ===',
+      'Date : ' + new Date().toLocaleString('fr-FR'),
+      'Navigateur : ' + navigator.userAgent,
+      'Connexion : ' + (c ? `${c.kind} · ${c.name}` : 'aucune') + (cu.reconnecting ? ' (reconnexion en cours)' : ''),
+      'Version Control Unit : ' + (cu.version || 'inconnue'),
+      c?.modeLabel ? 'Liaison : ' + c.modeLabel : null,
+      p ? `Écriture possible : avec accusé ${p.write ? 'oui' : 'non'}, sans réponse ${p.writeWithoutResponse ? 'oui' : 'non'} · lecture ${c.notify?.properties?.read ? 'oui' : 'non'}, notifications ${c.notify?.properties?.notify ? 'oui' : 'non'}` : null,
+      `Échanges : ${cu.stats.requests} · erreurs : ${cu.stats.errors} · passages : ${cu.stats.timers}`,
+      cu.counts ? 'Réponses : ' + Object.entries(cu.counts).map(([k, v]) => `${k} ${v}`).join(', ') : null,
+      cu.status ? `Dernier état : feux ${cu.status.start}, mode ${cu.status.mode}` : null,
+      '',
+      '--- Dernières réponses brutes du circuit ---',
+      ...(cu.trace || []).map((t) => `${t.time}  ${JSON.stringify(t.raw)}  → ${t.desc}`),
+      '',
+      '--- Journal (30 dernières lignes) ---',
+      ...this.logLines.slice(-30),
+    ];
+    return lines.filter((l) => l !== null).join('\n');
+  },
+
+  /** Copie le diagnostic (ou l'affiche à copier à la main si la copie est refusée). */
+  async copyDiagnostic() {
+    const text = this.diagnosticText();
+    try {
+      await navigator.clipboard.writeText(text);
+      toast('📋 Diagnostic copié : colle-le dans un message', 2500);
+    } catch {
+      const m = modal(`<h2>Diagnostic</h2>
+        <p class="muted" style="font-size:.85rem">Sélectionne tout le texte et copie-le.</p>
+        <textarea readonly style="width:100%;height:260px;font-size:.75rem">${esc(text)}</textarea>
+        <div class="row" style="justify-content:flex-end;margin-top:8px"><button class="btn ghost" data-close>Fermer</button></div>`);
+      const ta = m.el.querySelector('textarea');
+      ta.focus(); ta.select();
+    }
+  },
+
   openConnectDialog() {
     if (cu.conn) {
       const m = modal(`
@@ -600,10 +641,12 @@ export const app = {
         <p class="muted num" id="cuLive"></p>
         <p class="muted" id="cuMode" style="font-size:.8rem"></p>
         <pre class="cu-log" id="cuLog"></pre>
-        <div class="row" style="justify-content:flex-end">
+        <div class="row" style="justify-content:flex-end;flex-wrap:wrap">
+          <button class="btn ghost" id="diagBtn">📋 Copier le diagnostic</button>
           <button class="btn ghost" data-close>Fermer</button>
           <button class="btn primary" id="discBtn">Déconnecter</button>
         </div>`, { onClose: () => clearInterval(live) });
+      m.el.querySelector('#diagBtn').onclick = () => this.copyDiagnostic();
       const upd = () => {
         const el = m.el.querySelector('#cuLive');
         if (el) el.textContent = `Échanges : ${cu.stats.requests} · erreurs : ${cu.stats.errors} · passages : ${cu.stats.timers}`;
@@ -635,7 +678,11 @@ export const app = {
           <span class="muted">Des voitures virtuelles pour tester l'appli sans le circuit.</span>
         </button>
       </div>
-      <div class="row" style="justify-content:flex-end;margin-top:12px"><button class="btn ghost" data-close>Annuler</button></div>`);
+      <div class="row" style="justify-content:flex-end;margin-top:12px">
+        ${this.logLines.length ? '<button class="btn ghost" id="diagBtn">📋 Copier le diagnostic</button>' : ''}
+        <button class="btn ghost" data-close>Annuler</button></div>`);
+    const dg = m.el.querySelector('#diagBtn');
+    if (dg) dg.onclick = () => this.copyDiagnostic();
     m.el.querySelector('#cBle').onclick = () => { m.close(); this.connect(new BleConnection()); };
     const all = m.el.querySelector('#cBleAll');
     if (all) all.onclick = () => {
