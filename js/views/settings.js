@@ -81,12 +81,14 @@ function showHelp(k) {
     <div class="row" style="justify-content:flex-end;margin-top:12px"><button class="btn primary" data-close>Compris</button></div>`);
 }
 let openFuelNext = false;
+let openNext = null; // section à ouvrir directement au prochain affichage (ex. 'vsc')
 
 export function mount(main, a) {
   app = a;
   root = main;
-  tab = openFuelNext ? 'fuel' : 'menu'; // l'onglet Réglages s'ouvre sur les tuiles
+  tab = openFuelNext ? 'fuel' : openNext || 'menu'; // l'onglet Réglages s'ouvre sur les tuiles
   openFuelNext = false;
+  openNext = null;
   render();
 }
 
@@ -595,6 +597,12 @@ function renderDevices() {
   if (off) off.onclick = () => act(() => L.disconnect());
   bindEnable();
   bindScenesPanel();
+}
+
+/** Ouvre directement Réglages → VSC → VSC automatique (depuis un autre écran). */
+export function openAutoVsc() {
+  openNext = 'vsc';
+  vscTab = 'auto';
 }
 
 /** Ouvre directement Réglages → Essence (depuis un autre écran). */

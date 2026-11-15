@@ -362,6 +362,11 @@ export const app = {
     if (perf.bases.size) sim.cars.forEach((c, i) => { if (i !== 6) c.active = perf.bases.has(i); });
   },
 
+  openAutoVscSettings() {
+    settingsView.openAutoVsc();
+    this.go('settings');
+  },
+
   openFuelSettings(tab) {
     settingsView.openFuel(tab);
     this.go('settings');

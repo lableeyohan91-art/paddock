@@ -178,7 +178,7 @@ function render() {
         <label class="switch"><input type="checkbox" id="qAutoVsc" ${prefs.autoVsc ? 'checked' : ''}><span></span> ${prefs.autoVsc ? 'Activé' : 'Désactivé'}</label>
       </div>
       <p class="muted" style="margin:8px 0 0;font-size:.85rem">${prefs.autoVsc
-        ? 'Le VSC se déclenche (et se termine) tout seul selon les réglages de Réglages → VSC → VSC automatique.'
+        ? 'Se déclenche et s\'arrête tout seul · <a href="#" class="q-link" id="qVscCfg">Réglages</a>'
         : 'Course sans VSC automatique : seul le bouton VSC fonctionne.'}</p>
     </section>
 
@@ -274,6 +274,8 @@ function bind() {
   }));
   const av = $('#qAutoVsc', root);
   if (av) av.onchange = (e) => { prefs.autoVsc = e.target.checked; savePrefs(); render(); };
+  const vl = $('#qVscCfg', root);
+  if (vl) vl.onclick = (e) => { e.preventDefault(); app.openAutoVscSettings(); };
   const ty = $('#qTyres', root);
   if (ty) ty.onchange = (e) => { prefs.tyresOn = e.target.checked; savePrefs(); render(); };
   const sel = $('#qSetup', root);
