@@ -1054,7 +1054,7 @@ async function init() {
   app.lights.addEventListener('change', async () => {
     const on = app.lights.connected;
     if (on && !lightWasOn) {
-      // vient de se connecter : 3 clignotements pour le signaler, puis la couleur de la séance
+      // vient de se connecter : 2 clignotements pour le signaler, puis la couleur de la séance
       lightWasOn = true;
       $('#lightBar').classList.add('hidden');
       app.lightHello = true;
