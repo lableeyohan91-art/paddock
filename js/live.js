@@ -6,6 +6,7 @@
 
 import * as sync from './sync.js';
 import { toast } from './ui.js';
+import { tyreState } from './tyres.js';
 
 const PUBLIC_URL = 'https://lableeyohan91-art.github.io/paddock/';
 const CODE_KEY = 'paddock.liveCode';
@@ -101,6 +102,7 @@ function snapshot() {
     endWall: s.endedAt && startWall !== null ? startWall + s.elapsedMs : null,
     leaderLaps: s.leaderLaps,
     fuel: app.fuelOn(),
+    tyres: app.tyresOn(),
     overallBest: s.overallBest ? { time: s.overallBest.time, address: s.overallBest.address } : null,
     comps: list.map((c) => {
       const t = app.getTune(c.driver?.id, c.car?.id);
@@ -119,6 +121,7 @@ function snapshot() {
         inPit: c.inPit,
         pitStops: c.pitStops,
         finished: c.finished,
+        tyre: c.tyre ? { c: c.tyre.compound, w: Math.round(c.tyre.wear), n: c.tyre.next, st: tyreState(app.tyres, c.tyre) } : null,
         speed: t.speed,
         brake: t.brake,
       };
@@ -173,6 +176,9 @@ function handle(cmd) {
     if (s.flag === 'red' && s.redResuming) return;
     app.toggleRed();
     toast(s.flag === 'red' ? `🚩 Drapeau rouge${who}` : `Reprise demandée${who}`);
+  } else if (cmd.type === 'tyre') {
+    // gomme choisie par le pilote (pneus de départ avant le GO, sinon pour le prochain arrêt)
+    app.setTyreNext(cmd.a, cmd.compound);
   } else if (cmd.type === 'tune') {
     // un pilote ne règle que SA voiture : celle de la manette indiquée
     const c = s.comps.get(cmd.a);

@@ -6,6 +6,7 @@ import { MODE } from '../cu/protocol.js';
 import { renderFuel } from './fuel-settings.js';
 import { vscSpeed } from '../performance.js';
 import { autoCfg } from '../autovsc.js';
+import { COMPOUNDS, COMPOUND_INFO, DEFAULT_TYRES } from '../tyres.js';
 import { LIGHT_SCENES, COLOR_SLOTS, paletteColor, sceneCss, cssOf } from '../devices/lightsync.js';
 import { GenericLight, PROTOCOLS } from '../devices/generic-light.js';
 import { openImport, importDone, removeImport } from './import-records.js';
@@ -18,6 +19,7 @@ const SECTIONS = [
   { k: 'general', ico: '⚙️', name: 'Général' },
   { k: 'fuel', ico: '⛽', name: 'Essence' },
   { k: 'vsc', ico: '<span class="vsc-ico">VSC</span>', name: 'VSC' }, // même icône que le bouton en course
+  { k: 'tyres', ico: '🛞', name: 'Pneus' },
   { k: 'devices', ico: '🔌', name: 'Appareils connectés' },
 ];
 let tab = 'menu';
@@ -53,6 +55,16 @@ const HELP = {
       <li><b>VSC automatique</b> (2e onglet) : le VSC se déclenche tout seul quand une voiture ne repasse plus — <b>par tour</b> (pas de passage sur la ligne depuis X s) ou <b>par secteur</b> avec les Check Lane (Y s). Les voitures au stand, en panne sèche ou arrivées sont exclues.</li>
     </ul>`,
 };
+
+HELP.tyres = `
+    <p>Trois gommes aux comportements bien marqués (mode arcade).</p>
+    <ul>
+      <li><b>Tendre</b> : la plus rapide, s'use vite. <b>Medium</b> : entre les deux. <b>Dur</b> : plus lent, dure longtemps.</li>
+      <li><b>Usure</b> : à chaque tour. Au-delà de l'<b>usure critique</b>, la voiture ralentit nettement jusqu'à la vitesse « usée ».</li>
+      <li><b>Chauffe</b> : après un changement, la voiture est un peu bridée pendant les tours de chauffe.</li>
+      <li><b>Changement</b> : rester immobile quelques secondes dans la voie des stands. Chaque pilote choisit sa gomme sur sa <b>vue pilote</b> (ou on la choisit sur l'écran de course).</li>
+      <li>Les pneus s'activent course par course sur l'écran de préparation. Pas d'effet pendant un VSC ou une panne sèche.</li>
+    </ul>`;
 
 HELP.devices = `
     <p>Les appareils que Paddock peut piloter en plus du circuit.</p>
@@ -114,6 +126,7 @@ function render() {
     bindTabs();
     return;
   }
+  if (tab === 'tyres') { renderTyres(); bindTabs(); return; }
   if (tab === 'devices') {
     renderDevices();
     bindTabs();
@@ -226,6 +239,57 @@ function renderVsc() {
   r.onchange = async () => { await app.saveVscCfg({ speedPct: +r.value }); toast('VSC : ' + r.value + ' %', 1200); };
   $('#vscReset', root).onclick = async () => { await app.saveVscCfg({ speedPct: 20 }); renderVsc(); bindTabs(); };
   bindVscTabs();
+}
+
+/** Réglages → Pneus : tout se règle par gomme (valeurs en % de la vitesse du garage). */
+const TYRE_FIELDS = [
+  ['newPct', 'Vitesse neufs', '%', 10, 100, 5],
+  ['wearPerLap', 'Usure par tour', '%', 0, 100, 1],
+  ['cliffPct', 'Usure critique', '%', 0, 100, 5],
+  ['wornPct', 'Vitesse usés', '%', 0, 100, 5],
+  ['warmLaps', 'Tours de chauffe', 'tours', 0, 10, 1],
+  ['coldPct', 'Vitesse à froid', '%', 10, 100, 5],
+];
+function renderTyres() {
+  const t = app.tyres;
+  const lapsTo = (g) => (g.wearPerLap ? Math.ceil(g.cliffPct / g.wearPerLap) : '∞');
+  root.innerHTML = sectionHead() + `
+  <section class="panel">
+    <h2>Arrêt au stand</h2>
+    <div class="row" style="gap:14px;flex-wrap:wrap">
+      <label class="field">Temps de changement (s)<input type="number" id="tyChange" min="0" max="30" step="0.5" value="${t.changeSec}" style="width:90px"></label>
+      <label class="field">Gomme de départ
+        <select id="tyStart">${COMPOUNDS.map((k) => `<option value="${k}" ${t.start === k ? 'selected' : ''}>${COMPOUND_INFO[k].label}</option>`).join('')}</select></label>
+    </div>
+    <p class="muted" style="margin:8px 0 0;font-size:.85rem">La voiture doit rester immobile ce temps-là dans la voie des stands pour repartir avec la gomme choisie. La gomme de départ peut être changée par chaque pilote sur sa vue pilote avant le GO.</p>
+  </section>
+  ${COMPOUNDS.map((k) => {
+    const g = t[k];
+    return `
+  <section class="panel tyre-card" style="margin-top:14px;--tc:${COMPOUND_INFO[k].color}">
+    <h2><span class="tyre-dot">${COMPOUND_INFO[k].short}</span> ${COMPOUND_INFO[k].label}</h2>
+    <div class="tyre-grid">
+      ${TYRE_FIELDS.map(([f, l, u, mn, mx, st]) => `<label class="field">${l} (${u})<input type="number" data-ty="${k}.${f}" min="${mn}" max="${mx}" step="${st}" value="${g[f]}"></label>`).join('')}
+    </div>
+    <p class="muted" style="margin:8px 0 0;font-size:.8rem">≈ ${lapsTo(g)} tours avant l'usure critique.</p>
+  </section>`;
+  }).join('')}
+  <button class="btn small ghost" id="tyReset" style="margin-top:14px">↺ Revenir aux réglages d'origine</button>`;
+
+  const save = async (patch) => { await app.saveTyres({ ...app.tyres, ...patch }); };
+  $('#tyChange', root).onchange = async (e) => { await save({ changeSec: +e.target.value }); toast('Enregistré', 1000); };
+  $('#tyStart', root).onchange = async (e) => { await save({ start: e.target.value }); toast('Enregistré', 1000); };
+  root.querySelectorAll('[data-ty]').forEach((inp) => (inp.onchange = async () => {
+    const [k, f] = inp.dataset.ty.split('.');
+    await save({ [k]: { ...app.tyres[k], [f]: +inp.value } });
+    renderTyres(); bindTabs();
+    toast('Enregistré', 1000);
+  }));
+  $('#tyReset', root).onclick = async () => {
+    if (!(await confirmBox('Revenir aux réglages d\'origine des pneus ?'))) return;
+    await app.saveTyres(DEFAULT_TYRES);
+    renderTyres(); bindTabs();
+  };
 }
 
 /** Réglages → Appareils connectés : onglets « Chihiros » (rampe) et « Autres lampes ». */

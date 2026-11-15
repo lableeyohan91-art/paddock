@@ -40,3 +40,12 @@
 .pv-rname { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pv-rbest, .pv-rgap { text-align: right; font-size: .8rem; }
 .pv-pick { margin-top: 10px; }
+
+/* Mes pneus */
+.pv-tyres { margin-top: 12px; }
+.tyre-dot { display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; border: 3px solid var(--tc); font-size: .75rem; font-weight: 900; color: var(--text); background: #111; flex: none; }
+.pv-tyre-now { display: flex; align-items: center; gap: 8px; }
+.pv-tyre-now .fuelg-bar { height: 10px; }
+.pv-tyre-pick { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.pv-tyre-btn { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 10px 6px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel-2); color: var(--text); font-weight: 700; cursor: pointer; }
+.pv-tyre-btn.on { border-color: var(--tc); box-shadow: 0 0 0 2px var(--tc); }

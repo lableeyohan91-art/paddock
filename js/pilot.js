@@ -7,6 +7,12 @@ import { FIREBASE_CONFIG } from './firebase-config.js';
 import { esc, $, $$, toast, confirmBox } from './ui.js';
 import { fmtTime, fmtClock } from './race.js';
 
+const TYRES = {
+  soft: { label: 'Tendre', short: 'T', color: '#e10600' },
+  medium: { label: 'Medium', short: 'M', color: '#facc15' },
+  hard: { label: 'Dur', short: 'D', color: '#f5f5f5' },
+};
+
 const SDK = 'https://www.gstatic.com/firebasejs/10.12.2/';
 const code = (new URLSearchParams(location.search).get('c') || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
 const PICK_KEY = 'paddock.pilot.' + code;
@@ -149,6 +155,8 @@ function renderPilot() {
         : `<button class="btn red icon-sq" id="pvRed" ${!live ? 'disabled' : ''} title="Drapeau rouge">🚩</button><span class="pv-act-l">Drapeau rouge</span>`}
     </section>
 
+    ${d.tyres && c.tyre ? tyresPanel(d, c) : ''}
+
     <section class="panel" id="pvGarage">${oldGarage ? '' : garage(c)}</section>
 
     <section class="panel pv-board">
@@ -165,6 +173,29 @@ function renderPilot() {
   </div>`;
   if (oldGarage) $('#pvGarage', view).replaceWith(oldGarage);
   bind(c, !oldGarage);
+}
+
+/** Mes pneus : gomme, usure, état, et choix de la gomme (départ ou prochain arrêt). */
+function tyresPanel(d, c) {
+  const t = c.tyre;
+  const g = TYRES[t.c];
+  const before = !['running', 'finishing'].includes(d.state);
+  const want = before ? t.c : (t.n || t.c);
+  const st = t.st === 'cold' ? '❄️ Froids' : t.st === 'worn' ? '⚠️ Usés' : '✅ OK';
+  return `
+    <section class="panel pv-tyres">
+      <h2 style="margin-bottom:8px">🛞 Mes pneus</h2>
+      <div class="pv-tyre-now">
+        <span class="tyre-dot" style="--tc:${g.color}">${g.short}</span>
+        <b>${g.label}</b><span class="muted">${st}</span>
+        <div class="fuelg-bar" style="flex:1"><i style="width:${100 - t.w}%;background:${t.st === 'worn' ? 'var(--accent)' : 'var(--green)'}"></i></div>
+        <b class="num">${100 - t.w} %</b>
+      </div>
+      <p class="muted" style="margin:10px 0 6px;font-size:.85rem">${before ? 'Pneus de départ :' : 'Gomme pour le prochain arrêt au stand :'}</p>
+      <div class="pv-tyre-pick">
+        ${Object.entries(TYRES).map(([k, x]) => `<button class="pv-tyre-btn ${want === k ? 'on' : ''}" data-tyre="${k}" style="--tc:${x.color}"><span class="tyre-dot" style="--tc:${x.color}">${x.short}</span>${x.label}</button>`).join('')}
+      </div>
+    </section>`;
 }
 
 function garage(c) {
@@ -198,6 +229,9 @@ function bind(c, bindGarage = true) {
     if (data.flag !== 'red' && !(await confirmBox('Drapeau rouge : toutes les voitures s\'arrêtent. Confirmer ?'))) return;
     if (await send('red')) toast(data.flag === 'red' ? 'Reprise demandée' : 'Drapeau rouge demandé', 1500);
   };
+  $$('[data-tyre]', view).forEach((b) => (b.onclick = async () => {
+    if (await send('tyre', { a: c.a, compound: b.dataset.tyre })) toast(`Pneus ${TYRES[b.dataset.tyre].label} demandés`, 1500);
+  }));
   if (bindGarage) $$('#pvGarage [data-k]', view).forEach((r) => {
     const show = () => {
       const bar = r.parentElement;

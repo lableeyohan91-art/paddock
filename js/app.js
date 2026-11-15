@@ -6,6 +6,7 @@ import { SimulatorConnection } from './cu/simulator.js';
 import { PerformanceEngine, vscModifier } from './performance.js';
 import { ChihirosLight } from './devices/chihiros.js';
 import { checkAutoVsc, shouldEndVsc } from './autovsc.js';
+import { tyreCfg, freshTyres, tyreFactor, wearLap, COMPOUND_INFO } from './tyres.js';
 import { GenericLight } from './devices/generic-light.js';
 import { syncLights, resetLightSync } from './devices/lightsync.js';
 import { Weather, SKY } from './weather.js';
@@ -79,6 +80,7 @@ export const app = {
     this.setup = await db.getSetting('setup', null) || defaultSetup(this);
     this.fuelCfg = sanitize(await db.getSetting('fuel', defaultFuelConfig()));
     this.vscCfg = { ...DEFAULT_VSC, ...(await db.getSetting('vsc', {})) };
+    this.tyres = tyreCfg(await db.getSetting('tyres', {}));
     this.lightSync = { enabled: true, ...(await db.getSetting('lightSync', {})) };
     audio.voice = await db.getSetting('voice', true);
     audio.sounds = await db.getSetting('sounds', true);
@@ -240,6 +242,69 @@ export const app = {
     syncLights(this, { force: true });
   },
   vscCfg: { ...DEFAULT_VSC },
+
+  tyres: tyreCfg(),
+
+  async saveTyres(cfg) {
+    this.tyres = tyreCfg(cfg);
+    await db.setSetting('tyres', this.tyres);
+    perf.update();
+  },
+
+  /** Les pneus sont-ils gérés pour la séance en cours ? */
+  tyresOn() {
+    return !!this.session?.cfg.tyres?.enabled;
+  },
+
+  /** Effet des pneus sur la vitesse (pas pendant un VSC ni en panne sèche : vitesses imposées). */
+  tyreModifier() {
+    return {
+      id: 'tyres',
+      label: 'Pneus',
+      compute: (address) => {
+        const s = this.session;
+        if (!this.tyresOn() || !s || s.flag === 'vsc' || this.isOutOfFuel(address)) return null;
+        const c = s.comps.get(address);
+        if (!c?.tyre) return null;
+        const f = tyreFactor(this.tyres, c.tyre);
+        return { speed: f, note: `🛞 ${COMPOUND_INFO[c.tyre.compound].label} ${Math.round(c.tyre.wear)} %` };
+      },
+    };
+  },
+
+  /**
+   * Gomme choisie (vue pilote ou écran de course) : avant le départ, ce sont les pneus
+   * de départ ; en course, ceux qui seront montés au prochain arrêt au stand.
+   */
+  setTyreNext(address, compound) {
+    const s = this.session;
+    const c = s?.comps.get(address);
+    if (!c || !COMPOUND_INFO[compound] || s.state === 'finished') return;
+    if (!['running', 'finishing'].includes(s.state)) c.tyre = freshTyres(compound);
+    else c.tyre.next = compound;
+    perf.update();
+    s.emit('update');
+  },
+
+  /** Changement de pneus : voiture immobile assez longtemps dans la voie des stands. */
+  tyreTick() {
+    const s = this.session;
+    if (!this.tyresOn() || !s || !['running', 'finishing'].includes(s.state)) return;
+    const now = performance.now();
+    for (const c of s.comps.values()) {
+      if (!c.tyre) continue;
+      if (!c.inPit) { c._pitSince = null; c._tyreDone = false; continue; }
+      if (c._pitSince == null) c._pitSince = now;
+      if (!c._tyreDone && now - c._pitSince >= this.tyres.changeSec * 1000) {
+        c._tyreDone = true;
+        c.tyre = freshTyres(c.tyre.next || c.tyre.compound);
+        perf.update();
+        toast(`🛞 ${c.driver?.name || 'Voiture ' + (c.address + 1)} : pneus ${COMPOUND_INFO[c.tyre.compound].label}`, 2000);
+        this.log(`Pneus changés : ${c.driver?.name} → ${COMPOUND_INFO[c.tyre.compound].label}`);
+        s.emit('update');
+      }
+    }
+  },
 
   async saveVscCfg(values) {
     this.vscCfg = { ...this.vscCfg, ...values };
@@ -590,6 +655,7 @@ export const app = {
       kind: opts.kind, // quick | race | practice | qualifying (écran choisi au menu)
       autoVsc: opts.autoVsc !== false, // case « VSC automatique » de la préparation
       fuel: { enabled: !!opts.fuelOn, tank15: opts.tank15 },
+      tyres: { enabled: !!opts.tyresOn }, // pneus (Réglages → Pneus)
     });
   },
 
@@ -632,6 +698,7 @@ export const app = {
       title: s.title,
       kind: s.kind,
       autoVsc: s.autoVsc,
+      tyres: s.tyres,
       fuel: s.fuel, // course rapide : essence activée ou non + réservoir commun
     });
     session.trackId = s.trackId;
@@ -647,12 +714,16 @@ export const app = {
     perf.addModifier(vscModifier(() => this.session?.flag, () => this.vscCfg.speedPct, (a) => perf.bases.get(a)?.speed, (a) => this.isOutOfFuel(a)));
     perf.removeModifier('fuel');
     perf.addModifier(this.emptyTankModifier());
+    perf.removeModifier('tyres');
+    perf.addModifier(this.tyreModifier());
     entries.forEach((e) => perf.setBase(e.address, e.car.speed, e.car.brake));
     this.calibrateSim();
     // Essence : chaque voiture part avec son réservoir du garage,
     // ou avec le réservoir commun choisi pour la course rapide
     const tankOf = (c) => s.fuel?.tank15 ?? this.getTune(c.driver.id, c.car.id).fuel;
     for (const c of session.comps.values()) this.fillTank(c, tankOf(c));
+    // pneus : tout le monde part avec la gomme de départ (modifiable sur la vue pilote avant le GO)
+    for (const c of session.comps.values()) c.tyre = freshTyres(this.tyres.start);
     perf.start();
     if (cu.connected) for (const c of session.comps.values()) cu.setFuel(c.address, tankOf(c));
 
@@ -696,6 +767,7 @@ export const app = {
       c.car.speed = t.speed;
       c.car.brake = t.brake;
       if (session.cfg.fuel?.enabled ?? this.fuelOn()) this.fillTank(c, session.cfg.fuel?.tank15 ?? t.fuel);
+      c.tyre = freshTyres(this.tyres.start);
       perf.setBase(c.address, t.speed, t.brake); // bridage VSC, panne sèche… s'appliquent aussi
       this.log(`Manette ${c.address + 1} ajoutée en cours de séance`);
     });
@@ -786,6 +858,7 @@ export const app = {
     const s = this.session;
     const p = perf.current.get(comp.address);
     const fuelUsed = this.burnFuel(comp, lap.time);
+    if (this.tyresOn() && comp.tyre) { wearLap(this.tyres, comp.tyre); perf.update(); } // usure des pneus
     if (!(s.simulated ?? this.isSim)) db.put('laps', {
       fuelUsed,
       fuelLeft: comp.fuelPct,
@@ -1230,6 +1303,7 @@ async function init() {
   audio.sounds = await db.getSetting('sounds', true);
   app.fuelCfg = sanitize(await db.getSetting('fuel', defaultFuelConfig()));
   app.vscCfg = { ...DEFAULT_VSC, ...(await db.getSetting('vsc', {})) };
+  app.tyres = tyreCfg(await db.getSetting('tyres', {}));
   app.lightSync = { enabled: true, ...(await db.getSetting('lightSync', {})) };
   // rampe qui (re)vient : elle reprend tout de suite la couleur de la séance
   let lightWasOn = false;
@@ -1305,6 +1379,7 @@ async function init() {
   setInterval(() => {
     app.session?.tick();
     app.refuelTick(200);
+    app.tyreTick();
     VIEWS[app.view]?.tick?.();
     updateLiveBar();
   }, 200);

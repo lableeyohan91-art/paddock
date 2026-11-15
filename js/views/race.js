@@ -6,6 +6,7 @@ import { SKY } from '../weather.js';
 import { MODE } from '../cu/protocol.js';
 import { avatar } from './drivers.js';
 import { live, startLive, pilotUrl, drawQr } from '../live.js';
+import { COMPOUNDS, COMPOUND_INFO, tyreState } from '../tyres.js';
 
 let app;
 let root;
@@ -75,6 +76,14 @@ export function mount(main, a) {
   const board = $('#board', root);
   const openSwap = (e) => {
     if (e.type === 'click' && e.target.closest('[data-gofuel]')) { app.openFuelSettings(); return; }
+    const ty = e.type === 'click' && e.target.closest('[data-tyre]');
+    if (ty) {
+      // gomme suivante : Tendre → Medium → Dur → …
+      const c = app.session.comps.get(+ty.dataset.tyre);
+      const cur = c.tyre.next || c.tyre.compound;
+      app.setTyreNext(c.address, COMPOUNDS[(COMPOUNDS.indexOf(cur) + 1) % COMPOUNDS.length]);
+      return;
+    }
     const el = e.target.closest('[data-swap]');
     if (el && (e.type === 'click' || e.key === 'Enter')) swapDialog(+el.dataset.swap);
   };
@@ -238,6 +247,19 @@ function fuelCell(c) {
     <span class="num">${pct <= 0 ? 'À SEC' : pct + ' %'}</span></div>`;
 }
 
+/** Pneus : gomme, usure, état ; toucher la pastille choisit la gomme suivante. */
+function tyreCell(c) {
+  const t = c.tyre;
+  if (!t) return '';
+  const st = tyreState(app.tyres, t);
+  const g = COMPOUND_INFO[t.compound];
+  const nx = t.next && t.next !== t.compound ? COMPOUND_INFO[t.next] : null;
+  return `<div class="tyre-cell" data-tyre="${c.address}" title="Toucher pour choisir la gomme suivante">
+    <span class="tyre-dot" style="--tc:${g.color}">${g.short}</span>
+    <span class="num tyre-wear ${st}">${Math.round(t.wear)} %</span>${st === 'cold' ? ' ❄️' : st === 'worn' ? ' ⚠️' : ''}
+    ${nx ? `<span class="tyre-next" style="--tc:${nx.color}">→ ${nx.short}</span>` : ''}</div>`;
+}
+
 function sectorsCell(c, s) {
   const list = c.sectors.length ? c.sectors : c.lastSectors;
   if (!list.length) return '';
@@ -260,6 +282,7 @@ function renderBoard() {
     <th class="hide-sm">${isRace ? 'Écart' : 'Écart'}</th>
     ${hasSectors ? '<th class="hide-sm">Secteurs</th>' : ''}
     ${fuelMode ? '<th><button class="th-link" data-gofuel title="Régler la consommation">Essence ⚙</button></th>' : ''}
+    ${app.tyresOn() ? '<th>Pneus</th>' : ''}
     <th></th></tr>`;
 
   const rows = list.map((c) => {
@@ -278,6 +301,7 @@ function renderBoard() {
       <td class="num hide-sm">${esc(c.gap)}</td>
       ${hasSectors ? `<td class="hide-sm">${sectorsCell(c, s)}</td>` : ''}
       ${fuelMode ? `<td>${fuelCell(c)}</td>` : ''}
+      ${app.tyresOn() ? `<td>${tyreCell(c)}</td>` : ''}
       <td>${badge}</td>
     </tr>`;
   }).join('');
