@@ -676,7 +676,10 @@ export const app = {
     });
     // reprise après drapeau rouge : même bip aigu qu'au départ
     session.addEventListener('flag', (e) => {
-      if (e.detail?.resumed) beep(1320, 500); // juste le bip, sans voix
+      if (e.detail?.resumed) {
+        beep(1320, 500); // juste le bip, sans voix
+        cu.urgent(); perf.resendSpeeds(); // 2e envoi de la vitesse normale, CU repartie
+      }
     });
     // faux départ : la CU a coupé la séquence des feux
     session.addEventListener('falsestart', () => {
@@ -809,7 +812,7 @@ export const app = {
     s._sawLights = s._sawAllLights = s._sawRedLights = s._sawAllRedLights = false;
     s._startChangedAt = performance.now();
     s._prevStart = null;      // la séquence repart de zéro : pas de faux « faux départ »
-    if (s.redResuming) { cu.urgent(); perf.resendSpeeds(); this.vscResendUntil = performance.now() + 15000; } // vitesse normale
+    if (s.redResuming) { cu.urgent(); perf.resendSpeeds(); } // vitesse normale
     s._relaunchAt = performance.now();
     await cu.pressStart();
     setTimeout(() => { if (cu.status?.start === 1 && (s.state === 'armed' || s.redResuming)) cu.pressStart(); }, 1500);
@@ -856,11 +859,10 @@ export const app = {
       say('Drapeau rouge, drapeau rouge', { priority: true });
     } else if (!s.redResuming) {
       s.resumeFromRed();
-      // vitesse normale renvoyée dès l'appui sur la relance, puis 2×/s jusqu'après la reprise
-      // (une consigne envoyée pendant l'arrêt de la CU peut être ignorée : ex. VSC puis drapeau rouge)
+      // vitesse normale renvoyée à l'appui sur la relance, puis une 2e fois à l'extinction
+      // des feux (une consigne envoyée pendant l'arrêt de la CU peut être ignorée : VSC puis drapeau rouge)
       cu.urgent();
       perf.resendSpeeds();
-      this.vscResendUntil = performance.now() + 15000;
       await cu.pressStart();
       // certaines CU demandent un 2e appui pour lancer la séquence des feux
       setTimeout(() => { if (s.flag === 'red' && s.redResuming && cu.status?.start === 1) cu.pressStart(); }, 1500);
