@@ -127,6 +127,7 @@ export class RaceSession extends EventTarget {
   }
 
   setFlag(flag) {
+    if (flag === 'green' && this.flag !== 'green') this.greenSince = performance.now();
     this.flag = flag;
     this.emit('update');
   }
@@ -157,6 +158,7 @@ export class RaceSession extends EventTarget {
     this.redResuming = false;
     this.falseStart = false;
     this._goStart = undefined; // nouvelle référence après la reprise
+    this.greenSince = performance.now();
     this.flag = 'green';
     this.emit('flag', { flag: 'green', resumed: true });
     this.emit('update');
@@ -239,6 +241,7 @@ export class RaceSession extends EventTarget {
       const pit = !!st.pit[c.address];
       if (pit !== c.inPit) {
         c.inPit = pit;
+        if (!pit) c.pitOutAt = performance.now(); // sortie du stand : le compte repart de là
         if (pit) c.pitStops++;
         this.emit('pit', { comp: c, in: pit });
       }
@@ -260,6 +263,9 @@ export class RaceSession extends EventTarget {
     }
     if (c.finished) return;
     c.onTrack = true;
+    // heures (appli) des passages : VSC automatique (voiture qui ne repasse plus)
+    c.seenAt = performance.now();
+    if (sector > 1) c.sawSector = true; else c.lineAt = c.seenAt;
 
     if (sector > 1) {
       // Capteur intermédiaire (Check Lane) : fin d'un secteur

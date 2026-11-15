@@ -5,6 +5,7 @@ import { BleConnection, bluetoothSupported } from './cu/ble.js';
 import { SimulatorConnection } from './cu/simulator.js';
 import { PerformanceEngine, vscModifier } from './performance.js';
 import { ChihirosLight } from './devices/chihiros.js';
+import { checkAutoVsc } from './autovsc.js';
 import { GenericLight } from './devices/generic-light.js';
 import { syncLights, resetLightSync } from './devices/lightsync.js';
 import { Weather, SKY } from './weather.js';
@@ -1256,6 +1257,15 @@ async function init() {
     const stuck = !!s && (s.state === 'armed' || s.redResuming) && raceView.lightsStuck(s);
     if (stuck && !stuckSaid) say('Faux départ', { priority: true });
     stuckSaid = stuck;
+    // VSC automatique : une voiture ne repasse plus (sortie de piste…)
+    const hit = checkAutoVsc(app);
+    if (hit) {
+      hit.comp.autoVscFor = hit.comp.seenAt; // une seule fois tant qu'elle n'est pas repassée
+      app.toggleVsc();
+      const who = hit.comp.driver?.name || `voiture ${hit.comp.address + 1}`;
+      toast(`🟨 VSC automatique : ${who} ne repasse plus (${hit.rule}, ${Math.round(hit.secs)} s)`, 5000);
+      app.log(`VSC automatique (${hit.rule}) : ${who} sans passage depuis ${hit.secs.toFixed(1)} s`);
+    }
   }, 200);
   setInterval(() => {
     app.session?.tick();

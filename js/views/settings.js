@@ -5,6 +5,7 @@ import { audio, say } from '../audio.js';
 import { MODE } from '../cu/protocol.js';
 import { renderFuel } from './fuel-settings.js';
 import { vscSpeed } from '../performance.js';
+import { autoCfg } from '../autovsc.js';
 import { LIGHT_SCENES, COLOR_SLOTS, paletteColor, sceneCss, cssOf } from '../devices/lightsync.js';
 import { GenericLight, PROTOCOLS } from '../devices/generic-light.js';
 import { openImport, importDone, removeImport } from './import-records.js';
@@ -49,6 +50,7 @@ const HELP = {
       <li>La vitesse est <b>renvoyée deux fois par seconde</b> : une voiture remise en piste ralentit tout de suite.</li>
       <li>Un second appui lance un <b>décompte de 3 secondes</b> (« Fin du VSC dans 3, 2, 1, Go ! ») puis chacun retrouve sa vitesse.</li>
       <li>Les pilotes peuvent aussi le déclencher depuis leur <b>vue pilote</b> (QR code).</li>
+      <li><b>VSC automatique</b> (2e onglet) : le VSC se déclenche tout seul quand une voiture ne repasse plus — <b>par tour</b> (pas de passage sur la ligne depuis X s) ou <b>par secteur</b> avec les Check Lane (Y s). Les voitures au stand, en panne sèche ou arrivées sont exclues.</li>
     </ul>`,
 };
 
@@ -128,6 +130,54 @@ function render() {
 }
 
 /** Réglages → VSC : vitesse imposée aux voitures pendant le Virtual Safety Car. */
+let autoSectorOpen = false;
+/** Onglet « VSC automatique » : le VSC se déclenche tout seul quand une voiture ne repasse plus. */
+function renderAutoVsc() {
+  const c = autoCfg(app);
+  const sw = (id, on) => `<label class="switch"><input type="checkbox" id="${id}" ${on ? 'checked' : ''}><span></span> ${on ? 'Activé' : 'Désactivé'}</label>`;
+  root.innerHTML = sectionHead() + vscTabs() + `
+  <section class="panel">
+    <h2>VSC automatique</h2>
+    <p class="muted" style="margin:-4px 0 12px;font-size:.9rem">Le VSC se déclenche tout seul quand une voiture ne repasse plus (sortie de piste, voiture arrêtée). Tu le termines comme d'habitude avec le bouton VSC.</p>
+
+    <div class="auto-rule">
+      <div class="row" style="justify-content:space-between"><h3 style="margin:0">Par tour</h3>${sw('avLap', c.lapOn)}</div>
+      <p class="muted" style="margin:6px 0 8px;font-size:.85rem">Si une voiture ne boucle pas son tour en :</p>
+      <div class="row" style="gap:8px;align-items:center">
+        <input type="number" id="avLapSec" min="2" max="120" step="0.5" value="${c.lapSec}" style="width:90px"> <span>secondes → VSC</span>
+      </div>
+    </div>
+
+    <details class="color-box auto-rule" id="avSectorBox" ${autoSectorOpen ? 'open' : ''}>
+      <summary><h3 style="margin:0">Par secteur (Check Lane)</h3>${sw('avSector', c.sectorOn).replace('<label class="switch"', '<label class="switch" id="avSectorWrap"')}</summary>
+      <p class="muted" style="margin:6px 0 8px;font-size:.85rem">Plus rapide que par tour : si une voiture ne passe pas le capteur suivant (ligne ou Check Lane) en :</p>
+      <div class="row" style="gap:8px;align-items:center">
+        <input type="number" id="avSectorSec" min="1" max="60" step="0.5" value="${c.sectorSec}" style="width:90px"> <span>secondes → VSC</span>
+      </div>
+      <p class="muted" style="margin:8px 0 0;font-size:.8rem">Ne s'applique qu'aux voitures déjà passées sur une Check Lane pendant la séance : sans Check Lane, rien ne se passe.</p>
+    </details>
+
+    <p class="muted" style="margin:14px 0 0;font-size:.8rem"><b>Jamais de VSC automatique pour :</b> une voiture au stand (le compte repart à sa sortie), en panne sèche, déjà arrivée ou pas encore partie ; ni pendant un VSC, un drapeau rouge ou la fin de course. Après chaque reprise, le compte repart de zéro. Une voiture qui a déclenché le VSC ne le redéclenche pas tant qu'elle n'est pas repassée.</p>
+  </section>`;
+  bindVscTabs();
+  const save = async (values) => { await app.saveVscCfg({ auto: { ...autoCfg(app), ...values } }); };
+  const box = $('#avSectorBox', root);
+  box.addEventListener('toggle', () => { autoSectorOpen = box.open; });
+  $('#avSectorWrap', root).addEventListener('click', (e) => e.stopPropagation());
+  $('#avLap', root).onchange = async (e) => { await save({ lapOn: e.target.checked }); renderAutoVsc(); bindTabs(); };
+  $('#avSector', root).onchange = async (e) => { await save({ sectorOn: e.target.checked }); renderAutoVsc(); bindTabs(); };
+  const num = (id, k, min, max) => {
+    $(id, root).onchange = async (e) => {
+      const v = Math.max(min, Math.min(max, parseFloat(e.target.value) || min));
+      e.target.value = v;
+      await save({ [k]: v });
+      toast(`Enregistré : ${v} s`, 1200);
+    };
+  };
+  num('#avLapSec', 'lapSec', 2, 120);
+  num('#avSectorSec', 'sectorSec', 1, 60);
+}
+
 let vscTab = 'button'; // onglets du VSC : « Bouton VSC » et « VSC automatique »
 function vscTabs() {
   return `<div class="subtabs small">
@@ -140,15 +190,7 @@ function bindVscTabs() {
 }
 
 function renderVsc() {
-  if (vscTab === 'auto') {
-    root.innerHTML = sectionHead() + vscTabs() + `
-  <section class="panel">
-    <h2>VSC automatique</h2>
-    <p class="muted" style="margin:0">À venir : le VSC se déclenchera tout seul selon des règles à définir ensemble.</p>
-  </section>`;
-    bindVscTabs();
-    return;
-  }
+  if (vscTab === 'auto') { renderAutoVsc(); return; }
   const pct = app.vscCfg.speedPct;
   root.innerHTML = sectionHead() + vscTabs() + `
   <section class="panel">
