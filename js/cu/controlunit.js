@@ -37,13 +37,18 @@ export class ControlUnit extends EventTarget {
     await this.disconnect();
     this.conn = conn;
     conn.ondisconnect = () => this._lost();
+    conn.onlog = (m) => this.log(m);
     await conn.open();
     this.running = true;
-    try {
-      const v = P.parseResponse(await conn.request(P.cmdVersion()));
-      this.version = v.type === 'version' ? v.version : null;
-    } catch (e) {
-      this.log('Version illisible : ' + e.message);
+    // version : quelques essais (le temps que la connexion trouve la bonne façon d'échanger)
+    for (let i = 0; i < 4 && !this.version; i++) {
+      try {
+        const v = P.parseResponse(await conn.request(P.cmdVersion()));
+        this.version = v.type === 'version' ? v.version : null;
+        if (!this.version) this.log('Réponse inattendue à la demande de version : ' + JSON.stringify(v.raw ?? v));
+      } catch (e) {
+        this.log(`Version illisible (essai ${i + 1}/4) : ${e.message}`);
+      }
     }
     this.emit('connection', { state: 'connected', name: conn.name, version: this.version });
     this._loop();

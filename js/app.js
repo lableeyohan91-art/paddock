@@ -598,6 +598,8 @@ export const app = {
         <h2>${cu.reconnecting ? 'Reconnexion en cours…' : 'Connecté'} : ${esc(cu.conn.name)}</h2>
         <p class="muted">Version Control Unit : ${esc(cu.version || 'inconnue')}</p>
         <p class="muted num" id="cuLive"></p>
+        <p class="muted" id="cuMode" style="font-size:.8rem"></p>
+        <pre class="cu-log" id="cuLog"></pre>
         <div class="row" style="justify-content:flex-end">
           <button class="btn ghost" data-close>Fermer</button>
           <button class="btn primary" id="discBtn">Déconnecter</button>
@@ -605,6 +607,11 @@ export const app = {
       const upd = () => {
         const el = m.el.querySelector('#cuLive');
         if (el) el.textContent = `Échanges : ${cu.stats.requests} · erreurs : ${cu.stats.errors} · passages : ${cu.stats.timers}`;
+        const md = m.el.querySelector('#cuMode');
+        if (md) md.textContent = cu.conn?.modeLabel ? 'Liaison : ' + cu.conn.modeLabel : '';
+        // dernières lignes du journal : utiles pour comprendre un souci de connexion
+        const lg = m.el.querySelector('#cuLog');
+        if (lg) lg.textContent = this.logLines.slice(-6).join('\n');
       };
       const live = setInterval(upd, 300);
       upd();
