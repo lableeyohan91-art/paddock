@@ -685,6 +685,21 @@ export const app = {
         cu.urgent(); perf.resendSpeeds(); // 2e envoi de la vitesse normale, CU repartie
       }
     });
+    // voiture ajoutée en cours de séance (détection auto) : elle suit les mêmes règles
+    // que les autres (VSC, essence, garage…)
+    session.addEventListener('join', (e) => {
+      const c = e.detail.comp;
+      const slot = this.setup?.slots?.[c.address];
+      if (slot?.driverId && this.driver(slot.driverId)) c.driver = this.driver(slot.driverId);
+      if (slot?.carId && this.car(slot.carId)) c.car = { ...this.car(slot.carId) };
+      const t = this.getTune(c.driver?.id, c.car?.id);
+      c.car.speed = t.speed;
+      c.car.brake = t.brake;
+      if (session.cfg.fuel?.enabled ?? this.fuelOn()) this.fillTank(c, session.cfg.fuel?.tank15 ?? t.fuel);
+      perf.setBase(c.address, t.speed, t.brake); // bridage VSC, panne sèche… s'appliquent aussi
+      if (session._vscFuel) { session._vscFuel[c.address] = 15; cu.setFuel(c.address, 0); }
+      this.log(`Manette ${c.address + 1} ajoutée en cours de séance`);
+    });
     // faux départ : la CU a coupé la séquence des feux
     session.addEventListener('falsestart', () => {
       // la voix « Faux départ » est dite quand le bouton « Nouvelle relance » apparaît (écran de course)

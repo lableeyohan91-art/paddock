@@ -260,6 +260,7 @@ export class RaceSession extends EventTarget {
     if (!c) {
       if (!this.cfg.autoAdd) return;
       c = this._addComp(address);
+      this.emit('join', { comp: c }); // nouvelle voiture en cours de séance (détection auto)
     }
     if (c.finished) return;
     c.onTrack = true;
