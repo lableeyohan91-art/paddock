@@ -29,7 +29,8 @@ export const LIGHT_SCENES = [
   { k: 'yellow', label: 'Drapeau jaune', c: 'yellow' },
   { k: 'vsc', label: 'VSC', c: 'orange' },
   { k: 'red', label: 'Drapeau rouge', c: 'red' },
-  { k: 'finish', label: 'Arrivée : bleu 2 s / blanc 1 s pendant 5 s', alt: ['blue', 'white'] },
+  { k: 'twoLaps', label: 'Deux tours restants : 2 clignotements rapides blanc / bleu', alt: ['white', 'blue'] },
+  { k: 'finish', label: 'Arrivée : bleu fixe 5 s', c: 'blue' },
   { k: 'end', label: 'Ensuite (fin de séance)', c: 'white' },
 ];
 
@@ -88,7 +89,34 @@ function stepFor(app, k) {
  * À appeler régulièrement : envoie la couleur à la rampe quand la scène change.
  * force : renvoie même si rien n'a changé (rampe qui vient de se connecter…).
  */
+let flashing = false; // un clignotement ponctuel est en cours (deux tours restants…)
+
+/**
+ * Clignotement ponctuel par-dessus la scène en cours, puis retour à la scène.
+ * Deux tours restants : blanc / bleu, deux fois, rapidement.
+ */
+export async function flashTwoLaps(app) {
+  const outs = app.lightOutputs ? app.lightOutputs() : [];
+  if (!outs.length || !app.lightSync?.enabled || flashing) return;
+  flashing = true;
+  clearTimeout(blinkTimer);
+  const [a, b] = LIGHT_SCENES.find((x) => x.k === 'twoLaps').alt.map((n) => paletteColor(app, n));
+  try {
+    for (let i = 0; i < 2; i++) {
+      for (const c of [a, b]) {
+        outs.forEach((o) => o.setColor(...c));
+        await new Promise((r) => setTimeout(r, 250));
+      }
+    }
+  } finally {
+    flashing = false;
+    last = null;
+    syncLights(app, { force: true }); // retour à la scène de la course
+  }
+}
+
 export function syncLights(app, { force = false } = {}) {
+  if (flashing) return;
   // toutes les lampes connectées (rampe Chihiros + autres lampes) reçoivent la même scène
   const outs = app.lightOutputs ? app.lightOutputs() : [];
   if (!outs.length || !app.lightSync?.enabled) { last = null; return; }
