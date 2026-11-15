@@ -306,18 +306,18 @@ function calcHtml() {
       </div>
     </details>
     <div class="calc-grid">
-      <label class="field">Record du circuit (s)
+      <label class="field"><span class="calc-l">Record du circuit (s)<em>cale les fourchettes rapides</em></span>
         <input type="number" step="0.01" min="1" max="60" data-ci="record" value="${fmtS(v.record)}" placeholder="${a.record ? 'auto : ' + fmtS(a.record) : 'à saisir'}">
         <small class="muted">${a.record ? 'Auto : ' + fmtS(a.record) + ' s' : 'Aucun tour enregistré'}</small></label>
-      <label class="field">Temps médian (s)
+      <label class="field"><span class="calc-l">Temps médian (s)<em>adapte aux pilotes présents</em></span>
         <input type="number" step="0.01" min="1" max="60" data-ci="median" value="${fmtS(v.median)}" placeholder="${a.median ? 'auto : ' + fmtS(a.median) : 'à saisir'}">
         <small class="muted">${a.median ? 'Auto : ' + fmtS(a.median) + ' s (pilotes cochés)' : 'Coche des pilotes ou saisis-le'}</small></label>
-      <label class="field">Tour avec arrêt au stand (s)
+      <label class="field"><span class="calc-l">Tour avec arrêt au stand (s)<em>calcule le coût d’un arrêt</em></span>
         <input type="number" step="0.01" min="1" max="60" data-ci="pitLap" value="${fmtS(v.pitLap)}" placeholder="à saisir">
         <small class="muted">${pitLoss !== null ? `Un passage au stand ajoute <b>${pitLoss.toFixed(2)} s</b> au tour (hors remplissage)` : 'Tour avec passage et arrêt minimal au stand'}</small></label>
-      <label class="field">Nombre de tours
+      <label class="field"><span class="calc-l">Nombre de tours<em>règle la taille du plein</em></span>
         <input type="number" step="1" min="5" max="500" data-ci="laps" value="${v.laps}"></label>
-      <label class="field">Arrêts souhaités (rythme nominal)
+      <label class="field"><span class="calc-l">Arrêts souhaités<em>au rythme nominal</em></span>
         <input type="number" step="1" min="0" max="20" data-ci="stops" value="${v.stops}"></label>
     </div>
     <div class="row" style="gap:8px;margin-top:12px">
