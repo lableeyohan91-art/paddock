@@ -6,7 +6,7 @@
 //  - rouler plus vite fait gagner du temps sur la piste mais coûte de l'essence (arrêts
 //    en plus, remplissage plus long) : les rythmes rapides finissent au plus près du nominal ;
 //  - rouler lentement pour économiser ne paie pas (un peu plus lent que le nominal) ;
-//  - il garde de 2 à 4 fourchettes rapides et lentes : les autres sont désactivées.
+//  - il utilise le plus de fourchettes possible (4 rapides, 4 lentes), sinon 3 ou 2.
 // Le calcul est direct (pas de course tour par tour) : quelques millisecondes.
 
 const TANK = 100;
@@ -99,7 +99,7 @@ export function optimizeFuel({ record, median: med, pitLap, laps: L, stops: S })
               return { ...b, pct: p };
             });
             if (p > 40 || tooMany) continue;
-            cost += 0.001 * (nF - 2);
+            cost += 0.01 * (4 - nF); // le plus de fourchettes possible (course plus vivante)
             if (!fast || cost < fast.cost) fast = { cost, bands: out };
           }
         }
@@ -122,11 +122,11 @@ export function optimizeFuel({ record, median: med, pitLap, laps: L, stops: S })
               const t = i < nS - 1 ? (b.min + b.max) / 2 : b.min + step / 2;
               const T = raceTime(L, t, p, pitLoss, R).total;
               const loss = (T - TN) / TN;
-              cost += loss < 0 ? 10 * -loss : Math.abs(loss - 0.01);
+              cost += loss < 0.003 ? 0.05 + 10 * (0.003 - loss) : Math.abs(loss - 0.01); // économiser ne doit jamais payer
               return { ...b, pct: p };
             });
-            if (p < 1) continue;
-            cost = cost / nS + 0.001 * (nS - 2);
+            if (p < 0.5) continue;
+            cost = cost / nS + 0.01 * (4 - nS);
             if (!slow || cost < slow.cost) slow = { cost, bands: out };
           }
         }

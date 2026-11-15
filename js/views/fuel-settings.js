@@ -273,7 +273,7 @@ function calcHtml() {
   <section class="panel">
     <details class="calc-box" id="calcBox" ${calcOpen ? 'open' : ''}>
     <summary><h2 style="margin:0">🧮 Calcul automatique des valeurs</h2></summary>
-    <p class="muted" style="margin:10px 0 12px;font-size:.88rem">Il propose les fourchettes, les consommations et la vitesse de remplissage les plus équilibrées pour ton circuit : au rythme nominal, le plein impose le nombre d'arrêts voulu ; attaquer coûte de l'essence, économiser ne paie pas. Il garde de 2 à 4 fourchettes rapides et lentes.</p>
+    <p class="muted" style="margin:10px 0 12px;font-size:.88rem">Il propose les fourchettes, les consommations et la vitesse de remplissage les plus équilibrées pour ton circuit : au rythme nominal, le plein impose le nombre d'arrêts voulu ; attaquer coûte de l'essence, économiser ne paie pas. Il utilise le plus de fourchettes possible (jusqu'à 4 rapides et 4 lentes).</p>
     <details class="calc-pick" id="calcPick" ${driversOpen ? 'open' : ''}>
       <summary>
         <span>Pilotes présents <b>(${a.present.filter((id) => app.driver(id)).length})</b></span>
