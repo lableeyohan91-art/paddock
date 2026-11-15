@@ -673,10 +673,14 @@ export const app = {
           : `Fin de la session. ${c.driver.name} termine premier`, { priority: true });
       }
     });
+    // reprise après drapeau rouge : même bip aigu qu'au départ
+    session.addEventListener('flag', (e) => {
+      if (e.detail?.resumed) { beep(1320, 500); say('Reprise !'); }
+    });
     // faux départ : la CU a coupé la séquence des feux
     session.addEventListener('falsestart', () => {
       say('Faux départ ! Relance les feux', { priority: true });
-      toast('⚠️ Faux départ : appuie sur « Relancer les feux »', 5000);
+      toast('⚠️ Faux départ : appuie sur « Reprise »', 5000);
       this.log('Faux départ détecté pendant les feux');
     });
     // course arrêtée par la CU après le départ : drapeau rouge, on relance avec « Reprendre »

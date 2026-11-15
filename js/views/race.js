@@ -182,7 +182,7 @@ function renderControls() {
     // raccourcis en icônes carrées : VSC, drapeau rouge, terminer, garage
     if (s.flag === 'red') {
       html += s.redResuming && lightsStuck(s)
-        ? `<button class="btn yellow big" id="bRelaunch">↻ Relancer les feux</button>`
+        ? `<button class="btn go big" id="bRelaunch" title="Relancer les feux">🟢 Reprise</button>`
         : `<button class="btn go big" id="bRed" ${s.redResuming ? 'disabled' : ''}>${s.redResuming ? '🚦 Reprise en cours…' : '🟢 Reprendre la course'}</button>`;
     }
     html += `<div class="ico-row">`;
@@ -197,7 +197,7 @@ function renderControls() {
     html += `</div>`;
   }
   if (s.state === 'armed' && lightsStuck(s)) {
-    html += `<button class="btn yellow" id="bRelaunch">↻ Relancer les feux</button>`;
+    html += `<button class="btn go" id="bRelaunch" title="Relancer les feux de départ">🟢 Reprise</button>`;
   }
   if (s.state === 'armed') {
     html += `<button class="btn icon-sq" id="bGarage" title="Garage : régler les voitures sans arrêter la session" aria-label="Garage">🔧</button>`;
