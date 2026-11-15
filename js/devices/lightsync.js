@@ -29,7 +29,7 @@ export const LIGHT_SCENES = [
   { k: 'yellow', label: 'Drapeau jaune', c: 'yellow' },
   { k: 'vsc', label: 'VSC', c: 'orange' },
   { k: 'red', label: 'Drapeau rouge', c: 'red' },
-  { k: 'finish', label: 'Arrivée : bleu / blanc pendant 5 s', alt: ['blue', 'white'] },
+  { k: 'finish', label: 'Arrivée : bleu 2 s / blanc 1 s pendant 5 s', alt: ['blue', 'white'] },
   { k: 'end', label: 'Ensuite (fin de séance)', c: 'white' },
 ];
 
@@ -40,7 +40,7 @@ export function sceneCss(app, scene) {
 }
 
 const FINISH_MS = 5000; // alternance bleu / blanc à l'arrivée
-const ALT_MS = 400;     // durée de chaque couleur dans une alternance
+const ALT_STEPS = [2000, 1000]; // alternance de l'arrivée : bleu 2 s, puis blanc 1 s, et on recommence
 let endSince = null;    // début de l'arrivée
 let endFor = null;
 
@@ -98,13 +98,19 @@ export function syncLights(app, { force = false } = {}) {
   noteScene(k);
   const scene = LIGHT_SCENES.find((x) => x.k === k);
   const step = stepFor(app, k);
-  // alternance de deux couleurs (arrivée) : la couleur change toutes les ALT_MS
-  const phase = scene.alt ? Math.floor((performance.now() - endSince) / ALT_MS) % 2 : null;
+  // alternance de deux couleurs (arrivée) : bleu 2 s, blanc 1 s…
+  let phase = null;
+  if (scene.alt) {
+    const cycle = ALT_STEPS[0] + ALT_STEPS[1];
+    const t = (performance.now() - endSince) % cycle;
+    const n = Math.floor((performance.now() - endSince) / cycle);
+    phase = t < ALT_STEPS[0] ? `0.${n}` : `1.${n}`; // le n° de cycle distingue chaque passage
+  }
   const key = step !== null ? `${k}:${step}` : phase !== null ? `${k}~${phase}` : k;
   if (key === last && !force) return;
   const blink = step !== null && last !== null && key !== last && !force;
   last = key;
-  const color = paletteColor(app, scene.alt ? scene.alt[phase] : scene.c);
+  const color = paletteColor(app, scene.alt ? scene.alt[+phase[0]] : scene.c);
   clearTimeout(blinkTimer);
   if (blink) {
     // flash : éteint un court instant, puis la couleur revient
