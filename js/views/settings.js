@@ -156,7 +156,7 @@ function renderVsc() {
 /** Réglages → Appareils connectés : onglets « Chihiros » (rampe) et « Autres lampes ». */
 let devTab = 'lights';
 let selColor = 'racing'; // couleur (situation de course) en cours de réglage
-let colorsOpen = false;  // case « Personnalisation des couleurs » dépliée ?
+let colorsOpen = false;  // case « Test des couleurs » dépliée ?
 
 /** Envoie une couleur d'essai à toutes les lampes connectées. */
 function testColor(c) {
@@ -167,7 +167,7 @@ function testColor(c) {
   return outs.length;
 }
 
-/** Case « Couleurs » : choisir une couleur, la régler aux curseurs, revenir à l'origine. */
+/** Case « Test des couleurs » : choisir une couleur, la régler aux curseurs, revenir à l'origine. */
 function colorsPanel() {
   const c = selColor === 'off' ? [0, 0, 0] : paletteColor(app, selColor);
   const edited = !!app.lightSync.palette && Object.keys(app.lightSync.palette).length > 0;
@@ -175,7 +175,7 @@ function colorsPanel() {
   return `
   <section class="panel" style="margin-top:14px">
   <details class="color-box" id="colorsBox" ${colorsOpen ? 'open' : ''}>
-    <summary><h2>Personnalisation des couleurs</h2></summary>
+    <summary><h2>Test des couleurs</h2></summary>
     <p class="muted" style="font-size:.85rem;margin:6px 0 10px">Toutes les couleurs qui peuvent s'afficher en course. Touche-en une pour l'essayer, puis règle-la avec les curseurs : elle est enregistrée et utilisée en course.</p>
     <div class="light-presets slots">
       ${COLOR_SLOTS.map((x) => `<button class="light-chip ${selColor === x.k ? 'sel' : ''}" data-preset="${x.k}"><i style="background:${cssOf(paletteColor(app, x.k))}"></i>${esc(x.label)}</button>`).join('')}
@@ -332,7 +332,7 @@ function renderOtherLights() {
       </ul>
       <p class="muted" style="font-size:.8rem;margin:6px 0 0">Chaque marque a son propre langage Bluetooth : une lampe non reconnue peut être ajoutée plus tard si l'on connaît son protocole. Ferme l'appli de la lampe avant la recherche (une seule connexion à la fois).</p>
     </details>
-  </section>` + colorsPanel() + scenesPanel();
+  </section>` + scenesPanel() + colorsPanel();
 
   bindDevTabs();
   bindColorsPanel();
@@ -410,7 +410,7 @@ function renderDevices() {
     <p class="muted" style="font-size:.85rem;margin:10px 0 0">Allume la rampe et <b>ferme l'appli My Chihiros</b> (une rampe n'accepte qu'une seule connexion à la fois). Le nom d'une WRGB II commence en général par <b>DY</b> (ex. DYWRGB…, DYNW…).</p>
   </section>
 
-` + colorsPanel() + scenesPanel();
+` + scenesPanel() + colorsPanel();
   bindDevTabs();
   bindColorsPanel();
   const act = async (fn) => { try { await fn(); } catch (e) { toast(e.message || String(e), 3500); } renderDevices(); bindTabs(); };
