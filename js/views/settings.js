@@ -128,9 +128,29 @@ function render() {
 }
 
 /** Réglages → VSC : vitesse imposée aux voitures pendant le Virtual Safety Car. */
+let vscTab = 'button'; // onglets du VSC : « Bouton VSC » et « VSC automatique »
+function vscTabs() {
+  return `<div class="subtabs small">
+    <button class="${vscTab === 'button' ? 'on' : ''}" data-vsctab="button">Bouton VSC</button>
+    <button class="${vscTab === 'auto' ? 'on' : ''}" data-vsctab="auto">VSC automatique</button>
+  </div>`;
+}
+function bindVscTabs() {
+  root.querySelectorAll('[data-vsctab]').forEach((b) => (b.onclick = () => { vscTab = b.dataset.vsctab; renderVsc(); bindTabs(); }));
+}
+
 function renderVsc() {
+  if (vscTab === 'auto') {
+    root.innerHTML = sectionHead() + vscTabs() + `
+  <section class="panel">
+    <h2>VSC automatique</h2>
+    <p class="muted" style="margin:0">À venir : le VSC se déclenchera tout seul selon des règles à définir ensemble.</p>
+  </section>`;
+    bindVscTabs();
+    return;
+  }
   const pct = app.vscCfg.speedPct;
-  root.innerHTML = sectionHead() + `
+  root.innerHTML = sectionHead() + vscTabs() + `
   <section class="panel">
     <h2>Virtual Safety Car</h2>
     <p class="muted" style="margin-top:-4px">En course, le bouton <b>VSC</b> met immédiatement <b>toutes les voitures à la même vitesse fixe</b>, quel que soit leur réglage du garage (comme la panne sèche en vitesse fixe). Un second appui rend la course.</p>
@@ -151,6 +171,7 @@ function renderVsc() {
   r.oninput = () => show(+r.value);
   r.onchange = async () => { await app.saveVscCfg({ speedPct: +r.value }); toast('VSC : ' + r.value + ' %', 1200); };
   $('#vscReset', root).onclick = async () => { await app.saveVscCfg({ speedPct: 20 }); renderVsc(); bindTabs(); };
+  bindVscTabs();
 }
 
 /** Réglages → Appareils connectés : onglets « Chihiros » (rampe) et « Autres lampes ». */
