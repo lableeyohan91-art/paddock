@@ -1,17 +1,43 @@
 // Éclairage synchronisé avec la séance : la rampe LED prend la couleur
 // du drapeau en cours (course, essais libres, qualification).
 
+// Palette : couleurs de base des scènes, personnalisables dans Réglages → Éclairage
+// (r, g, b de 0 à 100). Les séquences, elles, ne changent pas.
+export const DEFAULT_PALETTE = {
+  red: [100, 0, 0],
+  yellow: [100, 60, 0],
+  orange: [100, 30, 0],
+  green: [0, 100, 0],
+  blue: [0, 0, 100],
+  white: [100, 100, 100],
+};
+export const PALETTE_NAMES = {
+  red: 'Rouge', yellow: 'Jaune', orange: 'Orange (VSC)', green: 'Vert', blue: 'Bleu', white: 'Blanc',
+};
+
+/** Couleur d'un nom de la palette, en tenant compte des réglages de l'utilisateur. */
+export function paletteColor(app, name) {
+  return app?.lightSync?.palette?.[name] || DEFAULT_PALETTE[name];
+}
+export const cssOf = (c) => `rgb(${Math.round(c[0] * 2.55)},${Math.round(c[1] * 2.55)},${Math.round(c[2] * 2.55)})`;
+
 export const LIGHT_SCENES = [
-  { k: 'ready', label: 'Prêt (avant le GO)', c: [100, 100, 100], css: '#ffffff' },
-  { k: 'lights', label: 'Feux de départ', c: [100, 0, 0], css: '#e10600' },
-  { k: 'green', label: 'Départ / reprise (2 secondes)', c: [0, 100, 0], css: '#22c55e' },
-  { k: 'racing', label: 'Course en cours (rien de spécial)', c: [100, 100, 100], css: '#ffffff' },
-  { k: 'yellow', label: 'Drapeau jaune', c: [100, 60, 0], css: '#facc15' },
-  { k: 'vsc', label: 'VSC', c: [100, 30, 0], css: '#fb923c' },
-  { k: 'red', label: 'Drapeau rouge', c: [100, 0, 0], css: '#e10600' },
-  { k: 'finish', label: 'Arrivée : bleu / blanc pendant 5 s', alt: [[0, 0, 100], [100, 100, 100]], css: 'linear-gradient(90deg,#3b82f6 50%,#ffffff 50%)' },
-  { k: 'end', label: 'Ensuite (fin de séance)', c: [100, 100, 100], css: '#ffffff' },
+  { k: 'ready', label: 'Prêt (avant le GO)', c: 'white' },
+  { k: 'lights', label: 'Feux de départ', c: 'red' },
+  { k: 'green', label: 'Départ / reprise (2 secondes)', c: 'green' },
+  { k: 'racing', label: 'Course en cours (rien de spécial)', c: 'white' },
+  { k: 'yellow', label: 'Drapeau jaune', c: 'yellow' },
+  { k: 'vsc', label: 'VSC', c: 'orange' },
+  { k: 'red', label: 'Drapeau rouge', c: 'red' },
+  { k: 'finish', label: 'Arrivée : bleu / blanc pendant 5 s', alt: ['blue', 'white'] },
+  { k: 'end', label: 'Ensuite (fin de séance)', c: 'white' },
 ];
+
+/** Aperçu d'une scène pour le tableau des réglages. */
+export function sceneCss(app, scene) {
+  if (scene.alt) return `linear-gradient(90deg,${cssOf(paletteColor(app, scene.alt[0]))} 50%,${cssOf(paletteColor(app, scene.alt[1]))} 50%)`;
+  return cssOf(paletteColor(app, scene.c));
+}
 
 const FINISH_MS = 5000; // alternance bleu / blanc à l'arrivée
 const ALT_MS = 400;     // durée de chaque couleur dans une alternance
@@ -78,7 +104,7 @@ export function syncLights(app, { force = false } = {}) {
   if (key === last && !force) return;
   const blink = step !== null && last !== null && key !== last && !force;
   last = key;
-  const color = scene.alt ? scene.alt[phase] : scene.c;
+  const color = paletteColor(app, scene.alt ? scene.alt[phase] : scene.c);
   clearTimeout(blinkTimer);
   if (blink) {
     // flash : éteint un court instant, puis la couleur revient

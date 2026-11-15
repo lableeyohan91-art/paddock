@@ -5,7 +5,7 @@ import { audio, say } from '../audio.js';
 import { MODE } from '../cu/protocol.js';
 import { renderFuel } from './fuel-settings.js';
 import { vscSpeed } from '../performance.js';
-import { LIGHT_SCENES } from '../devices/lightsync.js';
+import { LIGHT_SCENES, DEFAULT_PALETTE, PALETTE_NAMES, paletteColor, sceneCss, cssOf } from '../devices/lightsync.js';
 import { GenericLight, PROTOCOLS } from '../devices/generic-light.js';
 import { openImport, importDone, removeImport } from './import-records.js';
 
@@ -155,14 +155,75 @@ function renderVsc() {
 
 /** Réglages → Appareils connectés : onglets « Chihiros » (rampe) et « Autres lampes ». */
 let devTab = 'lights';
-const PRESETS = [
-  { k: 'red', label: 'Rouge', c: [100, 0, 0], css: '#e10600' },
-  { k: 'yellow', label: 'Jaune', c: [100, 60, 0], css: '#facc15' },
-  { k: 'green', label: 'Vert', c: [0, 100, 0], css: '#22c55e' },
-  { k: 'blue', label: 'Bleu', c: [0, 0, 100], css: '#3b82f6' },
-  { k: 'white', label: 'Blanc', c: [100, 100, 100], css: '#ffffff' },
-  { k: 'off', label: 'Éteint', c: [0, 0, 0], css: '#222' },
-];
+let selColor = 'yellow'; // couleur de la palette en cours de réglage
+
+/** Envoie une couleur d'essai à toutes les lampes connectées. */
+function testColor(c) {
+  const outs = [];
+  if (app.lightSync.chihiros && app.lights.connected) outs.push(app.lights);
+  if (app.lightSync.others) app.extraLights.forEach((l) => { if (l.connected) outs.push(l); });
+  outs.forEach((o) => o.setColor(...c));
+  return outs.length;
+}
+
+/** Case « Couleurs » : choisir une couleur, la régler aux curseurs, revenir à l'origine. */
+function colorsPanel() {
+  const c = selColor === 'off' ? [0, 0, 0] : paletteColor(app, selColor);
+  const edited = !!app.lightSync.palette && Object.keys(app.lightSync.palette).length > 0;
+  return `
+  <section class="panel" style="margin-top:14px">
+    <h2>Couleurs</h2>
+    <p class="muted" style="font-size:.85rem;margin:-4px 0 10px">Touche une couleur pour l'essayer, puis règle-la avec les curseurs : elle est enregistrée et servira en course (ex. le jaune du drapeau jaune).</p>
+    <div class="light-presets">
+      ${Object.keys(DEFAULT_PALETTE).map((k) => `<button class="light-chip ${selColor === k ? 'sel' : ''}" data-preset="${k}"><i style="background:${cssOf(paletteColor(app, k))}"></i>${PALETTE_NAMES[k]}</button>`).join('')}
+      <button class="light-chip ${selColor === 'off' ? 'sel' : ''}" data-preset="off"><i style="background:#222"></i>Éteint</button>
+    </div>
+    ${selColor === 'off' ? '<p class="muted" style="margin:12px 0 0;font-size:.85rem">Éteint : rien à régler.</p>' : `
+    <h3>Réglage du ${esc(PALETTE_NAMES[selColor].toLowerCase())}</h3>
+    ${[['r', 'Rouge', '#e10600', 0], ['g', 'Vert', '#22c55e', 1], ['b', 'Bleu', '#3b82f6', 2]].map(([k, l, col, i]) => `
+    <div class="bar" style="--c:${col};--p:${c[i]}%">
+      <span class="bar-l">${l}</span>
+      <input type="range" min="0" max="100" step="5" value="${c[i]}" data-rgb="${i}" aria-label="${l}">
+      <span class="bar-v num">${c[i]} %</span>
+    </div>`).join('')}`}
+    <div class="light-preview" id="lPreview" style="background:${cssOf(c)}"></div>
+    <button class="btn small ghost" id="lReset" style="margin-top:10px" ${edited ? '' : 'disabled'}>↺ Revenir aux couleurs d'origine</button>
+  </section>`;
+}
+
+let paletteTimer = null;
+function bindColorsPanel() {
+  root.querySelectorAll('[data-preset]').forEach((b) => (b.onclick = () => {
+    selColor = b.dataset.preset;
+    testColor(selColor === 'off' ? [0, 0, 0] : paletteColor(app, selColor));
+    renderDevices(); bindTabs();
+  }));
+  root.querySelectorAll('[data-rgb]').forEach((r) => r.addEventListener('input', () => {
+    r.parentElement.style.setProperty('--p', r.value + '%');
+    r.parentElement.querySelector('.bar-v').textContent = r.value + ' %';
+    const c = [0, 1, 2].map((i) => +$(`[data-rgb="${i}"]`, root).value);
+    $('#lPreview', root).style.background = cssOf(c);
+    const dot = root.querySelector(`[data-preset="${selColor}"] i`);
+    if (dot) dot.style.background = cssOf(c);
+    testColor(c);
+    // enregistrée dans la palette (un court délai pendant qu'on fait glisser)
+    app.lightSync.palette = { ...(app.lightSync.palette || {}), [selColor]: c };
+    clearTimeout(paletteTimer);
+    paletteTimer = setTimeout(async () => {
+      await app.saveLightSync({ palette: app.lightSync.palette });
+      const rs = $('#lReset', root);
+      if (rs) rs.disabled = false;
+    }, 400);
+  }));
+  const reset = $('#lReset', root);
+  if (reset) reset.onclick = async () => {
+    if (!(await confirmBox('Revenir aux couleurs d\'origine pour toutes les couleurs ?'))) return;
+    await app.saveLightSync({ palette: {} });
+    testColor(selColor === 'off' ? [0, 0, 0] : paletteColor(app, selColor));
+    toast('Couleurs d\'origine rétablies', 1500);
+    renderDevices(); bindTabs();
+  };
+}
 
 /** Onglets d'Appareils connectés : la rampe Chihiros et les autres lampes. */
 function devTabs() {
@@ -185,7 +246,7 @@ function scenesPanel() {
     </div>
     <p class="muted" style="font-size:.85rem;margin:8px 0 10px">Pendant une course, des essais libres ou une qualification, <b>toutes les lampes connectées</b> (rampe Chihiros et autres lampes) prennent la couleur de la situation :</p>
     <div class="light-scenes">
-      ${LIGHT_SCENES.map((x) => `<div class="light-scene"><i style="background:${x.css}"></i><span>${x.label}</span></div>`).join('')}
+      ${LIGHT_SCENES.map((x) => `<div class="light-scene"><i style="background:${sceneCss(app, x)}"></i><span>${x.label}</span></div>`).join('')}
     </div>
   </section>`;
 }
@@ -239,9 +300,10 @@ function renderOtherLights() {
       </ul>
       <p class="muted" style="font-size:.8rem;margin:6px 0 0">Chaque marque a son propre langage Bluetooth : une lampe non reconnue peut être ajoutée plus tard si l'on connaît son protocole. Ferme l'appli de la lampe avant la recherche (une seule connexion à la fois).</p>
     </details>
-  </section>` + scenesPanel();
+  </section>` + colorsPanel() + scenesPanel();
 
   bindDevTabs();
+  bindColorsPanel();
   bindSw();
   bindScenesPanel();
   const again = () => { renderDevices(); bindTabs(); };
@@ -296,7 +358,6 @@ function renderDevices() {
     return;
   }
   const st = L.status;
-  const c = L.color || { r: 100, g: 100, b: 100 };
   root.innerHTML = sectionHead() + `
   ${devTabs()}
   <section class="panel">
@@ -317,29 +378,9 @@ function renderDevices() {
     <p class="muted" style="font-size:.85rem;margin:10px 0 0">Allume la rampe et <b>ferme l'appli My Chihiros</b> (une rampe n'accepte qu'une seule connexion à la fois). Le nom d'une WRGB II commence en général par <b>DY</b> (ex. DYWRGB…, DYNW…).</p>
   </section>
 
-  <section class="panel" style="margin-top:14px">
-    <h2>Essai des couleurs</h2>
-    <div class="light-presets">
-      ${PRESETS.map((p) => `<button class="light-chip" data-preset="${p.k}" ${st === 'on' ? '' : 'disabled'}><i style="background:${p.css}"></i>${p.label}</button>`).join('')}
-    </div>
-    <h3>Couleur sur mesure</h3>
-    ${[['r', 'Rouge', '#e10600'], ['g', 'Vert', '#22c55e'], ['b', 'Bleu', '#3b82f6']].map(([k, l, col]) => `
-    <div class="bar" style="--c:${col};--p:${c[k]}%">
-      <span class="bar-l">${l}</span>
-      <input type="range" min="0" max="100" step="5" value="${c[k]}" data-rgb="${k}" ${st === 'on' ? '' : 'disabled'} aria-label="${l}">
-      <span class="bar-v num">${c[k]} %</span>
-    </div>`).join('')}
-    <div class="light-preview" id="lPreview"></div>
-  </section>
-
-` + scenesPanel();
+` + colorsPanel() + scenesPanel();
   bindDevTabs();
-
-  const preview = () => {
-    const v = (k) => +$(`[data-rgb="${k}"]`, root).value;
-    $('#lPreview', root).style.background = `rgb(${v('r') * 2.55},${v('g') * 2.55},${v('b') * 2.55})`;
-  };
-  preview();
+  bindColorsPanel();
   const act = async (fn) => { try { await fn(); } catch (e) { toast(e.message || String(e), 3500); } renderDevices(); bindTabs(); };
   const conn = $('#lConn', root);
   if (conn) conn.onclick = () => act(async () => { await L.connect(); toast('💡 Rampe connectée'); });
@@ -351,24 +392,6 @@ function renderDevices() {
   if (off) off.onclick = () => act(() => L.disconnect());
   bindEnable();
   bindScenesPanel();
-  root.querySelectorAll('[data-preset]').forEach((b) => (b.onclick = () => {
-    const p = PRESETS.find((x) => x.k === b.dataset.preset);
-    L.setColor(...p.c);
-    ['r', 'g', 'b'].forEach((k, i) => {
-      const r = $(`[data-rgb="${k}"]`, root);
-      r.value = p.c[i];
-      r.parentElement.style.setProperty('--p', p.c[i] + '%');
-      r.parentElement.querySelector('.bar-v').textContent = p.c[i] + ' %';
-    });
-    preview();
-  }));
-  root.querySelectorAll('[data-rgb]').forEach((r) => r.addEventListener('input', () => {
-    r.parentElement.style.setProperty('--p', r.value + '%');
-    r.parentElement.querySelector('.bar-v').textContent = r.value + ' %';
-    preview();
-    const v = (k) => +$(`[data-rgb="${k}"]`, root).value;
-    L.setColor(v('r'), v('g'), v('b'));
-  }));
 }
 
 /** Ouvre directement Réglages → Essence (depuis un autre écran). */
