@@ -22,13 +22,8 @@ export const PLACE_CARS_MSG = "* Les réglages doivent s'effectuer avec l'ensemb
 export async function mount(main, a) {
   app = a;
   root = main;
-  // participants par défaut (2 en course, 1 en essais libres / qualification), seulement si le
-  // circuit n'est pas connecté : connecté, on peut partir de 0 et chaque voiture qui passe la ligne s'ajoute
-  const min = mode().type === 'race' ? 2 : 1;
-  if (!app.cu.connected && app.setup.slots.filter((s) => s.active).length < min) {
-    app.setup.slots.slice(0, min).forEach((s) => (s.active = true));
-    app.saveSetup();
-  }
+  // pas de participants imposés : on peut partir de 0, chaque voiture qui passe la ligne
+  // s'ajoute toute seule (et ＋ en ajoute un à la main)
   if (!app.track(app.setup.trackId) && app.data.tracks[0]) { app.setup.trackId = app.data.tracks[0].id; app.saveSetup(); }
   prefs = { laps: 30, minutes: 5, pqByLaps: false, pqLaps: 5, raceByTime: false, raceMinutes: 10, fuelOn: true, tank15: 15, autoVsc: true, tyresOn: false, ...(await app.db.getSetting('quickRace', {})) };
   setups = await app.fuelSetups();

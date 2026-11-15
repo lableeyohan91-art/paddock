@@ -45,6 +45,7 @@ h3 { font-size: 0.95rem; color: var(--muted); text-transform: uppercase; letter-
   border-bottom: 1px solid var(--line);
 }
 .brand { display: flex; align-items: center; gap: 8px; font-weight: 800; letter-spacing: .04em; }
+.brand-ver { font-size: .7rem; font-weight: 700; color: var(--muted); letter-spacing: 0; align-self: flex-end; margin-bottom: 2px; }
 .brand-mark {
   width: 26px; height: 26px; border-radius: 6px;
   background: repeating-conic-gradient(#fff 0 25%, #111 0 50%) 0 0 / 13px 13px;

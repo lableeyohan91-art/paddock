@@ -1,6 +1,7 @@
 // Point d'entrée : état global, connexion, cycle de vie des sessions, navigation.
 
 import { ControlUnit } from './cu/controlunit.js';
+import { APP_VERSION } from './version.js';
 import { BleConnection, bluetoothSupported } from './cu/ble.js';
 import { SimulatorConnection } from './cu/simulator.js';
 import { PerformanceEngine, vscModifier, vscSpeed } from './performance.js';
@@ -600,7 +601,7 @@ export const app = {
     const c = cu.conn;
     const p = c?.out?.properties;
     const lines = [
-      '=== Diagnostic Paddock ===',
+      '=== Diagnostic Paddock v' + APP_VERSION + ' ===',
       'Date : ' + new Date().toLocaleString('fr-FR'),
       'Navigateur : ' + navigator.userAgent,
       'Connexion : ' + (c ? `${c.kind} · ${c.name}` : 'aucune') + (cu.reconnecting ? ' (reconnexion en cours)' : ''),
@@ -1482,6 +1483,8 @@ async function init() {
 
   app.go(location.hash.slice(1) || 'race'); // accueil : menu Course
 
+  const ver = document.getElementById('appVer');
+  if (ver) ver.textContent = 'v' + APP_VERSION;
   if ('serviceWorker' in navigator && location.protocol !== 'file:') {
     navigator.serviceWorker.register('sw.js').catch(() => {});
   }
