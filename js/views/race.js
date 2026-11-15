@@ -104,7 +104,7 @@ function renderMenu() {
     <div class="menu-grid">
       <button class="menu-tile" data-go="practice"><span class="menu-ico">🛞</span><span class="menu-name">Essais libres</span></button>
       <button class="menu-tile" data-go="qualifying"><span class="menu-ico">⏱️</span><span class="menu-name">Qualification</span></button>
-      <button class="menu-tile quick" data-go="quick"><span class="menu-ico">⚡</span><span class="menu-name">Course rapide</span></button>
+      <button class="menu-tile" data-go="quick"><span class="menu-ico">⚡</span><span class="menu-name">Course rapide</span></button>
       <button class="menu-tile" data-go="race"><span class="menu-ico">🏁</span><span class="menu-name">Course</span></button>
     </div>
     ${last ? '<button class="btn ghost" id="mLast" style="margin-top:16px">↩ Revoir la dernière session</button>' : ''}

@@ -2,6 +2,12 @@
 
 import { ControlUnit } from './cu/controlunit.js';
 import { APP_VERSION } from './version.js';
+
+// feuille de style rechargée à chaque nouvelle version (sinon un téléphone peut garder l'ancienne)
+{
+  const css = document.querySelector('link[rel="stylesheet"][href^="css/app.css"]');
+  if (css && !css.getAttribute('href').endsWith('v=' + APP_VERSION)) css.setAttribute('href', 'css/app.css?v=' + APP_VERSION);
+}
 import { BleConnection, bluetoothSupported } from './cu/ble.js';
 import { SimulatorConnection } from './cu/simulator.js';
 import { PerformanceEngine, vscModifier, vscSpeed } from './performance.js';
