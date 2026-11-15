@@ -588,6 +588,7 @@ export const app = {
       quick: true,
       title: opts.title,
       kind: opts.kind, // quick | race | practice | qualifying (écran choisi au menu)
+      autoVsc: opts.autoVsc !== false, // case « VSC automatique » de la préparation
       fuel: { enabled: !!opts.fuelOn, tank15: opts.tank15 },
     });
   },
@@ -630,6 +631,7 @@ export const app = {
       quick: !!s.quick,
       title: s.title,
       kind: s.kind,
+      autoVsc: s.autoVsc,
       fuel: s.fuel, // course rapide : essence activée ou non + réservoir commun
     });
     session.trackId = s.trackId;

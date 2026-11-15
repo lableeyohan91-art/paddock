@@ -28,7 +28,7 @@ export async function mount(main, a) {
     app.setup.slots.slice(0, min).forEach((s) => (s.active = true));
     app.saveSetup();
   }
-  prefs = { laps: 30, minutes: 5, pqByLaps: false, pqLaps: 5, raceByTime: false, raceMinutes: 10, fuelOn: true, tank15: 15, ...(await app.db.getSetting('quickRace', {})) };
+  prefs = { laps: 30, minutes: 5, pqByLaps: false, pqLaps: 5, raceByTime: false, raceMinutes: 10, fuelOn: true, tank15: 15, autoVsc: true, ...(await app.db.getSetting('quickRace', {})) };
   setups = await app.fuelSetups();
   activeSetup = await app.db.getSetting('fuelActiveSetup', null);
   render();
@@ -146,6 +146,17 @@ function render() {
       <p class="warn-note">${PLACE_CARS_MSG}</p>
     </section>
 
+    ${isRace() ? `
+    <section class="panel" style="margin-top:14px">
+      <div class="row" style="justify-content:space-between">
+        <h2 style="margin:0">4. VSC automatique</h2>
+        <label class="switch"><input type="checkbox" id="qAutoVsc" ${prefs.autoVsc ? 'checked' : ''}><span></span> ${prefs.autoVsc ? 'Activé' : 'Désactivé'}</label>
+      </div>
+      <p class="muted" style="margin:8px 0 0;font-size:.85rem">${prefs.autoVsc
+        ? 'Le VSC se déclenche (et se termine) tout seul selon les réglages de Réglages → VSC → VSC automatique.'
+        : 'Course sans VSC automatique : seul le bouton VSC fonctionne.'}</p>
+    </section>` : ''}
+
     <div class="q-go">
       <button class="depart" id="qStart">
         <span class="depart-lights"><i></i><i></i><i></i><i></i><i></i></span>
@@ -208,6 +219,8 @@ function bind() {
   if (qm) qm.onchange = (e) => { prefs.minutes = Math.max(1, Math.min(600, parseInt(e.target.value, 10) || 1)); savePrefs(); render(); };
 
   $('#qFuel', root).onchange = (e) => { prefs.fuelOn = e.target.checked; savePrefs(); render(); };
+  const av = $('#qAutoVsc', root);
+  if (av) av.onchange = (e) => { prefs.autoVsc = e.target.checked; savePrefs(); render(); };
   const sel = $('#qSetup', root);
   if (sel && setups.length) sel.onchange = async () => {
     await app.loadFuelSetup(sel.value);
@@ -228,7 +241,7 @@ function bind() {
     if (parts.some((s) => !s.driverId)) { toast('Choisis un pilote pour chaque participant coché'); return; }
     // Départ : on prépare la séance et on passe à l'écran de course ; le lancement se fait avec GO
     const pqLaps = !isRace() && prefs.pqByLaps;
-    await app.prepareQuickRace({ laps: pqLaps ? prefs.pqLaps : prefs.laps, fuelOn: prefs.fuelOn, tank15: prefs.tank15, title: title(), type: mode().type, kind: app.quickMode || app.setup?.prepMode || 'quick', minutes: isRace() ? (prefs.raceByTime ? prefs.raceMinutes : 0) : pqLaps ? 0 : prefs.minutes });
+    await app.prepareQuickRace({ laps: pqLaps ? prefs.pqLaps : prefs.laps, fuelOn: prefs.fuelOn, tank15: prefs.tank15, title: title(), type: mode().type, kind: app.quickMode || app.setup?.prepMode || 'quick', autoVsc: prefs.autoVsc, minutes: isRace() ? (prefs.raceByTime ? prefs.raceMinutes : 0) : pqLaps ? 0 : prefs.minutes });
   };
 }
 
