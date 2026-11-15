@@ -172,6 +172,14 @@ export function editDriver(d, onSaved) {
         </div>
       </div>
     </div>
+    ${isNew ? '' : `
+    <div class="driver-stats-tools">
+      <h3 style="margin:0 0 8px">Statistiques</h3>
+      <div class="row" style="gap:8px;flex-wrap:wrap">
+        <button class="btn small ghost" id="pClearLaps" title="Remet à zéro ses tours et son temps de roulage (garde les records SmartRace importés)">🧹 Effacer les tours roulés</button>
+        <button class="btn small ghost" id="pResetResults">🏁 Remettre à zéro courses / victoires et qualifs / poles (tous les pilotes)</button>
+      </div>
+    </div>`}
     <div class="row" style="justify-content:flex-end;margin-top:16px">
       <button class="btn ghost" data-close>Annuler</button>
       <button class="btn primary" id="pSave">${isNew ? 'Ajouter' : 'Enregistrer'}</button>
@@ -209,6 +217,26 @@ export function editDriver(d, onSaved) {
     toast(isNew ? `${name} ajouté` : 'Pilote enregistré', 1500);
     if (onSaved) onSaved();
     else if (root) render();
+  };
+  // remises à zéro (la fenêtre de confirmation remplace celle-ci)
+  const done = () => { if (onSaved) onSaved(); else if (root) render(); };
+  const cl = $('#pClearLaps', el);
+  if (cl) cl.onclick = async () => {
+    const mine = (await app.db.all('laps')).filter((l) => l.driverId === d.id && !l.imported);
+    if (!mine.length) { toast('Aucun tour roulé à effacer'); return; }
+    if (!(await confirmBox(`Effacer définitivement les ${mine.length} tours roulés par ${d.name} ? Ses tours effectués, son temps de roulage et ses records faits dans Paddock repartent de zéro. Ses records SmartRace importés sont conservés.`))) return;
+    for (const l of mine) await app.db.remove('laps', l.id);
+    toast(`Tours de ${d.name} effacés`);
+    done();
+  };
+  const rr = $('#pResetResults', el);
+  if (rr) rr.onclick = async () => {
+    const list = (await app.db.all('sessions')).filter((x) => x.type === 'race' || x.type === 'qualifying');
+    if (!list.length) { toast('Aucune course ni qualif enregistrée'); return; }
+    if (!(await confirmBox(`Effacer définitivement les ${list.length} courses et qualifs enregistrées ? Les compteurs courses / victoires et qualifs / poles de tous les pilotes repartent de zéro. Les tours, temps de roulage et records sont conservés.`))) return;
+    for (const x of list) await app.db.remove('sessions', x.id);
+    toast('Courses et qualifs remises à zéro');
+    done();
   };
   setTimeout(() => $('#pName', el).focus(), 50);
 }

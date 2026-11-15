@@ -108,7 +108,6 @@ async function render(d) {
           <span class="sheet-color" style="background:${esc(d.color)}"></span>
           <button class="btn small" id="edit">✎ Modifier</button>
           <button class="btn small ghost danger" id="del">🗑 Supprimer</button>
-          <button class="btn small ghost" id="clearLaps" title="Remet à zéro ses tours et son temps de roulage (garde les records SmartRace importés)">🧹 Effacer les tours roulés</button>
         </div>
       </div>
     </header>
@@ -121,9 +120,6 @@ async function render(d) {
       <div class="kstat"><div class="v num">${st.quals} <small>/</small> <span class="purple">${st.poles}</span></div>
         <div class="l">Qualifs / pole positions</div><div class="s">${st.quals ? pct(st.poles, st.quals) + ' de poles' : ''}</div></div>
     </section>
-    <div class="row" style="justify-content:flex-end;margin-top:8px">
-      <button class="btn small ghost" id="resetResults">🏁 Remettre à zéro courses / victoires et qualifs / poles (tous les pilotes)</button>
-    </div>
 
     <section class="panel" style="margin-top:16px">
       <h2>Records par circuit</h2>
@@ -159,22 +155,6 @@ async function render(d) {
 
   $('#back', root).onclick = () => app.go('drivers');
   $('#edit', root).onclick = () => editDriver(d, () => refresh());
-  $('#resetResults', root).onclick = async () => {
-    const list = (await app.db.all('sessions')).filter((x) => x.type === 'race' || x.type === 'qualifying');
-    if (!list.length) { toast('Aucune course ni qualif enregistrée'); return; }
-    if (!(await confirmBox(`Effacer définitivement les ${list.length} courses et qualifs enregistrées ? Les compteurs courses / victoires et qualifs / poles de tous les pilotes repartent de zéro. Les tours, temps de roulage et records sont conservés.`))) return;
-    for (const x of list) await app.db.remove('sessions', x.id);
-    toast('Courses et qualifs remises à zéro');
-    refresh();
-  };
-  $('#clearLaps', root).onclick = async () => {
-    const mine = (await app.db.all('laps')).filter((l) => l.driverId === d.id && !l.imported);
-    if (!mine.length) { toast('Aucun tour roulé à effacer'); return; }
-    if (!(await confirmBox(`Effacer définitivement les ${mine.length} tours roulés par ${d.name} ? Ses tours effectués, son temps de roulage et ses records faits dans Paddock repartent de zéro. Ses records SmartRace importés sont conservés.`))) return;
-    for (const l of mine) await app.db.remove('laps', l.id);
-    toast(`Tours de ${d.name} effacés`);
-    refresh();
-  };
   $('#del', root).onclick = async () => {
     if (!(await confirmBox(`Supprimer ${d.name} ? Ses tours déjà enregistrés restent dans les statistiques.`))) return;
     await app.db.remove('drivers', d.id);
