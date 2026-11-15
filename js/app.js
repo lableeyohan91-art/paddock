@@ -218,6 +218,7 @@ export const app = {
     l?.disconnect();
     this.extraLights = this.extraLights.filter((x) => x.id !== id);
     saveExtraLights();
+    updateExtraBar();
   },
   lightSync: { enabled: true, chihiros: false, others: false }, // chihiros : rampe activée (seulement chez qui en a une) ; enabled : elle suit les drapeaux
 
@@ -226,8 +227,8 @@ export const app = {
     const wasOthers = this.lightSync.others;
     this.lightSync = { ...this.lightSync, ...values };
     if ('others' in values && values.others !== wasOthers) {
-      if (values.others) this.extraLights.forEach((l) => l.autoConnect().catch(() => {}));
-      else this.extraLights.forEach((l) => l.disconnect());
+      if (values.others) autoConnectExtras();
+      else { this.extraLights.forEach((l) => l.disconnect()); updateExtraBar(); }
     }
     if ('chihiros' in values && values.chihiros !== wasOn) {
       if (values.chihiros) autoConnectLights();
@@ -1017,7 +1018,42 @@ function watchExtraLight(l, fresh = false) {
       resetLightSync();
       syncLights(app, { force: true });
     } else if (!l.connected) wasOn = false;
+    updateExtraBar();
   });
+}
+
+/**
+ * Au lancement (ou à l'activation) : reconnexion des autres lampes, puis bandeau
+ * « non connectée » pour celles qui n'ont pas répondu (comme pour la rampe).
+ */
+let extraBarArmed = false;
+async function autoConnectExtras() {
+  await Promise.all(app.extraLights.map((l) => l.autoConnect().catch(() => false)));
+  extraBarArmed = true;
+  updateExtraBar();
+}
+
+function updateExtraBar() {
+  const bar = $('#extraBar');
+  if (!bar) return;
+  const missing = app.lightSync.others && extraBarArmed ? app.extraLights.filter((l) => !l.connected && l.status !== 'connecting') : [];
+  if (!missing.length) { bar.classList.add('hidden'); return; }
+  const label = missing.length === 1 ? `${esc(missing[0].name)} non connectée` : `${missing.length} lampes non connectées`;
+  bar.innerHTML = `<span>🔦</span><span>${label}</span><b>Connecter</b>`;
+  bar.classList.remove('hidden');
+  bar.onclick = async () => {
+    for (const l of missing) {
+      try {
+        // un appui permet souvent de rouvrir la lampe déjà autorisée ; sinon on la recherche
+        if (l.device) await l.reconnect();
+        else { const n = await GenericLight.pick(); app.addExtraLight(n); }
+      } catch (e) {
+        if (!/cancel|chosen/i.test(e?.message || '')) toast(`${l.name} : ${e.message || e}`, 3500);
+        break; // une seule fenêtre de recherche par appui
+      }
+    }
+    updateExtraBar();
+  };
 }
 
 // ---------- Rampe LED : connexion automatique au lancement ----------
@@ -1150,7 +1186,8 @@ async function init() {
   let savedLights = [];
   try { savedLights = JSON.parse(localStorage.getItem(EXTRA_KEY) || '[]'); } catch { /* ignore */ }
   app.extraLights = savedLights.map((x) => new GenericLight(x));
-  app.extraLights.forEach((l) => { watchExtraLight(l); if (app.lightSync.others) l.autoConnect().catch(() => {}); });
+  app.extraLights.forEach((l) => watchExtraLight(l));
+  if (app.lightSync.others) autoConnectExtras();
   // Une seule fois : on installe le réglage équilibré (validé par simulation 50 et 100 tours)
   // et on l'enregistre comme setup nommé.
   if (!(await db.getSetting('fuelBalancedApplied', false))) {
