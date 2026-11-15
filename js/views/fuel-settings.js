@@ -192,24 +192,12 @@ function consoHtml() {
     <section class="panel">
       <h2>⛽ Panne sèche (0 %)</h2>
       <p class="muted" style="margin-top:-6px;font-size:.88rem">Vitesse de la voiture quand son réservoir est vide, jusqu'à ce qu'elle ravitaille au stand.</p>
-      <div class="seg" id="fEmptyMode">
-        <button data-em="pct" class="${cfg.emptyMode === 'pct' ? 'on' : ''}">% de sa vitesse</button>
-        <button data-em="fixed" class="${cfg.emptyMode === 'fixed' ? 'on' : ''}">Vitesse fixe</button>
-      </div>
-      ${cfg.emptyMode === 'pct' ? `
-      <div class="bar" style="--c:var(--yellow);--p:${cfg.emptySpeedPct}%;margin-top:14px">
-        <span class="bar-l">Vitesse</span>
-        <input type="range" id="fEmptyPct" min="10" max="100" step="5" value="${cfg.emptySpeedPct}">
-        <span class="bar-v num" id="fEmptyPctV">${cfg.emptySpeedPct} %</span>
-      </div>
-      <p class="muted" style="font-size:.85rem;margin-bottom:0">Ex. 40 % : une voiture réglée à 80 % au garage tombe à 32 %. 100 % = pas de pénalité.</p>`
-      : `
       <div class="bar" style="--c:var(--yellow);--p:${Math.round((cfg.emptySpeedFixed / 15) * 100)}%;margin-top:14px">
         <span class="bar-l">Vitesse</span>
         <input type="range" id="fEmptyFix" min="0" max="15" step="1" value="${cfg.emptySpeedFixed}">
         <span class="bar-v num" id="fEmptyFixV">${Math.round((cfg.emptySpeedFixed / 15) * 100)} %</span>
       </div>
-      <p class="muted" style="font-size:.85rem;margin-bottom:0">Toutes les voitures à sec roulent à cette vitesse (même échelle que la barre verte du garage), quel que soit leur réglage. Une voiture déjà réglée plus lentement garde sa vitesse.</p>`}
+      <p class="muted" style="font-size:.85rem;margin-bottom:0">Toutes les voitures à sec roulent à cette vitesse (même échelle que la barre verte du garage), quel que soit leur réglage. Une voiture déjà réglée plus lentement garde sa vitesse.</p>
     </section>
   </div>`;
 }
@@ -226,14 +214,6 @@ function bindConso() {
   $('#fNom', el).onchange = (e) => setNom(e.target.value);
   $('#fRefuel', el).onchange = (e) => { cfg.refuelPerSec = +e.target.value; save(true); };
   $('#fLow', el).onchange = (e) => { cfg.lowWarnPct = +e.target.value; save(true); };
-  $$('[data-em]', el).forEach((b) => (b.onclick = () => { cfg.emptyMode = b.dataset.em; save(); draw(); }));
-  const pctIn = $('#fEmptyPct', el);
-  if (pctIn) pctIn.oninput = () => {
-    cfg.emptySpeedPct = +pctIn.value;
-    pctIn.parentElement.style.setProperty('--p', pctIn.value + '%');
-    $('#fEmptyPctV', el).textContent = pctIn.value + ' %';
-    save();
-  };
   const fixIn = $('#fEmptyFix', el);
   if (fixIn) fixIn.oninput = () => {
     cfg.emptySpeedFixed = +fixIn.value;

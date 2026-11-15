@@ -30,7 +30,7 @@ export function defaultFuelConfig() {
     ],
     refuelPerSec: 10,     // % ajoutés par seconde passée au stand
     lowWarnPct: 15,       // annonce "réserve"
-    emptyMode: 'pct',     // panne sèche : 'pct' = % de sa vitesse ; 'fixed' = vitesse fixe (0-15, comme au garage)
+    emptyMode: 'fixed',   // panne sèche : vitesse fixe (0-15, comme au garage)
     emptySpeedPct: 40,    //   mode 'pct' : vitesse limitée à ce % jusqu'au ravitaillement
     emptySpeedFixed: 4,   //   mode 'fixed' : vitesse imposée (0-15)
   };
@@ -127,7 +127,7 @@ export function sanitize(cfg) {
   c.refuelPerSec = num(c.refuelPerSec, 1, 100, d.refuelPerSec);
   c.lowWarnPct = num(c.lowWarnPct, 0, 50, d.lowWarnPct);
   c.emptySpeedPct = Math.round(num(c.emptySpeedPct, 10, 100, d.emptySpeedPct));
-  c.emptyMode = c.emptyMode === 'fixed' ? 'fixed' : 'pct';
+  c.emptyMode = 'fixed'; // panne sèche : toujours une vitesse fixe (le mode « % de sa vitesse » a été retiré)
   c.emptySpeedFixed = Math.round(num(c.emptySpeedFixed, 0, 15, d.emptySpeedFixed));
   return c;
 }
