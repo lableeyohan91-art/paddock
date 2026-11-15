@@ -15,6 +15,7 @@ let saveTimer = null;
 let lapsCache = [];  // tours enregistrés (record, temps médians)
 let calc = {};       // saisies du calculateur (gardées d'une fois sur l'autre)
 let calcResult = null;
+let driversOpen = false; // liste « Pilotes présents » dépliée ?
 
 export async function renderFuel(container, a) {
   app = a;
@@ -295,16 +296,15 @@ function calcHtml() {
   <section class="panel">
     <h2>🧮 Calculateur d'équilibrage</h2>
     <p class="muted" style="margin-top:-6px;font-size:.88rem">Il propose les fourchettes, les consommations et la vitesse de remplissage les plus équilibrées pour ton circuit : au rythme nominal, le plein impose le nombre d'arrêts voulu ; attaquer coûte de l'essence, économiser ne paie pas. Il garde de 2 à 4 fourchettes rapides et lentes.</p>
-    <div class="field" style="margin-bottom:12px">Pilotes présents
+    <details class="calc-pick" id="calcPick" ${driversOpen ? 'open' : ''}>
+      <summary>
+        <span>Pilotes présents <b>(${a.present.filter((id) => app.driver(id)).length})</b></span>
+        <span class="calc-pick-names">${a.present.map((id) => app.driver(id)?.name).filter(Boolean).map(esc).join(', ') || 'aucun'}</span>
+      </summary>
       <div class="calc-drivers">
-        ${app.data.drivers.map((d) => {
-          const m = driverMedian(d);
-          return `<label class="calc-drv ${a.present.includes(d.id) ? 'on' : ''}" style="--dc:${esc(d.color)}"><input type="checkbox" data-cd="${esc(d.id)}" ${a.present.includes(d.id) ? 'checked' : ''}>
-            ${esc(d.name)} <span class="muted">${m ? m.sec.toFixed(2) + ' s' : '—'}</span></label>`;
-        }).join('') || '<span class="muted">Aucun pilote</span>'}
+        ${app.data.drivers.map((d) => `<label class="calc-drv" style="--dc:${esc(d.color)}"><input type="checkbox" data-cd="${esc(d.id)}" ${a.present.includes(d.id) ? 'checked' : ''}><span>${esc(d.name)}</span></label>`).join('') || '<span class="muted">Aucun pilote</span>'}
       </div>
-      <small class="muted">Temps médian au tour en course de chaque pilote (case de son profil, sinon calculé sur ses courses).</small>
-    </div>
+    </details>
     <div class="calc-grid">
       <label class="field">Record du circuit (s)
         <input type="number" step="0.01" min="1" max="60" data-ci="record" value="${fmtS(v.record)}" placeholder="${a.record ? 'auto : ' + fmtS(a.record) : 'à saisir'}">
@@ -353,6 +353,8 @@ function calcResultHtml() {
 async function saveCalc() { await app.db.setSetting('fuelCalc', calc, { quiet: true }); }
 
 function bindCalc() {
+  const pick = $('#calcPick', el);
+  if (pick) pick.ontoggle = () => { driversOpen = pick.open; };
   $$('[data-cd]', el).forEach((c) => (c.onchange = async () => {
     const set = new Set(calcAuto().present);
     if (c.checked) set.add(c.dataset.cd); else set.delete(c.dataset.cd);
