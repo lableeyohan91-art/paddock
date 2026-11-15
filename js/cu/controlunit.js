@@ -106,8 +106,12 @@ export class ControlUnit extends EventTarget {
   }
 
   async _loop() {
+    let lastWasCmd = false;
     while (this.running && this.conn) {
-      const item = this.commands.shift();
+      // une interrogation après chaque commande : les passages (tours) continuent
+      // d'arriver même quand beaucoup de réglages sont envoyés (VSC renvoyé 2×/s…)
+      const item = lastWasCmd ? null : this.commands.shift();
+      lastWasCmd = !!item;
       const cmd = item ? item.cmd : P.cmdPoll();
       try {
         const raw = await this.conn.request(cmd);
