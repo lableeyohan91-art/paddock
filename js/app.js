@@ -47,6 +47,7 @@ function defaultSetup(a) {
 const VIEWS = { race: raceView, garage: garageView, drivers: driversView, driver: driverView, ghost: ghostView, quick: quickView, stats: statsView, settings: settingsView };
 
 const cu = new ControlUnit();
+const DEFAULT_TUNE = { speed: 8, brake: 6 }; // réglage d'un couple pilote + voiture jamais joué : ~54 % accélération, 40 % freinage
 const DEFAULT_VSC = { speedPct: 20 }; // vitesse fixe imposée à toutes les voitures sous VSC, en % de la vitesse max
 export const GHOST = 6; // adresse de la voiture autonome (fantôme) ; 7 = pace car
 const perf = new PerformanceEngine(cu);
@@ -97,8 +98,9 @@ export const app = {
   getTune(driverId, carId) {
     const t = this.data.tunes.get(this.tuneId(driverId, carId));
     if (t) return { speed: t.speed, brake: t.brake, fuel: t.fuel, saved: true };
+    // jamais joué (pilote + voiture) : réglage prudent, pour éviter les sorties de piste
     const car = this.car(carId);
-    return { speed: car?.speed ?? 15, brake: car?.brake ?? 15, fuel: car?.fuelCapacity ?? 15, saved: false };
+    return { speed: DEFAULT_TUNE.speed, brake: DEFAULT_TUNE.brake, fuel: car?.fuelCapacity ?? 15, saved: false };
   },
 
   async saveTune(driverId, carId, values) {
