@@ -197,9 +197,25 @@ function bindScenesPanel() {
 /** Onglet « Autres lampes » : rechercher n'importe quelle lampe Bluetooth reconnue. */
 function renderOtherLights() {
   const lights = app.extraLights;
+  const enabled = !!app.lightSync.others;
+  const sw = `<label class="switch"><input type="checkbox" id="olEnable" ${enabled ? 'checked' : ''}><span></span> ${enabled ? 'Activées' : 'Désactivées'}</label>`;
+  const bindSw = () => {
+    $('#olEnable', root).onchange = async (e) => { await app.saveLightSync({ others: e.target.checked }); renderDevices(); bindTabs(); };
+  };
+  // désactivé (cas de ceux qui n'ont pas d'autre lampe) : juste l'interrupteur, comme pour Chihiros
+  if (!enabled) {
+    root.innerHTML = sectionHead() + devTabs() + `
+    <section class="panel">
+      <div class="row" style="justify-content:space-between"><h2 style="margin:0">Autres lampes Bluetooth</h2>${sw}</div>
+      <p class="muted" style="margin:10px 0 0">Tu as un ruban LED, une ampoule ou une lampe Bluetooth ? Active-les : tu pourras les rechercher, et elles prendront la couleur des drapeaux en course comme la rampe.</p>
+    </section>`;
+    bindSw();
+    bindDevTabs();
+    return;
+  }
   root.innerHTML = sectionHead() + devTabs() + `
   <section class="panel">
-    <h2>Autres lampes Bluetooth</h2>
+    <div class="row" style="justify-content:space-between;margin-bottom:6px"><h2 style="margin:0">Autres lampes Bluetooth</h2>${sw}</div>
     <p class="muted" style="margin:-4px 0 12px;font-size:.9rem">Rubans LED, ampoules, lampes : Paddock les pilote comme la rampe et leur applique les mêmes couleurs en course.</p>
     ${navigator.bluetooth ? '' : '<p class="warn-note">Bluetooth indisponible dans ce navigateur : utilise Chrome.</p>'}
     <div class="other-lights">
@@ -227,6 +243,7 @@ function renderOtherLights() {
   </section>` + scenesPanel();
 
   bindDevTabs();
+  bindSw();
   bindScenesPanel();
   const again = () => { renderDevices(); bindTabs(); };
   $('#olSearch', root).onclick = async () => {

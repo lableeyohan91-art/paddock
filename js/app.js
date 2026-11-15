@@ -200,7 +200,7 @@ export const app = {
   lightOutputs() {
     const outs = [];
     if (this.lightSync.chihiros && this.lights.connected && !this.lightHello) outs.push(this.lights);
-    this.extraLights.forEach((l) => { if (l.connected && !l.helloing) outs.push(l); });
+    if (this.lightSync.others) this.extraLights.forEach((l) => { if (l.connected && !l.helloing) outs.push(l); });
     return outs;
   },
 
@@ -219,11 +219,16 @@ export const app = {
     this.extraLights = this.extraLights.filter((x) => x.id !== id);
     saveExtraLights();
   },
-  lightSync: { enabled: true, chihiros: false }, // chihiros : rampe activée (seulement chez qui en a une) ; enabled : elle suit les drapeaux
+  lightSync: { enabled: true, chihiros: false, others: false }, // chihiros : rampe activée (seulement chez qui en a une) ; enabled : elle suit les drapeaux
 
   async saveLightSync(values) {
     const wasOn = this.lightSync.chihiros;
+    const wasOthers = this.lightSync.others;
     this.lightSync = { ...this.lightSync, ...values };
+    if ('others' in values && values.others !== wasOthers) {
+      if (values.others) this.extraLights.forEach((l) => l.autoConnect().catch(() => {}));
+      else this.extraLights.forEach((l) => l.disconnect());
+    }
     if ('chihiros' in values && values.chihiros !== wasOn) {
       if (values.chihiros) autoConnectLights();
       else { this.lights.disconnect(); $('#lightBar').classList.add('hidden'); }
@@ -1148,7 +1153,7 @@ async function init() {
   let savedLights = [];
   try { savedLights = JSON.parse(localStorage.getItem(EXTRA_KEY) || '[]'); } catch { /* ignore */ }
   app.extraLights = savedLights.map((x) => new GenericLight(x));
-  app.extraLights.forEach((l) => { watchExtraLight(l); l.autoConnect().catch(() => {}); });
+  app.extraLights.forEach((l) => { watchExtraLight(l); if (app.lightSync.others) l.autoConnect().catch(() => {}); });
   // Une seule fois : on installe le réglage équilibré (validé par simulation 50 et 100 tours)
   // et on l'enregistre comme setup nommé.
   if (!(await db.getSetting('fuelBalancedApplied', false))) {
