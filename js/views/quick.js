@@ -55,6 +55,9 @@ const title = () => mode().title;
 const isRace = () => mode().type === 'race';
 const savePrefs = () => app.db.setSetting('quickRace', prefs);
 const pct15 = (v) => Math.round((v / 15) * 100);
+/** Calcul « selon le temps au tour » : réservoir bloqué à 100 %. */
+const tankLocked = () => app.fuelCfg.mode === 'bands';
+const tank15 = () => (tankLocked() ? 15 : prefs.tank15);
 
 function opt(list, sel, empty) {
   return `<option value="">${empty}</option>` +
@@ -158,11 +161,12 @@ function render() {
           <select id="qSetup">${setups.length ? setups.map((s) => `<option value="${esc(s.id)}" ${s.id === activeSetup ? 'selected' : ''}>${esc(s.name)}</option>`).join('')
             : '<option value="">Réglage actuel</option>'}</select></label>`}
         <div>
-          <div class="bar" style="--c:var(--blue);--p:${pct15(prefs.tank15)}%">
+          <div class="bar" style="--c:var(--blue);--p:${pct15(tank15())}%">
             <span class="bar-l">Réservoir</span>
-            <input type="range" id="qTank" min="1" max="15" value="${prefs.tank15}">
-            <span class="bar-v num" id="qTankV">${pct15(prefs.tank15)} %</span>
+            <input type="range" id="qTank" min="1" max="15" value="${tank15()}" ${tankLocked() ? 'disabled' : ''}>
+            <span class="bar-v num" id="qTankV">${pct15(tank15())} %</span>
           </div>
+          ${tankLocked() ? '<p class="muted" style="font-size:.8rem;margin:4px 0 0">🔒 Réservoir à 100 % : le calcul selon le temps au tour est réglé sur un plein. Toutes les voitures sont remises à 100 % au départ.</p>' : ''}
           <p class="muted" style="font-size:.8rem;margin:4px 0 0">Même réservoir pour toutes les voitures de la course.</p>
         </div>
       </div>` : '<p class="muted" style="margin:8px 0 0">Pas de consommation : les voitures roulent sans jamais s\'arrêter.</p>'}
@@ -194,7 +198,7 @@ function render() {
       <button class="depart" id="qStart">
         <span class="depart-lights"><i></i><i></i><i></i><i></i><i></i></span>
         <span class="depart-txt">DÉPART</span>
-        <span class="depart-sub">${isRace() ? (prefs.raceByTime ? prefs.raceMinutes + ' min' : prefs.laps + ' tours') : prefs.pqByLaps ? prefs.pqLaps + ' tours' : prefs.minutes + ' min'} · ${n} pilote${n > 1 ? 's' : ''} · ${prefs.fuelOn ? `essence ${pct15(prefs.tank15)} %` : 'sans essence'}</span>
+        <span class="depart-sub">${isRace() ? (prefs.raceByTime ? prefs.raceMinutes + ' min' : prefs.laps + ' tours') : prefs.pqByLaps ? prefs.pqLaps + ' tours' : prefs.minutes + ' min'} · ${n} pilote${n > 1 ? 's' : ''} · ${prefs.fuelOn ? `essence ${pct15(tank15())} %` : 'sans essence'}</span>
       </button>
     </div>
     <p class="warn-note q-start-note">${START_MSG}</p>
@@ -295,7 +299,7 @@ function bind() {
     if (parts.some((s) => !s.driverId)) { toast('Choisis un pilote pour chaque participant coché'); return; }
     // Départ : on prépare la séance et on passe à l'écran de course ; le lancement se fait avec GO
     const pqLaps = !isRace() && prefs.pqByLaps;
-    await app.prepareQuickRace({ laps: pqLaps ? prefs.pqLaps : prefs.laps, fuelOn: prefs.fuelOn, tank15: prefs.tank15, title: title(), type: mode().type, kind: app.quickMode || app.setup?.prepMode || 'quick', autoVsc: prefs.autoVsc, tyresOn: isRace() && prefs.tyresOn, minutes: isRace() ? (prefs.raceByTime ? prefs.raceMinutes : 0) : pqLaps ? 0 : prefs.minutes });
+    await app.prepareQuickRace({ laps: pqLaps ? prefs.pqLaps : prefs.laps, fuelOn: prefs.fuelOn, tank15: tank15(), title: title(), type: mode().type, kind: app.quickMode || app.setup?.prepMode || 'quick', autoVsc: prefs.autoVsc, tyresOn: isRace() && prefs.tyresOn, minutes: isRace() ? (prefs.raceByTime ? prefs.raceMinutes : 0) : pqLaps ? 0 : prefs.minutes });
   };
 }
 

@@ -139,7 +139,7 @@ export const app = {
       else if (cu.connected) { cu.setSpeed(address, t.speed); cu.setBrake(address, t.brake); }
     }
     // le réservoir ne change pas en pleine course (il remplirait les voitures)
-    if (keys.includes('fuel') && cu.connected && !this.isRacing) cu.setFuel(address, t.fuel);
+    if (keys.includes('fuel') && cu.connected && !this.isRacing) cu.setFuel(address, this.tankFor(t.fuel)); // selon le temps au tour : plein
   },
 
   /**
@@ -167,7 +167,7 @@ export const app = {
       const reset = changedDriver && s.cfg.type !== 'race';
       const comp = s.reassign(address, driver, car, { resetTiming: reset });
       // essence : nouveau pilote en essais/qualif = plein ; sinon on garde le niveau
-      if (reset || comp.fuelPct === null) this.fillTank(comp, t.fuel);
+      if (reset || comp.fuelPct === null) this.fillTank(comp, this.tankFor(t.fuel));
       else {
         comp.tankPct = Math.round((t.fuel / 15) * 100);
         comp.fuelPct = Math.min(comp.fuelPct, comp.tankPct);
@@ -417,6 +417,15 @@ export const app = {
   },
 
   /** Remplit le réservoir d'une voiture (valeur garage 0..15 -> %). */
+  /**
+   * Réservoir (0-15) d'une voiture pour la séance : en calcul « selon le temps au tour »,
+   * toujours le plein (100 %), car les réglages d'essence sont calculés sur un plein de 100 % ;
+   * sinon la valeur demandée (réservoir commun de la préparation, ou celui du garage).
+   */
+  tankFor(tank15) {
+    return this.fuelCfg.mode === 'bands' ? 15 : tank15;
+  },
+
   fillTank(comp, tank15 = 15) {
     comp.tankPct = Math.round((tank15 / 15) * 100);
     comp.fuelPct = comp.tankPct;
@@ -802,7 +811,7 @@ export const app = {
     this.calibrateSim();
     // Essence : chaque voiture part avec son réservoir du garage,
     // ou avec le réservoir commun choisi pour la course rapide
-    const tankOf = (c) => s.fuel?.tank15 ?? this.getTune(c.driver.id, c.car.id).fuel;
+    const tankOf = (c) => this.tankFor(s.fuel?.tank15 ?? this.getTune(c.driver.id, c.car.id).fuel);
     for (const c of session.comps.values()) this.fillTank(c, tankOf(c));
     // pneus : tout le monde part avec la gomme de départ (modifiable sur la vue pilote avant le GO)
     for (const c of session.comps.values()) c.tyre = freshTyres(this.tyres.start, undefined, this.tyres);
@@ -848,7 +857,11 @@ export const app = {
       const t = this.getTune(c.driver?.id, c.car?.id);
       c.car.speed = t.speed;
       c.car.brake = t.brake;
-      if (session.cfg.fuel?.enabled ?? this.fuelOn()) this.fillTank(c, session.cfg.fuel?.tank15 ?? t.fuel);
+      if (session.cfg.fuel?.enabled ?? this.fuelOn()) {
+        const tank = this.tankFor(session.cfg.fuel?.tank15 ?? t.fuel);
+        this.fillTank(c, tank);
+        if (cu.connected) cu.setFuel(c.address, tank); // réservoir de la Control Unit recalé aussi
+      }
       c.tyre = freshTyres(this.tyres.start, undefined, this.tyres);
       perf.setBase(c.address, t.speed, t.brake); // bridage VSC, panne sèche… s'appliquent aussi
       this.log(`Manette ${c.address + 1} ajoutée en cours de séance`);
