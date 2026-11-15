@@ -16,6 +16,7 @@ let lapsCache = [];  // tours enregistrés (record, temps médians)
 let calc = {};       // saisies du calculateur (gardées d'une fois sur l'autre)
 let calcResult = null;
 let driversOpen = false; // liste « Pilotes présents » dépliée ?
+let calcOpen = false;    // menu « Calcul automatique des valeurs » déplié ?
 
 export async function renderFuel(container, a) {
   app = a;
@@ -258,7 +259,7 @@ function rows() {
   ];
 }
 
-// ---------- Calculateur d'équilibrage ----------
+// ---------- Calcul automatique des valeurs (calculateur d'équilibrage) ----------
 
 /** Temps médian d'un pilote : sa case du profil, sinon calculé sur ses tours de course. */
 function driverMedian(d) {
@@ -294,8 +295,9 @@ function calcHtml() {
   const pitLoss = v.pitLap && v.median ? v.pitLap - v.median : null;
   return `
   <section class="panel">
-    <h2>🧮 Calculateur d'équilibrage</h2>
-    <p class="muted" style="margin-top:-6px;font-size:.88rem">Il propose les fourchettes, les consommations et la vitesse de remplissage les plus équilibrées pour ton circuit : au rythme nominal, le plein impose le nombre d'arrêts voulu ; attaquer coûte de l'essence, économiser ne paie pas. Il garde de 2 à 4 fourchettes rapides et lentes.</p>
+    <details class="calc-box" id="calcBox" ${calcOpen ? 'open' : ''}>
+    <summary><h2 style="margin:0">🧮 Calcul automatique des valeurs</h2></summary>
+    <p class="muted" style="margin:10px 0 12px;font-size:.88rem">Il propose les fourchettes, les consommations et la vitesse de remplissage les plus équilibrées pour ton circuit : au rythme nominal, le plein impose le nombre d'arrêts voulu ; attaquer coûte de l'essence, économiser ne paie pas. Il garde de 2 à 4 fourchettes rapides et lentes.</p>
     <details class="calc-pick" id="calcPick" ${driversOpen ? 'open' : ''}>
       <summary>
         <span>Pilotes présents <b>(${a.present.filter((id) => app.driver(id)).length})</b></span>
@@ -325,6 +327,7 @@ function calcHtml() {
       <button class="btn small ghost" id="calcAuto" title="Effacer tes saisies du record et du temps médian">↺ Valeurs automatiques</button>
     </div>
     <div id="calcRes">${calcResultHtml()}</div>
+    </details>
   </section>`;
 }
 
@@ -353,6 +356,8 @@ function calcResultHtml() {
 async function saveCalc() { await app.db.setSetting('fuelCalc', calc, { quiet: true }); }
 
 function bindCalc() {
+  const box = $('#calcBox', el);
+  if (box) box.ontoggle = () => { calcOpen = box.open; };
   const pick = $('#calcPick', el);
   if (pick) pick.ontoggle = () => { driversOpen = pick.open; };
   $$('[data-cd]', el).forEach((c) => (c.onchange = async () => {
