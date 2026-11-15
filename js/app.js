@@ -1139,7 +1139,7 @@ async function init() {
     if (s.flag === 'vsc' || performance.now() < (app.vscResendUntil || 0)) perf.resendSpeeds();
   }, 500);
   // Éclairage : la rampe prend la couleur du drapeau en cours
-  setInterval(() => syncLights(app), 100);
+  setInterval(() => syncLights(app), 300);
   $('#liveBar').onclick = () => app.go('race');
   checkVersion();
   setInterval(checkVersion, 15000);
