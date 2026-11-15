@@ -4,7 +4,8 @@
 export const LIGHT_SCENES = [
   { k: 'ready', label: 'Prêt (avant le GO)', c: [100, 100, 100], css: '#ffffff' },
   { k: 'lights', label: 'Feux de départ', c: [100, 0, 0], css: '#e10600' },
-  { k: 'green', label: 'Course / séance en cours', c: [0, 100, 0], css: '#22c55e' },
+  { k: 'green', label: 'Départ / reprise (2 secondes)', c: [0, 100, 0], css: '#22c55e' },
+  { k: 'racing', label: 'Course en cours (rien de spécial)', c: [100, 100, 100], css: '#ffffff' },
   { k: 'yellow', label: 'Drapeau jaune', c: [100, 60, 0], css: '#facc15' },
   { k: 'vsc', label: 'VSC', c: [100, 30, 0], css: '#fb923c' },
   { k: 'red', label: 'Drapeau rouge', c: [100, 0, 0], css: '#e10600' },
@@ -21,8 +22,17 @@ export function sceneFor(session) {
   if (s.flag === 'red') return 'red';
   if (s.flag === 'vsc') return 'vsc';
   if (s.flag === 'yellow') return 'yellow';
-  return 'green';
+  // départ ou reprise (fin de drapeau jaune, de VSC, de drapeau rouge) : vert 2 secondes, puis blanc
+  if (greenFor !== s || greenSince === null) { greenFor = s; greenSince = performance.now(); }
+  return performance.now() - greenSince < GREEN_MS ? 'green' : 'racing';
 }
+
+const GREEN_MS = 2000;
+let greenSince = null; // début de la dernière période « vert »
+let greenFor = null;   // séance concernée
+
+/** Toute situation autre que la course normale remet le compteur du vert à zéro. */
+function noteScene(k) { if (k !== 'green' && k !== 'racing') greenSince = null; }
 
 let last = null;
 let blinkTimer = null;
@@ -48,6 +58,7 @@ export function syncLights(app, { force = false } = {}) {
   if (app.lightHello) return; // la rampe fait son signal de connexion
   const k = sceneFor(app.session);
   if (!k) return;
+  noteScene(k);
   const step = stepFor(app, k);
   const key = step === null ? k : `${k}:${step}`;
   if (key === last && !force) return;
