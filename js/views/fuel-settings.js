@@ -129,15 +129,15 @@ async function refreshAll() {
 }
 
 function draw() {
-  el.innerHTML = setupsHtml() + `
+  el.innerHTML = `
   <div class="subtabs small">
     <button data-sub="conso" class="${sub === 'conso' ? 'on' : ''}">Consommation</button>
     <button data-sub="ref" class="${sub === 'ref' ? 'on' : ''}">Temps de référence</button>
   </div>
-  ${sub === 'conso' ? consoHtml() : refHtml()}`;
+  ${sub === 'conso' ? consoHtml() : setupsHtml() + refHtml()}`;
   $$('[data-sub]', el).forEach((b) => (b.onclick = () => { sub = b.dataset.sub; draw(); }));
   if (sub === 'conso') bindConso(); else { bindRef(); bindCalc(); }
-  bindSetups();
+  if (sub === 'ref') bindSetups(); // setups d'essence : seulement dans « Temps de référence »
   updateLive();
 }
 
