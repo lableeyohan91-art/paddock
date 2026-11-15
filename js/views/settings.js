@@ -236,7 +236,6 @@ function renderOtherLights() {
       <summary>Lampes reconnues</summary>
       <ul style="margin:8px 0 0;padding-left:18px;font-size:.85rem">
         ${PROTOCOLS.map((x) => `<li>${esc(x.label)}</li>`).join('')}
-        <li>Rampe Chihiros : onglet « Chihiros »</li>
       </ul>
       <p class="muted" style="font-size:.8rem;margin:6px 0 0">Chaque marque a son propre langage Bluetooth : une lampe non reconnue peut être ajoutée plus tard si l'on connaît son protocole. Ferme l'appli de la lampe avant la recherche (une seule connexion à la fois).</p>
     </details>
