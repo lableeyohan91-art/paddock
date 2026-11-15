@@ -138,7 +138,7 @@ function renderAutoVsc() {
   root.innerHTML = sectionHead() + vscTabs() + `
   <section class="panel">
     <h2>VSC automatique</h2>
-    <p class="warn-note top">⚠️ Le VSC automatique ne fonctionne qu'en <b>Course</b> et <b>Course rapide</b>. Il est inactif en Qualification et en Essais libres.</p>
+    <p class="warn-note top">⚠️ Le VSC automatique n'est pas disponible en Essais libres et en Qualification.</p>
     <p class="muted" style="margin:-4px 0 12px;font-size:.9rem">Le VSC se déclenche tout seul quand une voiture ne repasse plus (sortie de piste, voiture arrêtée). Tu le termines comme d'habitude avec le bouton VSC.</p>
 
     <div class="auto-rule">
