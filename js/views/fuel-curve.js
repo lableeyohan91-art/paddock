@@ -96,7 +96,7 @@ export function curveHtml(c) {
     <summary><h2 style="margin:0">🧮 Calcul automatique de la formule</h2></summary>
     <p class="muted" style="margin:8px 0 12px;font-size:.88rem">Calcule la formule pour équilibrer au mieux ta course.</p>
 
-    <div class="field" style="margin-bottom:12px">Profil
+    <div class="field" style="margin-bottom:12px">
       <div class="seg cv-profile">
         ${Object.entries(CURVE_PROFILES).map(([k, p]) => `<button data-cvp="${k}" class="${v.profile === k ? 'on' : ''}">${p.label}</button>`).join('')}
       </div>
