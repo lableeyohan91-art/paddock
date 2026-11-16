@@ -11,11 +11,13 @@ import { optimizeCurve, driverStats, median, bestOfDrivers, RECENT_LAPS } from '
  * proposer une Course rapide de 30 tours avant le calcul automatique.
  */
 export function lapsTip(app, ids, countOf) {
-  const short = [...new Set(ids)].map((id) => app.driver(id)).filter(Boolean)
-    .map((d) => ({ d, n: countOf(d.id) })).filter((x) => x.n < RECENT_LAPS);
-  if (!short.length) return '';
-  const list = short.map((x) => `${esc(x.d.name)} : ${x.n}/${RECENT_LAPS}`).join(' · ');
-  return `<p class="tipbox">💡 Pour optimiser les réglages, faites d'abord une <b>Course rapide de ${RECENT_LAPS} tours</b> avec les pilotes présents, puis lancez le calcul automatique.<br><small>Tours de course récents sur ce circuit — ${list}</small></p>`;
+  const drivers = [...new Set(ids)].map((id) => app.driver(id)).filter(Boolean).map((d) => ({ d, n: countOf(d.id) }));
+  const short = drivers.filter((x) => x.n < RECENT_LAPS);
+  const detail = !drivers.length ? ''
+    : short.length ? `Tours de course récents sur ce circuit — ${short.map((x) => `${esc(x.d.name)} : ${x.n}/${RECENT_LAPS}`).join(' · ')}`
+    : `✅ Tous les pilotes cochés ont leurs ${RECENT_LAPS} tours récents sur ce circuit.`;
+  // toujours affiché : c'est le conseil de base avant tout calcul automatique
+  return `<p class="tipbox">💡 Pour optimiser les réglages, faites d'abord une <b>Course rapide de ${RECENT_LAPS} tours</b> avec les pilotes présents, puis lancez le calcul automatique.${detail ? `<br><small>${detail}</small>` : ''}</p>`;
 }
 
 /** Cases obligatoires : encadrées en rouge tant qu'elles sont vides, et Calculer bloqué. */
