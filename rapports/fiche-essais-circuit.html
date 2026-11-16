@@ -29,58 +29,17 @@
 <body>
 <main>
   <h1>🏁 Paddock — fiche d'essais circuit</h1>
-  <div class="sub">Corrections v1.33 à v1.35 (double appui, VSC et drapeau rouge depuis la vue pilote) + nouvelle connexion v1.28 + essence en formule continue v1.36 + VSC adaptatif v1.37</div>
+  <div class="sub">Essais restants · validés le 16/11 : double GO, double drapeau rouge, VSC et drapeau rouge par deux pilotes, faux départ</div>
 
   <div class="prep">
     <b>Avant de commencer</b>
-    <label><input type="checkbox"><span>L'écran de course affiche <b>v1.42</b> (ou plus) à côté de PADDOCK</span></label>
+    <label><input type="checkbox"><span>L'écran de course affiche <b>v1.45</b> (ou plus) à côté de PADDOCK</span></label>
     <label><input type="checkbox"><span>2 ou 3 téléphones avec la <b>vue pilote rechargée</b> (rescanner le QR code)</span></label>
     <label><input type="checkbox"><span>Circuit connecté, voitures posées sur la piste</span></label>
   </div>
 
   <section>
-    <h2>1. Double appui sur GO <small>(bug n° 1)</small></h2>
-    <label><input type="checkbox"><span>Préparer une course, appuyer <b>2 fois très vite</b> sur GO</span></label>
-    <label><input type="checkbox"><span>Recommencer avec <b>3 appuis</b></span></label>
-    <div class="warn"><span class="ok">Attendu :</span> le bouton se grise, les feux se déroulent normalement, la course part. <b>Pas de drapeau rouge.</b></div>
-    <textarea placeholder="Notes…"></textarea>
-  </section>
-
-  <section>
-    <h2>2. Double appui sur Drapeau rouge (écran principal)</h2>
-    <label><input type="checkbox"><span>En course, appuyer <b>2 fois vite</b> sur 🚩 → la course s'arrête et <b>reste arrêtée</b></span></label>
-    <label><input type="checkbox"><span>Attendre 3 s, appuyer 1 fois → les feux se rallument, la course repart</span></label>
-    <textarea placeholder="Notes…"></textarea>
-  </section>
-
-  <section>
-    <h2>3. VSC demandé par deux pilotes <small>(bug n° 2)</small></h2>
-    <label><input type="checkbox"><span>2 pilotes appuient sur <b>VSC</b> en même temps (« 1, 2, 3, appuyez ») → le VSC démarre et <b>reste actif</b></span></label>
-    <label><input type="checkbox"><span>Un pilote appuie sur <b>Fin du VSC</b> → décompte « Fin de VSC dans… 3, 2, 1, Go », voitures débridées <b>au Go</b></span></label>
-    <label><input type="checkbox"><span>Variante : un pilote appuie sur Fin du VSC <b>juste après</b> le déclenchement (moins de 2 s) → <b>ignoré</b></span></label>
-    <textarea placeholder="Notes…"></textarea>
-  </section>
-
-  <section>
-    <h2>4. Drapeau rouge demandé par deux pilotes <small>(bug n° 3)</small></h2>
-    <label><input type="checkbox"><span>2 pilotes appuient sur <b>Drapeau rouge</b> (plus de confirmation) presque en même temps → la course s'arrête et <b>reste arrêtée</b></span></label>
-    <label><input type="checkbox"><span>Un pilote redemande Drapeau rouge <b>quelques secondes après</b> → <b>rien ne se passe</b></span></label>
-    <label><input type="checkbox"><span>Un pilote appuie sur <b>Reprise</b> → <b>sans confirmation</b>, les feux se rallument et la course repart</span></label>
-    <label><input type="checkbox"><span>Le drapeau rouge s'affiche sur <b>toutes</b> les vues pilote (iPad compris) en quelques secondes au plus</span></label>
-    <label><input type="checkbox"><span>Un 2e pilote appuie aussi sur Reprise juste après → <b>pas de second départ</b></span></label>
-    <textarea placeholder="Notes…"></textarea>
-  </section>
-
-  <section>
-    <h2>5. Faux départ + « Nouvelle relance » <small>(pas testé au simulateur)</small></h2>
-    <label><input type="checkbox"><span>Provoquer un faux départ (une voiture part pendant les feux)</span></label>
-    <label><input type="checkbox"><span>Appuyer <b>2 fois vite</b> sur 🟢 Nouvelle relance → <b>une seule relance</b>, feux normaux</span></label>
-    <label><input type="checkbox"><span>Le bouton <b>🟢 Nouvelle relance</b> apparaît aussi sur <b>les vues pilote</b> et relance les feux</span></label>
-    <textarea placeholder="Notes…"></textarea>
-  </section>
-
-  <section>
-    <h2>6. Nouvelle connexion (v1.28) — à surveiller pendant tous les essais</h2>
+    <h2>1. Nouvelle connexion (v1.28) — à surveiller pendant tous les essais</h2>
     <label><input type="checkbox"><span>Fenêtre de connexion : <b>erreurs</b> à 0 ou presque</span></label>
     <label><input type="checkbox"><span>Ligne <b>Liaison</b> : « écriture sans réponse »</span></label>
     <label><input type="checkbox"><span>Tous les tours comptés, aussi pendant et juste après un VSC ou un drapeau rouge</span></label>
@@ -88,7 +47,7 @@
   </section>
 
   <section>
-    <h2>7. Essence en formule continue <small>(v1.36)</small></h2>
+    <h2>2. Essence en formule continue <small>(v1.36)</small></h2>
     <label><input type="checkbox"><span>Préparation de course, essence <b>Activée</b> : choisir <b>Formule</b> → le choix est en vert, <b>pas de barre réservoir</b>, la phrase indique le profil et le lien « Régler la formule »</span></label>
     <label><input type="checkbox"><span>Avant le départ, régler le réservoir d'une voiture au Garage à 50 % → au <b>DÉPART</b> puis au <b>GO</b>, la jauge repart bien à <b>100 %</b></span></label>
     <label><input type="checkbox"><span>En course : la jauge baisse <b>plus vite</b> sur les tours rapides et <b>moins vite</b> sur les tours lents ; l'écran affiche des % <b>sans décimale</b></span></label>
@@ -104,7 +63,7 @@
   </section>
 
   <section>
-    <h2>8. VSC adaptatif <small>(v1.37)</small></h2>
+    <h2>3. VSC adaptatif <small>(v1.37)</small></h2>
     <label><input type="checkbox"><span>Garage → une voiture → <b>🟨 VSC adaptatif</b> : choisir le circuit et la manette, poser la voiture sur la piste, <b>▶ Démarrer le test</b> à 33 % → la voiture ralentit tout de suite au bon cran</span></label>
     <label><input type="checkbox"><span>Manette à fond pendant 12 tours → le compteur avance, le 1er tour est grisé (non compté), le <b>temps médian</b> s'affiche et s'enregistre ; la voiture retrouve ensuite sa vitesse</span></label>
     <label><input type="checkbox"><span>Faire les tests 27 %, 13 % et 0 % (bouton <b>Impossible</b> si la voiture ne roule pas) ; « Annuler le test » remet bien la vitesse normale</span></label>
@@ -113,6 +72,13 @@
     <label><input type="checkbox"><span>En course, déclencher un VSC → les voitures roulent <b>à peu près à la même allure</b> (comparer leurs temps au tour sous VSC) ; au Go, vitesses normales</span></label>
     <label><input type="checkbox"><span>Une voiture <b>non étalonnée</b> reçoit le VSC normal (même cran que d'habitude)</span></label>
     <textarea placeholder="Notes… (temps au tour de chaque voiture sous VSC)"></textarea>
+  </section>
+
+  <section>
+    <h2>4. QR code en course <small>(v1.45)</small></h2>
+    <label><input type="checkbox"><span>Pendant la course, le <b>QR code</b> reste visible en petit sous le classement</span></label>
+    <label><input type="checkbox"><span>Un téléphone qui a fermé la page rescanne le QR code et <b>retrouve la course</b></span></label>
+    <textarea placeholder="Notes…"></textarea>
   </section>
 
   <footer>
