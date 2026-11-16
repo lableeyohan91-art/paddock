@@ -435,7 +435,7 @@ function refHtml() {
   return calcHtml() + `
   <section class="panel" style="margin-top:14px">
     <details class="calc-box" id="manualBox" ${manualOpen ? 'open' : ''}>
-    <summary><h2 style="margin:0">✍️ Temps des paliers / réglage manuel</h2></summary>
+    <summary><h2 style="margin:0">✍️ Paliers / réglage manuel</h2></summary>
     <p class="muted" style="margin:10px 0 12px;font-size:.88rem">
       Si le tour est bouclé dans une fourchette, on retire son pourcentage d'essence.
       Plus rapide que toutes les fourchettes : on prend la plus rapide ; plus lent que toutes : la plus lente.
