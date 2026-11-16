@@ -48,6 +48,7 @@ export function mount(main, a) {
         <div class="panel" style="margin-top:16px;padding:8px 8px 4px;overflow-x:auto">
           <table class="board" id="board"></table>
         </div>
+        <div id="livePanelRace"></div>
       </div>
       <aside class="side">
         <section class="panel ${s.cfg.quick ? 'hidden' : ''}">
@@ -137,15 +138,20 @@ function stateLabel(s) {
 }
 
 /**
- * Vue pilote : avant le GO, un QR code que chaque pilote scanne avec son téléphone
- * pour suivre la course (et déclencher VSC / drapeau rouge, régler sa voiture).
+ * Vue pilote : un QR code que chaque pilote scanne avec son téléphone pour suivre la course
+ * (et déclencher VSC / drapeau rouge, régler sa voiture). En grand avant le GO, puis en petit
+ * sous le classement pendant toute la course (un téléphone qui a perdu la page se reconnecte).
  */
 let liveShown = '';
 async function renderLive() {
-  const el = $('#livePanel', root);
-  if (!el) return;
+  const big = $('#livePanel', root);
+  const small = $('#livePanelRace', root);
+  if (!big || !small) return;
   const s = app.session;
-  if (!s || s.state !== 'ready') { el.innerHTML = ''; liveShown = ''; return; }
+  if (!s) { big.innerHTML = ''; small.innerHTML = ''; liveShown = ''; return; }
+  const compact = s.state !== 'ready';
+  const el = compact ? small : big;
+  (compact ? big : small).innerHTML = '';
   if (live.status !== 'on') {
     el.innerHTML = `<section class="panel live-panel"><p class="muted" style="margin:0">📱 ${live.status === 'error' ? esc(live.error) : 'Préparation du QR code « vue pilote »…'}</p>
       ${live.status === 'error' ? '<button class="btn small" id="liveRetry" style="margin-top:8px">Réessayer</button>' : ''}</section>`;
@@ -154,10 +160,18 @@ async function renderLive() {
     if (live.status === 'off') { await startLive(app); if (root) renderLive(); }
     return;
   }
-  if (liveShown === live.code && el.innerHTML) return;
-  liveShown = live.code;
+  if (liveShown === live.code + compact && el.innerHTML) return;
+  liveShown = live.code + compact;
   const url = pilotUrl();
-  el.innerHTML = `
+  el.innerHTML = compact ? `
+    <section class="panel live-panel compact">
+      <div class="live-qr" id="liveQr"></div>
+      <div class="live-txt">
+        <b>📱 Vue pilote</b>
+        <p class="muted" style="margin:2px 0 0;font-size:.85rem">Un téléphone a perdu la course ? Scanne ce code pour la retrouver.</p>
+        <p class="live-code">Code : <b>${esc(live.code)}</b></p>
+      </div>
+    </section>` : `
     <section class="panel live-panel">
       <div class="live-qr" id="liveQr"></div>
       <div class="live-txt">
