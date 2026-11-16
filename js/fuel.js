@@ -111,7 +111,7 @@ export function consumption(cfg, lapMs) {
 
 /** Profils de la formule continue (Réglages → Essence → Formule continue). */
 export const CURVE_PROFILES = {
-  attaque: { label: '⚡ Prime à l\'attaque', short: 'Attaque' },
+  attaque: { label: '⚡ Attaque', short: 'Attaque' },
   equilibre: { label: '⚖️ Équilibré', short: 'Équilibré' },
   gestion: { label: '🛡️ Gestion', short: 'Gestion' },
 };
