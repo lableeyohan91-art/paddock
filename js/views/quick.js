@@ -55,7 +55,7 @@ const isRace = () => mode().type === 'race';
 const savePrefs = () => app.db.setSetting('quickRace', prefs);
 const pct15 = (v) => Math.round((v / 15) * 100);
 /** Calcul « selon le temps au tour » : réservoir bloqué à 100 %. */
-const tankLocked = () => app.fuelCfg.mode === 'bands';
+const tankLocked = () => app.fuelCfg.mode !== 'fixed'; // fourchettes et formule : calculées sur un plein
 const tank15 = () => (tankLocked() ? 15 : prefs.tank15);
 
 function opt(list, sel, empty) {
@@ -148,15 +148,18 @@ function render() {
       <div class="q-fuel-mode">
         <span class="muted" style="font-size:.85rem">Calcul de la consommation</span>
         <div class="seg" id="qFuelMode">
-          <button data-qfm="bands" class="${app.fuelCfg.mode === 'bands' ? 'on' : ''}">Selon le temps au tour</button>
+          <button data-qfm="bands" class="${app.fuelCfg.mode === 'bands' ? 'on' : ''}">Fourchettes</button>
+          <button data-qfm="curve" class="${app.fuelCfg.mode === 'curve' ? 'on' : ''}">Formule</button>
           <button data-qfm="fixed" class="${app.fuelCfg.mode === 'fixed' ? 'on' : ''}">Fixe</button>
         </div>
         <span class="muted" style="font-size:.8rem">${app.fuelCfg.mode === 'fixed'
           ? `Chaque tour consomme ${String(app.fuelCfg.nominalPct).replace('.', ',')} % d'essence, quel que soit le temps. <a href="#" id="qFuelNom">Se change dans Réglages → Essence</a>.`
-          : 'Plus on roule vite, plus on consomme (fourchettes de temps de référence).'}</span>
+          : app.fuelCfg.mode === 'curve'
+            ? `Plus on roule vite, plus on consomme, au centième près (${({ attaque: 'prime à l\'attaque', equilibre: 'équilibré', gestion: 'gestion' })[app.fuelCfg.curve.profile]}). <a href="#" id="qCurveCfg">Régler la formule</a>.`
+            : 'Plus on roule vite, plus on consomme (fourchettes de temps de référence).'}</span>
       </div>
       <div class="q-fuel">
-        ${app.fuelCfg.mode === 'fixed' ? '' : `<label class="field"><span>Setup d'essence · <a href="#" class="q-link" id="qFuelCfg">Régler les temps de référence</a></span>
+        ${app.fuelCfg.mode === 'fixed' ? '' : `<label class="field"><span>Setup d'essence · <a href="#" class="q-link" id="qFuelCfg">${app.fuelCfg.mode === 'curve' ? 'Régler la formule' : 'Régler les temps de référence'}</a></span>
           <select id="qSetup">${setups.length ? setups.map((s) => `<option value="${esc(s.id)}" ${s.id === activeSetup ? 'selected' : ''}>${esc(s.name)}</option>`).join('')
             : '<option value="">Réglage actuel</option>'}</select></label>`}
         <div>
@@ -244,7 +247,9 @@ function bind() {
     render();
   };
   const gear = $('#qFuelCfg', root);
-  if (gear) gear.onclick = (e) => { e.preventDefault(); app.openFuelSettings('ref'); };
+  if (gear) gear.onclick = (e) => { e.preventDefault(); app.openFuelSettings(app.fuelCfg.mode === 'curve' ? 'curve' : 'ref'); };
+  const cvLink = $('#qCurveCfg', root);
+  if (cvLink) cvLink.onclick = (e) => { e.preventDefault(); app.openFuelSettings('curve'); };
   const nomLink = $('#qFuelNom', root);
   if (nomLink) nomLink.onclick = (e) => { e.preventDefault(); app.openFuelSettings('conso'); };
 

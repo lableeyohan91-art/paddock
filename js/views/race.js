@@ -254,7 +254,7 @@ function fuelCell(c) {
   const pct = Math.round(c.fuelPct);
   const warn = app.fuelCfg.lowWarnPct;
   const cls = pct <= 0 ? 'empty' : pct <= warn ? 'low' : pct <= warn * 2.5 ? 'mid' : '';
-  const used = c.lastFuelUse ? ` · dernier tour −${c.lastFuelUse} % (${c.lastFuelBand})` : '';
+  const used = c.lastFuelUse ? ` · dernier tour −${Math.round(c.lastFuelUse)} % (${c.lastFuelBand})` : '';
   return `<div class="fuelg ${cls}${c.inPit && pct < c.tankPct ? ' refuel' : ''}" title="Réservoir ${c.tankPct} %${used}">
     <div class="fuelg-bar"><i style="width:${Math.min(100, pct)}%"></i>${c.tankPct < 100 ? `<b style="left:${c.tankPct}%"></b>` : ''}</div>
     <span class="num">${pct <= 0 ? 'À SEC' : pct + ' %'}</span></div>`;

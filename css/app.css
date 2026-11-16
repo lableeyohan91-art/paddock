@@ -127,7 +127,16 @@ input[type=checkbox] { accent-color: var(--accent); width: 18px; height: 18px; }
 .seg { display: inline-flex; background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 3px; flex-wrap: wrap; }
 .seg button { border: 0; background: none; padding: 8px 14px; border-radius: 8px; cursor: pointer; color: var(--muted); font-weight: 600; }
 .seg button.on { background: var(--panel-2); color: var(--text); }
-#fMode button.on, #qFuelMode button.on { background: var(--green); color: #04130a; }
+#fMode button.on, #qFuelMode button.on, .cv-profile button.on { background: var(--green); color: #04130a; }
+.cv-profile { margin: 6px 0 4px; }
+.cv-chart { width: 100%; height: auto; margin-top: 12px; background: var(--panel-2); border-radius: 10px; }
+.cv-chart text { font-size: 11px; fill: var(--muted); }
+.cv-chart .cv-good { fill: rgba(34,197,94,.08); }
+.cv-chart .cv-zero { stroke: var(--muted); stroke-dasharray: 4 4; }
+.cv-chart .cv-line { fill: none; stroke: var(--blue); stroke-width: 2.5; }
+.cv-chart .cv-nom { fill: var(--green); }
+.cv-chart .cv-lbl { fill: var(--green); }
+.cv-mix { font-size: .88rem; margin: 10px 0; }
 .q-fuel-mode { display: grid; gap: 6px; justify-items: start; margin: 12px 0 4px; }
 
 .badge { display: inline-block; padding: 2px 8px; border-radius: 6px; font-size: .75rem; font-weight: 700; background: var(--panel-2); }

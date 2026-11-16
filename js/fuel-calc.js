@@ -167,3 +167,104 @@ export function optimizeFuel({ record, median: med, pitLap, laps: L, stops: S })
   return { cfg, rows, pitLoss: r2(pitLoss) };
 }
 
+
+// ================= Formule continue (3 profils) =================
+import { curveConsumption } from './fuel.js';
+
+/**
+ * Statistiques d'un pilote sur un circuit, tirées de ses tours enregistrés :
+ *  - median : temps médian en course (drapeau vert) ;
+ *  - best   : meilleur tour (records importés compris) ;
+ *  - top10  : moyenne de ses 10 meilleurs tours en course (rythme d'attaque tenable) ;
+ *  - spread : régularité (écart entre ses tours habituels, en % du médian).
+ */
+export function driverStats(laps, driverId, trackId) {
+  const mine = onTrack(driverId ? laps.filter((l) => l.driverId === driverId) : laps, trackId);
+  const race = mine.filter((l) => !l.imported && l.sessionType === 'race' && (!l.flag || l.flag === 'green')).map((l) => l.time / 1000);
+  const all = mine.map((l) => l.time / 1000).filter((x) => x > 0);
+  if (!all.length) return null;
+  const sorted = [...race].sort((a, b) => a - b);
+  const top = sorted.slice(0, 10);
+  const q = (p) => sorted[Math.min(sorted.length - 1, Math.floor(p * sorted.length))];
+  const med = median(race);
+  return {
+    median: med === null ? null : r2(med),
+    best: r2(Math.min(...all)),
+    top10: top.length ? r2(top.reduce((s, x) => s + x, 0) / top.length) : null,
+    spread: sorted.length >= 8 && med ? Math.round(((q(0.75) - q(0.25)) / med) * 1000) / 10 : null,
+    laps: race.length,
+  };
+}
+
+const PROFILE_TARGETS = {
+  // gains visés (en part du temps de course) par rapport au rythme nominal
+  attaque: (g) => Math.abs(g.attack - 0.02) + Math.abs(g.light - 0.01) + 0.5 * Math.abs(g.best - 0.01),
+  equilibre: (g) => Math.abs(g.light - 0.006) + 0.5 * Math.abs(g.attack - 0.003) + 3 * Math.max(0, g.best),
+  gestion: (g) => Math.abs(g.light + 0.004) + 0.5 * Math.abs(g.attack + 0.01) + 3 * Math.max(0, g.best + 0.015),
+};
+
+/**
+ * Réglage de la formule continue pour un groupe de pilotes et une course.
+ * input : { median, best, top10, pitLap, laps, stops, profile }.
+ * Renvoie { cfg, rows, chart, bestMix, pitLoss, paces } ou { error }.
+ */
+export function optimizeCurve({ median: med, best, top10, pitLap, laps: L, stops: S, profile = 'equilibre' }) {
+  if (!(med > 0 && best > 0 && L > 0 && S >= 0)) return { error: 'Remplis le temps médian, le meilleur tour, le nombre de tours et d\'arrêts.' };
+  if (best >= med - 0.05) return { error: 'Le meilleur tour doit être nettement plus rapide que le temps médian (au moins 0,05 s).' };
+  if (!(pitLap > med)) return { error: 'Le tour avec arrêt au stand doit être plus long que le temps médian.' };
+  const pitLoss = pitLap - med;
+  const tA = top10 > best && top10 < med ? top10 : best + (med - best) * 0.35; // attaque tenable
+  const tR = (tA + med) / 2;                                                   // attaque légère
+  // nominale : le plein impose S arrêts, avec une marge (on vise 60 % du dernier plein)
+  let pN = Math.round((100 * (S + 0.6)) / L * 10) / 10;
+  const stopsOf = (F) => (F <= TANK ? 0 : Math.ceil((F - TANK) / TANK - 1e-9));
+  while (pN > 0.2 && stopsOf(L * pN) > S) pN = Math.round((pN - 0.1) * 10) / 10;
+  while (stopsOf(L * pN) < S) pN = Math.round((pN + 0.1) * 10) / 10;
+  if (pN > LIMIT_P) return { error: `Impossible d'obtenir ${S} arrêt(s) sur ${L} tours.` };
+
+  const race1 = (curve, R, t) => raceTime(L, t, curveConsumption(curve, t).pct, pitLoss, R);
+  const slow = [med * 1.03, med * 1.06, med * 1.1];
+  let bestCfg = null;
+  for (let k = 0; k <= 12; k += 0.25) for (const R of [5, 8, 10, 12, 15, 20, 25, 30]) {
+    const curve = { nominalPct: pN, medianSec: med, k, profile };
+    const TN = race1(curve, R, med).total;
+    const g = (t) => (TN - race1(curve, R, t).total) / TN;
+    const gains = { best: g(best), attack: g(tA), light: g(tR) };
+    let score = PROFILE_TARGETS[profile](gains);
+    for (const t of slow) score += 10 * Math.max(0, g(t) + 0.003); // économiser ne doit jamais payer
+    if (!bestCfg || score < bestCfg.score) bestCfg = { score, curve, R, TN };
+  }
+  const { curve, R, TN } = bestCfg;
+  const row = (name, t) => {
+    const p = curveConsumption(curve, t).pct;
+    const r = raceTime(L, t, p, pitLoss, R);
+    return { name, t: r2(t), pct: p, perTank: Math.floor(TANK / p), stops: r.stops, total: r.total, gap: r.total - TN };
+  };
+  const rows = [
+    row('Meilleur tour', best), row('Attaque', tA), row('Attaque légère', tR), row('Nominal', med),
+    row('Économie légère', slow[0]), row('Économie', slow[1]), row('Économie forte', slow[2]),
+  ];
+  // courbe : écart de temps de course selon le rythme tenu
+  const chart = [];
+  for (let t = best; t <= med * 1.12 + 1e-9; t += (med * 1.12 - best) / 60) chart.push({ t: r2(t), gap: race1(curve, R, t).total - TN });
+  // meilleure stratégie possible (mélange de 2 rythmes) : vérifie qu'il n'y a pas de faille
+  const paces = []; for (let t = best; t <= med * 1.12 + 1e-9; t += 0.01) paces.push(r2(t));
+  const step = Math.max(1, Math.ceil(L / 100));
+  let mix = null;
+  for (let i = 0; i < paces.length; i++) for (let j = i; j < paces.length; j++) {
+    const pi = curveConsumption(curve, paces[i]).pct, pj = curveConsumption(curve, paces[j]).pct;
+    for (let a = 0; a <= L; a += step) {
+      const F = a * pi + (L - a) * pj;
+      const st = stopsOf(F);
+      const T = a * paces[i] + (L - a) * paces[j] + st * pitLoss + Math.max(0, F - TANK) / R;
+      if (!mix || T < mix.total) mix = { total: T, stops: st, a, ti: paces[i], tj: paces[j] };
+      if (i === j) break;
+    }
+  }
+  return {
+    cfg: { mode: 'curve', curve, refuelPerSec: R },
+    rows, chart, pitLoss: r2(pitLoss),
+    bestMix: { gap: mix.total - TN, stops: mix.stops, desc: mix.a === L || mix.a === 0 ? `tous les tours en ${String(mix.a === L ? mix.ti : mix.tj).replace('.', ',')} s` : `${mix.a} tours en ${String(mix.ti).replace('.', ',')} s + ${L - mix.a} en ${String(mix.tj).replace('.', ',')} s` },
+  };
+}
+const LIMIT_P = 40;

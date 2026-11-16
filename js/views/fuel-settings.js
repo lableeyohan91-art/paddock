@@ -1,11 +1,12 @@
-// Réglages → Essence : deux sous-onglets.
+// Réglages → Essence : trois sous-onglets (Consommation, Temps de référence = fourchettes, Formule continue).
 //  - Consommation : activer la simulation, consommation nominale par tour, ravitaillement.
 //  - Temps de référence : 9 fourchettes de temps au tour (nominale + 4 rapides + 4 lentes),
 //    chacune réglable (2-30 s, 1-40 %) et activable/désactivable.
 
 import { esc, $, $$, toast, confirmBox, promptBox } from '../ui.js';
-import { LIMITS, activeBands } from '../fuel.js';
+import { LIMITS, activeBands, CURVE_PROFILES } from '../fuel.js';
 import { optimizeFuel, trackRecord, raceMedianOf, median } from '../fuel-calc.js';
+import { curveHtml, bindCurve, loadCurveState } from './fuel-curve.js';
 
 let app;
 let el;
@@ -18,7 +19,7 @@ let calcResult = null;
 let driversOpen = false; // liste « Pilotes présents » dépliée ?
 let calcOpen = false;    // menu « Calcul automatique des valeurs » déplié ?
 
-/** Prochain affichage : ouvrir directement ce sous-onglet ('conso' ou 'ref'). */
+/** Prochain affichage : ouvrir directement ce sous-onglet ('conso', 'ref' ou 'curve'). */
 export function openFuelTab(t) { sub = t; }
 
 export async function renderFuel(container, a) {
@@ -28,6 +29,7 @@ export async function renderFuel(container, a) {
   await loadSetups();
   lapsCache = await app.db.all('laps');
   calc = await app.db.getSetting('fuelCalc', {});
+  await loadCurveState(app);
   draw();
 }
 
@@ -132,16 +134,24 @@ async function refreshAll() {
   draw();
 }
 
+/** Ce que l'onglet Formule continue utilise de cet écran. */
+function curveCtx() {
+  return { app, el, laps: lapsCache, getCfg: () => cfg, save: () => save(true), redraw: draw, refreshAll };
+}
+
 function draw() {
   el.innerHTML = `
   <div class="subtabs small">
     <button data-sub="conso" class="${sub === 'conso' ? 'on' : ''}">Consommation</button>
     <button data-sub="ref" class="${sub === 'ref' ? 'on' : ''}">Temps de référence</button>
+    <button data-sub="curve" class="${sub === 'curve' ? 'on' : ''}">Formule continue</button>
   </div>
-  ${sub === 'conso' ? consoHtml() : setupsHtml() + refHtml()}`;
+  ${sub === 'conso' ? consoHtml() : sub === 'curve' ? setupsHtml() + curveHtml(curveCtx()) : setupsHtml() + refHtml()}`;
   $$('[data-sub]', el).forEach((b) => (b.onclick = () => { sub = b.dataset.sub; draw(); }));
-  if (sub === 'conso') bindConso(); else { bindRef(); bindCalc(); }
-  if (sub === 'ref') bindSetups(); // setups d'essence : seulement dans « Temps de référence »
+  if (sub === 'conso') bindConso();
+  else if (sub === 'curve') bindCurve(curveCtx());
+  else { bindRef(); bindCalc(); }
+  if (sub !== 'conso') bindSetups(); // setups d'essence : pas dans « Consommation »
   updateLive();
 }
 
@@ -164,22 +174,29 @@ function consoHtml() {
     <section class="panel">
       <h2>Calcul de la consommation</h2>
       <div class="seg" id="fMode">
-        <button data-mode="bands" class="${cfg.mode === 'bands' ? 'on' : ''}">Selon le temps au tour</button>
+        <button data-mode="bands" class="${cfg.mode === 'bands' ? 'on' : ''}">Fourchettes</button>
+        <button data-mode="curve" class="${cfg.mode === 'curve' ? 'on' : ''}">Formule continue</button>
         <button data-mode="fixed" class="${cfg.mode === 'fixed' ? 'on' : ''}">Fixe</button>
       </div>
       <p class="muted" style="font-size:.85rem;margin-bottom:0">${cfg.mode === 'bands'
-        ? 'Plus on roule vite, plus on consomme : voir l\'onglet « Temps de référence ».'
-        : 'Chaque tour consomme la valeur nominale, quel que soit le temps.'}</p>
+        ? 'Plus on roule vite, plus on consomme, par paliers : voir l\'onglet « Temps de référence ».'
+        : cfg.mode === 'curve'
+          ? `Plus on roule vite, plus on consomme, au centième près (profil ${CURVE_PROFILES[cfg.curve.profile].short}) : voir l'onglet « Formule continue ».`
+          : 'Chaque tour consomme la valeur nominale, quel que soit le temps.'}</p>
     </section>
 
-    <section class="panel">
+    ${cfg.mode === 'curve' ? `<section class="panel">
+      <h2>Consommation nominale</h2>
+      <p style="margin:0"><b>${String(cfg.curve.nominalPct).replace('.', ',')} %</b> par tour au temps médian (${String(cfg.curve.medianSec).replace('.', ',')} s), pente k = ${String(cfg.curve.k).replace('.', ',')}.</p>
+      <p class="muted" style="font-size:.85rem;margin:6px 0 0">Réglée dans l'onglet « Formule continue ».</p>
+    </section>` : `<section class="panel">
       <h2>Consommation nominale</h2>
       <div class="fuel-nominal">
         <input type="range" id="fNomR" step="0.5" min="${LIMITS.pMin}" max="${LIMITS.pMax}" value="${cfg.nominalPct}">
         <div class="fuel-nominal-v"><input type="number" id="fNom" step="0.5" min="${LIMITS.pMin}" max="${LIMITS.pMax}" value="${cfg.nominalPct}"> % / tour</div>
       </div>
       <p class="muted" id="fAutonomy" style="margin:8px 0 0"></p>
-    </section>
+    </section>`}
 
     <section class="panel">
       <h2>Stand et alertes</h2>
@@ -213,8 +230,10 @@ function bindConso() {
     $('#fNom', el).value = cfg.nominalPct;
     save();
   };
-  $('#fNomR', el).oninput = (e) => setNom(e.target.value);
-  $('#fNom', el).onchange = (e) => setNom(e.target.value);
+  if ($('#fNomR', el)) {
+    $('#fNomR', el).oninput = (e) => setNom(e.target.value);
+    $('#fNom', el).onchange = (e) => setNom(e.target.value);
+  }
   $('#fRefuel', el).onchange = (e) => { cfg.refuelPerSec = +e.target.value; save(true); };
   $('#fLow', el).onchange = (e) => { cfg.lowWarnPct = +e.target.value; save(true); };
   const fixIn = $('#fEmptyFix', el);

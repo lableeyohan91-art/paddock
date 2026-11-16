@@ -13,7 +13,7 @@ const half = (x) => Math.round(x * 2) / 2; // consommations au demi-pourcent
 export function defaultFuelConfig() {
   return {
     enabled: true,
-    mode: 'bands',        // 'bands' = selon le temps au tour ; 'fixed' = toujours la conso nominale
+    mode: 'bands',        // 'bands' = fourchettes selon le temps au tour ; 'curve' = formule continue ; 'fixed' = toujours la nominale
     nominalPct: 5,
     nominal: { min: 3.5, max: 3.7 },
     faster: [             // du plus proche au plus loin de la nominale
@@ -29,6 +29,8 @@ export function defaultFuelConfig() {
       { on: true, min: 4.5, max: 6.0, pct: 1 },
     ],
     refuelPerSec: 10,     // % ajoutés par seconde passée au stand
+    // Formule continue : conso = nominale × (temps médian ÷ temps du tour)^k
+    curve: { nominalPct: 5, medianSec: 3.6, k: 4, profile: 'equilibre' },
     lowWarnPct: 15,       // annonce "réserve"
     emptyMode: 'fixed',   // panne sèche : vitesse fixe (0-15, comme au garage)
     emptySpeedPct: 40,    //   mode 'pct' : vitesse limitée à ce % jusqu'au ravitaillement
@@ -96,6 +98,7 @@ export function activeBands(cfg) {
 export function consumption(cfg, lapMs) {
   if (cfg.mode === 'fixed') return { pct: cfg.nominalPct, band: 'Nominale' };
   const t = lapMs / 1000;
+  if (cfg.mode === 'curve') return curveConsumption(cfg.curve, t);
   const bands = activeBands(cfg);
   if (!bands.length) return { pct: cfg.nominalPct, band: 'Nominale' };
   const hit = bands.find((b) => t >= b.min && t < b.max);
@@ -104,6 +107,27 @@ export function consumption(cfg, lapMs) {
   const last = bands[bands.length - 1];
   if (t >= last.max) return { pct: last.pct, band: last.name + ' (au-delà)' };
   return { pct: cfg.nominalPct, band: 'Nominale (fourchette désactivée)' };
+}
+
+/** Profils de la formule continue (Réglages → Essence → Formule continue). */
+export const CURVE_PROFILES = {
+  attaque: { label: '⚡ Prime à l\'attaque', short: 'Attaque' },
+  equilibre: { label: '⚖️ Équilibré', short: 'Équilibré' },
+  gestion: { label: '🛡️ Gestion', short: 'Gestion' },
+};
+
+/**
+ * Formule continue : conso = nominale × (médian ÷ temps)^k.
+ * Bornée entre la moitié et 3 fois la nominale : un tour raté (sortie, VSC) consomme quand même,
+ * un tour aberrant (capteur) ne vide pas le réservoir. Calculée au centième près ; l'appli
+ * n'affiche que des valeurs arrondies.
+ */
+export function curveConsumption(curve, t) {
+  const n = curve.nominalPct;
+  const raw = n * (curve.medianSec / Math.max(0.5, t)) ** curve.k;
+  const pct = Math.round(Math.min(n * 3, Math.max(n / 2, raw)) * 100) / 100;
+  const r = t / curve.medianSec;
+  return { pct, band: r < 0.985 ? 'Attaque' : r > 1.015 ? 'Économie' : 'Nominale' };
 }
 
 /** Vérifie et corrige une config (bornes, types). */
@@ -125,6 +149,14 @@ export function sanitize(cfg) {
   c.faster = d.faster.map((def, i) => band(cfg?.faster?.[i], def));
   c.slower = d.slower.map((def, i) => band(cfg?.slower?.[i], def));
   c.refuelPerSec = num(c.refuelPerSec, 1, 100, d.refuelPerSec);
+  c.mode = ['bands', 'curve', 'fixed'].includes(c.mode) ? c.mode : 'bands';
+  const cv = cfg?.curve || {};
+  c.curve = {
+    nominalPct: Math.round(num(cv.nominalPct, 0.2, LIMITS.pMax, d.curve.nominalPct) * 100) / 100,
+    medianSec: num(cv.medianSec, LIMITS.tMin, LIMITS.tMax, d.curve.medianSec),
+    k: num(cv.k, 0, 15, d.curve.k),
+    profile: CURVE_PROFILES[cv.profile] ? cv.profile : d.curve.profile,
+  };
   c.lowWarnPct = num(c.lowWarnPct, 0, 50, d.lowWarnPct);
   c.emptySpeedPct = Math.round(num(c.emptySpeedPct, 10, 100, d.emptySpeedPct));
   c.emptyMode = 'fixed'; // panne sèche : toujours une vitesse fixe (le mode « % de sa vitesse » a été retiré)

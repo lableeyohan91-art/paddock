@@ -434,7 +434,7 @@ export const app = {
    * sinon la valeur demandée (réservoir commun de la préparation, ou celui du garage).
    */
   tankFor(tank15) {
-    return this.fuelCfg.mode === 'bands' ? 15 : tank15;
+    return this.fuelCfg.mode === 'fixed' ? tank15 : 15;
   },
 
   fillTank(comp, tank15 = 15) {
@@ -918,7 +918,7 @@ export const app = {
       const st = e.detail.state;
       this.log('Session : ' + ({ armed: 'feux en cours', running: 'départ donné', finishing: 'dernier tour', finished: 'terminée' }[st] || st));
       // GO : 2e envoi du plein (selon le temps au tour), voitures posées sur la grille
-      if (st === 'armed' && cu.connected && this.fuelOn() && this.fuelCfg.mode === 'bands') {
+      if (st === 'armed' && cu.connected && this.fuelOn() && this.fuelCfg.mode !== 'fixed') {
         for (const c of session.comps.values()) cu.setFuel(c.address, 15);
       }
       if (st === 'running') {
