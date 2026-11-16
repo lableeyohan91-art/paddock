@@ -225,46 +225,69 @@ function bindVscTabs() {
  */
 function renderAdaptiveVsc() {
   const a = app.vscCfg.adaptive || { on: false, targetSec: 8 };
-  const trackId = app.setup?.trackId;
-  const slots = (app.setup?.slots || []).filter((s) => s.active && s.carId);
+  const trackId = app.track(a.trackId) ? a.trackId : app.setup?.trackId;
+  // voitures choisies pour régler le temps cible (par défaut : celles de la course préparée)
+  const fromRace = [...new Set((app.setup?.slots || []).filter((x) => x.active && x.carId).map((x) => x.carId))];
+  const chosen = (a.cars || fromRace).filter((id) => app.car(id));
   const s2 = (x) => (+x).toFixed(2).replace('.', ',');
-  const rows = slots.map((s) => {
-    const car = app.car(s.carId);
-    const r = car && reach(car, trackId);
-    const c = car && cranFor(car, trackId, a.targetSec);
-    return { s, car, r, c };
+  const rows = app.data.cars.map((car) => {
+    const r = reach(car, trackId);
+    const c = cranFor(car, trackId, a.targetSec);
+    return { car, r, c, on: chosen.includes(car.id) };
   });
-  const bad = rows.filter((x) => x.c && !x.c.ok);
-  const missing = rows.filter((x) => !x.r);
-  const ranges = rows.filter((x) => x.r).map((x) => x.r);
+  const sel = rows.filter((x) => x.on);
+  const bad = sel.filter((x) => x.c && !x.c.ok);
+  const missing = sel.filter((x) => !x.r);
+  const ranges = sel.filter((x) => x.r).map((x) => x.r);
   const common = ranges.length ? { min: Math.max(...ranges.map((r) => r.min)), max: Math.min(...ranges.map((r) => r.max)) } : null;
+  const toGarage = (txt) => `<a href="#" class="q-link" data-go-garage>${txt}</a>`;
   root.innerHTML = sectionHead() + vscTabs() + `
   <section class="panel">
     <div class="row" style="justify-content:space-between">
       <h2 style="margin:0">VSC adaptatif</h2>
       <label class="switch"><input type="checkbox" id="vaOn" ${a.on ? 'checked' : ''}><span></span> ${a.on ? 'Activé' : 'Désactivé'}</label>
     </div>
-    <p class="muted" style="font-size:.88rem;margin:8px 0 12px">À 20 %, toutes les voitures ne roulent pas à la même allure : chaque moteur est différent. Le VSC adaptatif donne à <b>chaque voiture son propre cran</b> pour qu'elle tourne au plus près du <b>temps au tour cible</b>, grâce à son étalonnage (<b>Garage → voiture → 🟨 VSC adaptatif</b>, tests faits sur ce circuit). Une voiture pas étalonnée reçoit le VSC normal.</p>
-    <label class="field" style="max-width:260px">Temps au tour cible sous VSC (s)
-      <input type="number" id="vaTarget" step="0.1" min="2" max="60" value="${a.targetSec}"></label>
-    <p class="muted" style="font-size:.85rem;margin:10px 0 6px">Voitures de la course préparée, sur <b>${esc(app.track(trackId)?.name || 'ce circuit')}</b> :</p>
-    <div class="va-rows">
-      ${rows.length ? rows.map(({ s, car, r, c }) => `<div class="va-row ${!r ? 'none' : c.ok ? 'ok' : 'ko'}">
-        <span><b>Manette ${s.address + 1}</b> · ${esc(car?.name || '—')}</span>
-        <span class="muted">${r ? `possible de ${s2(r.min)} à ${s2(r.max)} s` : 'pas étalonnée sur ce circuit'}</span>
-        <span>${!r ? `VSC normal (cran ${vscSpeed(app.vscCfg.speedPct)})` : c.ok ? `✅ cran ${c.cran} (≈ ${s2(c.sec)} s)` : `❌ ne peut pas rouler en ${s2(a.targetSec)} s`}</span>
-      </div>`).join('') : '<p class="muted">Aucune voiture dans la course préparée.</p>'}
+    <p class="muted" style="font-size:.88rem;margin:8px 0 12px">À 20 %, toutes les voitures ne roulent pas à la même allure : chaque moteur est différent. Le VSC adaptatif donne à <b>chaque voiture son propre cran</b> pour qu'elle tourne au plus près du <b>temps au tour cible</b>, grâce à son étalonnage (${toGarage('Garage → voiture → 🟨 VSC adaptatif')}, tests faits sur ce circuit). Une voiture pas étalonnée reçoit le VSC normal.</p>
+    <div class="row" style="gap:12px;flex-wrap:wrap;align-items:flex-end">
+      <label class="field">Circuit<select id="vaTrack">${app.data.tracks.map((t) => `<option value="${esc(t.id)}" ${t.id === trackId ? 'selected' : ''}>${esc(t.name)}</option>`).join('')}</select></label>
+      <label class="field" style="max-width:220px">Temps au tour cible sous VSC (s)
+        <input type="number" id="vaTarget" step="0.1" min="0.5" max="60" value="${a.targetSec}"></label>
+      ${common && common.min <= common.max ? `<button class="btn small" id="vaSuggest" title="Temps que toutes les voitures cochées peuvent tenir">Conseillé : ${s2(common.min)} s</button>` : ''}
     </div>
+    <p class="muted" style="font-size:.85rem;margin:12px 0 6px">Coche les voitures qui rouleront ensemble (par défaut : celles de la course préparée) :</p>
+    <div class="va-rows">
+      ${rows.length ? rows.map(({ car, r, c, on }) => `<label class="va-row ${!on ? 'off' : !r ? 'none' : c.ok ? 'ok' : 'ko'}">
+        <span><input type="checkbox" data-va-car="${esc(car.id)}" ${on ? 'checked' : ''}> <b>${esc(car.name)}</b></span>
+        <span class="muted">${r ? `possible de ${s2(r.min)} à ${s2(r.max)} s` : `pas étalonnée sur ce circuit · ${toGarage('étalonner')}`}</span>
+        <span>${!r ? `VSC normal (cran ${vscSpeed(app.vscCfg.speedPct)})` : c.ok ? `✅ cran ${c.cran} (≈ ${s2(c.sec)} s)` : `❌ ne peut pas rouler en ${s2(a.targetSec)} s`}</span>
+      </label>`).join('') : '<p class="muted">Aucune voiture au garage.</p>'}
+    </div>
+    ${!sel.length ? '<p class="warnbox" style="margin-top:10px">Coche au moins une voiture.</p>' : ''}
     ${bad.length ? `<p class="warnbox" style="margin-top:10px;border-color:var(--accent)">❌ Les voitures sélectionnées ne permettent pas de rouler en <b>${s2(a.targetSec)} s</b>.
       ${common && common.min <= common.max ? `Choisis un temps entre <b>${s2(common.min)}</b> et <b>${s2(common.max)} s</b>.` : 'Elles n\'ont aucun temps en commun : refais les tests ou change de voitures.'}</p>` : ''}
-    ${missing.length && rows.length ? `<p class="muted" style="font-size:.8rem;margin-top:8px">⚪ ${missing.length} voiture${missing.length > 1 ? 's' : ''} sans étalonnage sur ce circuit : faites les tests dans le Garage.</p>` : ''}
+    ${missing.length ? `<p style="font-size:.85rem;margin-top:8px">⚪ ${missing.length} voiture${missing.length > 1 ? 's' : ''} cochée${missing.length > 1 ? 's' : ''} sans étalonnage sur ce circuit : ${toGarage('faire les tests dans le Garage')}.</p>` : ''}
   </section>`;
-  $('#vaOn', root).onchange = async (e) => { await app.saveVscCfg({ adaptive: { ...a, on: e.target.checked } }); renderAdaptiveVsc(); bindTabs(); };
-  $('#vaTarget', root).onchange = async (e) => {
-    const v = Math.max(2, Math.min(60, parseFloat(e.target.value) || a.targetSec));
-    await app.saveVscCfg({ adaptive: { ...a, targetSec: Math.round(v * 100) / 100 } });
-    renderAdaptiveVsc(); bindTabs();
+  const save = async (patch) => { await app.saveVscCfg({ adaptive: { ...a, ...patch } }); renderAdaptiveVsc(); bindTabs(); };
+  $('#vaOn', root).onchange = (e) => save({ on: e.target.checked });
+  $('#vaTrack', root).onchange = (e) => save({ trackId: e.target.value });
+  $('#vaTarget', root).onchange = (e) => {
+    const v = Math.max(0.5, Math.min(60, parseFloat(e.target.value) || a.targetSec));
+    save({ targetSec: Math.round(v * 100) / 100 });
   };
+  const sug = $('#vaSuggest', root);
+  if (sug) sug.onclick = () => save({ targetSec: Math.round(common.min * 100) / 100 });
+  root.querySelectorAll('[data-va-car]').forEach((cb) => (cb.onchange = () => {
+    const set = new Set(chosen);
+    if (cb.checked) set.add(cb.dataset.vaCar); else set.delete(cb.dataset.vaCar);
+    save({ cars: [...set] });
+  }));
+  root.querySelectorAll('[data-go-garage]').forEach((l) => (l.onclick = (e) => {
+    e.preventDefault();
+    app.requireConnection(() => {
+      app.go('garage');
+      setTimeout(() => document.getElementById('garageCars')?.scrollIntoView({ behavior: 'smooth' }), 300);
+    }, 'Connecte le circuit (ou le simulateur) avant d\'entrer au garage : les tests sont faits avec les voitures.');
+  }));
   bindVscTabs();
 }
 

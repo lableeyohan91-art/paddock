@@ -80,7 +80,7 @@ function render() {
 
   <div class="grid grid-2">
     <section class="panel">
-      <h2>Voitures</h2>
+      <h2 id="garageCars">Voitures</h2>
       <div class="list">
         ${cars.map((c) => `
         <div class="car-card">
