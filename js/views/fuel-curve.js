@@ -118,7 +118,7 @@ export function curveHtml(c) {
       ${field('best', 'Meilleur tour (s)', 'des pilotes cochés', a?.best ? `Auto : ${fmtS(a.best)} s` : '')}
       ${field('top10', '10 meilleurs tours (s)', 'rythme d’attaque', a?.top10 ? `Auto : ${fmtS(a.top10)} s (sur les 30 derniers tours)` : 'Facultatif')}
       ${field('pitLap', 'Tour avec arrêt au stand (s)', 'coût d’un arrêt', 'Passage par les stands et arrêt, sans attendre le plein')}
-      <label class="field"><span class="calc-l">Nombre de tours<em>taille du plein</em></span>
+      <label class="field"><span class="calc-l">Nombre de tours<em>voulu par l’utilisateur · taille du plein</em></span>
         <input type="number" step="1" min="5" max="1000" data-cv="laps" value="${v.laps}"></label>
       <label class="field"><span class="calc-l">Arrêts souhaités<em>au rythme nominal</em></span>
         <input type="number" step="1" min="0" max="60" data-cv="stops" value="${v.stops}"></label>

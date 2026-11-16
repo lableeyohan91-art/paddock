@@ -332,7 +332,7 @@ function calcHtml() {
       <label class="field"><span class="calc-l">Tour avec arrêt au stand (s)<em>calcule le coût d’un arrêt</em></span>
         <input type="number" step="0.01" min="1" max="60" data-ci="pitLap" value="${fmtS(v.pitLap)}" placeholder="à saisir">
         <small class="muted">Chronomètre un tour où tu passes par les stands, t'arrêtes et repars aussitôt, <b>sans attendre le plein</b> : le temps de remplissage est calculé à part (essence à remettre ÷ vitesse de remplissage).${pitLoss !== null ? ` Ici, passer par les stands coûte <b>${pitLoss.toFixed(2)} s</b> de plus qu'un tour normal.` : ''}</small></label>
-      <label class="field"><span class="calc-l">Nombre de tours<em>règle la taille du plein</em></span>
+      <label class="field"><span class="calc-l">Nombre de tours<em>voulu par l’utilisateur · règle la taille du plein</em></span>
         <input type="number" step="1" min="5" max="500" data-ci="laps" value="${v.laps}"></label>
       <label class="field"><span class="calc-l">Arrêts souhaités<em>au rythme nominal</em></span>
         <input type="number" step="1" min="0" max="20" data-ci="stops" value="${v.stops}"></label>
