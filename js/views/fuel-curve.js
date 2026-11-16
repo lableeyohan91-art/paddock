@@ -220,11 +220,11 @@ function bindResult() {
     const v = inputs();
     const name = await promptBox('Nom du setup', `${CURVE_PROFILES[v.profile].short} · ${v.laps} tours · ${v.stops} arrêt${v.stops > 1 ? 's' : ''}`, 'Ex. Course 50 tours, Soirée entre amis…');
     if (!name) return;
-    const list = await app.fuelSetups();
+    const list = await app.fuelSetups('curve');
     if (list.some((s) => s.name.toLowerCase() === name.toLowerCase())
       && !(await confirmBox(`Un setup « ${name} » existe déjà. Le remplacer ?`))) return;
     await app.saveFuelCfg(ctx.getCfg());
-    await app.saveFuelSetup(name);
+    await app.saveFuelSetup(name, null, {}, 'curve');
     toast(`💾 Setup « ${name} » enregistré`);
     await ctx.refreshAll();
   };

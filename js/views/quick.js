@@ -31,7 +31,7 @@ export async function mount(main, a) {
   if (!app.track(app.setup.trackId) && app.data.tracks[0]) { app.setup.trackId = app.data.tracks[0].id; app.saveSetup(); }
   prefs = { laps: 30, minutes: 5, pqByLaps: false, pqLaps: 5, raceByTime: false, raceMinutes: 10, fuelOn: true, tank15: 15, autoVsc: true, tyresOn: false, ...(await app.db.getSetting('quickRace', {})) };
   setups = await app.fuelSetups();
-  activeSetup = await app.db.getSetting('fuelActiveSetup', null);
+  activeSetup = { bands: await app.activeFuelSetup('bands'), curve: await app.activeFuelSetup('curve') };
   render();
 }
 
@@ -54,6 +54,9 @@ const title = () => mode().title;
 const isRace = () => mode().type === 'race';
 const savePrefs = () => app.db.setSetting('quickRace', prefs);
 const pct15 = (v) => Math.round((v / 15) * 100);
+/** Setups proposés : seulement ceux du mode choisi (Fourchettes ou Formule). */
+const setupMode = () => (app.fuelCfg.mode === 'curve' ? 'curve' : 'bands');
+const modeSetups = () => setups.filter((s) => app.setupMode(s) === setupMode());
 /** Calcul « selon le temps au tour » : réservoir bloqué à 100 %. */
 const tankLocked = () => app.fuelCfg.mode !== 'fixed'; // fourchettes et formule : calculées sur un plein
 const tank15 = () => (tankLocked() ? 15 : prefs.tank15);
@@ -160,7 +163,7 @@ function render() {
       </div>
       <div class="q-fuel">
         ${app.fuelCfg.mode === 'fixed' ? '' : `<label class="field"><span>Setup d'essence · <a href="#" class="q-link" id="qFuelCfg">${app.fuelCfg.mode === 'curve' ? 'Régler la formule' : 'Régler les temps de référence'}</a></span>
-          <select id="qSetup">${setups.length ? setups.map((s) => `<option value="${esc(s.id)}" ${s.id === activeSetup ? 'selected' : ''}>${esc(s.name)}</option>`).join('')
+          <select id="qSetup">${modeSetups().length ? modeSetups().map((s) => `<option value="${esc(s.id)}" ${s.id === activeSetup[setupMode()] ? 'selected' : ''}>${esc(s.name)}</option>`).join('')
             : '<option value="">Réglage actuel</option>'}</select></label>`}
         <div>
           ${tankLocked() ? '' : `<div class="bar" style="--c:var(--blue);--p:${pct15(tank15())}%">
@@ -284,9 +287,9 @@ function bind() {
   const ty = $('#qTyres', root);
   if (ty) ty.onchange = (e) => { prefs.tyresOn = e.target.checked; savePrefs(); render(); };
   const sel = $('#qSetup', root);
-  if (sel && setups.length) sel.onchange = async () => {
+  if (sel && modeSetups().length) sel.onchange = async () => {
     await app.loadFuelSetup(sel.value);
-    activeSetup = sel.value;
+    activeSetup[setupMode()] = sel.value;
     toast(`Setup « ${setups.find((s) => s.id === sel.value)?.name} » chargé`);
   };
   const tank = $('#qTank', root);

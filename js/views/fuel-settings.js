@@ -49,9 +49,12 @@ let activeId = null;
 
 const strip = (c) => { const { enabled, ...rest } = c; return JSON.stringify(rest); };
 
+/** Setups de l'onglet affiché : Formule continue, ou Temps de référence (fourchettes). */
+const setupsMode = () => (sub === 'curve' ? 'curve' : 'bands');
+
 async function loadSetups() {
-  setups = await app.fuelSetups();
-  activeId = await app.db.getSetting('fuelActiveSetup', null);
+  setups = await app.fuelSetups(setupsMode());
+  activeId = await app.activeFuelSetup(setupsMode());
 }
 
 function setupsHtml() {
@@ -60,7 +63,7 @@ function setupsHtml() {
   return `
   <section class="panel setups">
     <div class="setups-head">
-      <h2 style="margin:0">💾 Setups d'essence</h2>
+      <h2 style="margin:0">💾 Setups ${setupsMode() === 'curve' ? 'Formule continue' : 'Temps de référence'}</h2>
       <span class="setup-state">${active
         ? `Actif : <b>${esc(active.name)}</b>${modified ? ' <span class="badge mod">modifié</span>' : ' <span class="badge ok">enregistré</span>'}`
         : '<span class="muted">Réglage actuel non enregistré</span>'}</span>
@@ -100,7 +103,7 @@ function bindSetups() {
     const active = setups.find((s) => s.id === activeId);
     if (!active) return;
     await app.saveFuelCfg(cfg);
-    await app.saveFuelSetup(active.name, active.id);
+    await app.saveFuelSetup(active.name, active.id, {}, setupsMode());
     toast(`Setup « ${active.name} » enregistré`);
     await refreshAll();
   };
@@ -110,7 +113,7 @@ function bindSetups() {
     if (setups.some((s) => s.name.toLowerCase() === n.toLowerCase())
       && !(await confirmBox(`Un setup « ${n} » existe déjà. Le remplacer ?`))) return;
     await app.saveFuelCfg(cfg);
-    await app.saveFuelSetup(n);
+    await app.saveFuelSetup(n, null, {}, setupsMode());
     toast(`Setup « ${n} » enregistré`);
     await refreshAll();
   };
@@ -148,7 +151,7 @@ function draw() {
     <button data-sub="curve" class="${sub === 'curve' ? 'on' : ''}">Formule continue</button>
   </div>
   ${sub === 'general' ? generalHtml() : sub === 'conso' ? consoHtml() : sub === 'curve' ? '<div class="dev-banner">🚧 En cours de développement</div>' + setupsHtml() + curveHtml(curveCtx()) : setupsHtml() + refHtml()}`;
-  $$('[data-sub]', el).forEach((b) => (b.onclick = () => { sub = b.dataset.sub; draw(); }));
+  $$('[data-sub]', el).forEach((b) => (b.onclick = async () => { sub = b.dataset.sub; await loadSetups(); draw(); }));
   if (sub === 'conso' || sub === 'general') bindConso();
   else if (sub === 'curve') bindCurve(curveCtx());
   else { bindRef(); bindCalc(); }
@@ -421,7 +424,7 @@ function bindApply() {
       && !(await confirmBox(`Un setup « ${name} » existe déjà. Le remplacer ?`))) return;
     clearTimeout(saveTimer);
     await app.saveFuelCfg(cfg);   // réglages appliqués, enregistrés tout de suite
-    await app.saveFuelSetup(name);
+    await app.saveFuelSetup(name, null, {}, 'bands');
     toast(`💾 Setup « ${name} » enregistré`);
     await refreshAll();
   };

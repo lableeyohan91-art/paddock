@@ -396,18 +396,38 @@ export const app = {
   // ---------- Setups d'essence (réglages nommés) ----------
   // Un setup = toute la config essence sauf l'interrupteur "activer".
 
-  async fuelSetups() {
-    return db.getSetting('fuelSetups', []);
+  /** Mode d'un setup : 'curve' (formule continue) ou 'bands' (temps de référence). */
+  setupMode(s) {
+    return s?.cfg?.mode === 'curve' ? 'curve' : 'bands';
   },
 
-  async saveFuelSetup(name, id = null, opts = {}) {
+  /** Setup actif, gardé séparément pour chaque mode. */
+  activeSetupKey(mode) {
+    return mode === 'curve' ? 'fuelActiveSetupCurve' : 'fuelActiveSetup';
+  },
+
+  async activeFuelSetup(mode) {
+    return db.getSetting(this.activeSetupKey(mode), null);
+  },
+
+  /** Setups enregistrés : tous, ou seulement ceux d'un mode ('bands' / 'curve'). */
+  async fuelSetups(mode = null) {
+    const all = await db.getSetting('fuelSetups', []);
+    return mode ? all.filter((s) => this.setupMode(s) === mode) : all;
+  },
+
+  /** Enregistre le réglage actuel comme setup du mode donné (Temps de référence ou Formule continue). */
+  async saveFuelSetup(name, id = null, opts = {}, mode = null) {
     const list = await this.fuelSetups();
     const { enabled, ...cfg } = this.fuelCfg;
-    const existing = id ? list.find((s) => s.id === id) : list.find((s) => s.name.toLowerCase() === name.toLowerCase());
+    if (mode) cfg.mode = mode;
+    const m = this.setupMode({ cfg });
+    const existing = id ? list.find((s) => s.id === id)
+      : list.find((s) => s.name.toLowerCase() === name.toLowerCase() && this.setupMode(s) === m);
     if (existing) Object.assign(existing, { name, cfg, date: Date.now() });
     else list.push({ id: db.uid(), name, cfg, date: Date.now() });
     await db.setSetting('fuelSetups', list, opts);
-    await db.setSetting('fuelActiveSetup', existing?.id ?? list[list.length - 1].id, opts);
+    await db.setSetting(this.activeSetupKey(m), existing?.id ?? list[list.length - 1].id, opts);
     return list;
   },
 
@@ -427,14 +447,14 @@ export const app = {
     const s = (await this.fuelSetups()).find((x) => x.id === id);
     if (!s) return false;
     await this.saveFuelCfg({ ...s.cfg, enabled: this.fuelCfg.enabled });
-    await db.setSetting('fuelActiveSetup', id);
+    await db.setSetting(this.activeSetupKey(this.setupMode(s)), id);
     return true;
   },
 
   async deleteFuelSetup(id) {
     const list = (await this.fuelSetups()).filter((s) => s.id !== id);
     await db.setSetting('fuelSetups', list);
-    if ((await db.getSetting('fuelActiveSetup', null)) === id) await db.setSetting('fuelActiveSetup', null);
+    for (const k of ['fuelActiveSetup', 'fuelActiveSetupCurve']) if ((await db.getSetting(k, null)) === id) await db.setSetting(k, null);
   },
 
   async renameFuelSetup(id, name) {
