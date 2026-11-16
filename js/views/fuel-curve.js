@@ -18,6 +18,21 @@ export function lapsTip(app, ids, countOf) {
   return `<p class="tipbox">💡 Pour optimiser les réglages, faites d'abord une <b>Course rapide de ${RECENT_LAPS} tours</b> avec les pilotes présents, puis lancez le calcul automatique.<br><small>Tours de course récents sur ce circuit — ${list}</small></p>`;
 }
 
+/** Cases obligatoires : encadrées en rouge tant qu'elles sont vides, et Calculer bloqué. */
+export function bindRequired(scope, btnSel) {
+  const inputs = [...scope.querySelectorAll('[data-req]')];
+  const btn = scope.querySelector(btnSel);
+  const hint = btn?.parentElement.querySelector('.need-hint');
+  const check = () => {
+    let missing = 0;
+    inputs.forEach((i) => { const empty = i.value.trim() === ''; i.classList.toggle('need', empty); if (empty) missing++; });
+    if (btn) btn.disabled = missing > 0;
+    if (hint) hint.hidden = missing === 0;
+  };
+  inputs.forEach((i) => i.addEventListener('input', check));
+  check();
+}
+
 let st = {};          // saisies (gardées d'une fois sur l'autre)
 let result = null;    // dernier calcul
 let pickOpen = false; // liste des pilotes dépliée ?
@@ -73,8 +88,8 @@ function inputs() {
     best: st.best ?? a.best ?? null,
     top10: st.top10 ?? a.top10 ?? null,
     pitLap: st.pitLap ?? null,
-    laps: st.laps ?? 50,
-    stops: st.stops ?? 1,
+    laps: st.laps ?? null,
+    stops: st.stops ?? null,
     profile: st.profile || 'equilibre',
   };
 }
@@ -87,7 +102,7 @@ export function curveHtml(c) {
   const manual = !a || ['median', 'best', 'top10'].some((k) => st[k] !== undefined && st[k] !== null);
   const field = (key, label, why, hint) => `
       <label class="field"><span class="calc-l">${label}<em>${why}</em></span>
-        <input type="number" step="0.01" min="1" max="60" data-cv="${key}" value="${fmtS(v[key])}" placeholder="à saisir">
+        <input type="number" step="0.01" min="1" max="60" data-cv="${key}" ${key === 'top10' ? '' : 'data-req'} value="${fmtS(v[key])}" placeholder="à saisir">
         ${hint ? `<small class="muted">${hint}</small>` : ''}</label>`;
   return `
   <section class="panel">
@@ -125,13 +140,16 @@ export function curveHtml(c) {
       ${field('top10', '10 meilleurs tours (s)', 'rythme d’attaque', a?.top10 ? `Auto : ${fmtS(a.top10)} s (sur les 30 derniers tours)` : 'Facultatif')}
       ${field('pitLap', 'Tour avec arrêt au stand (s)', 'coût d’un arrêt', 'Passage par les stands et arrêt, sans attendre le plein')}
       <label class="field"><span class="calc-l">Nombre de tours<em>voulu par l’utilisateur · taille du plein</em></span>
-        <input type="number" step="1" min="5" max="1000" data-cv="laps" value="${v.laps}"></label>
+        <input type="number" step="1" min="5" max="1000" data-cv="laps" data-req value="${v.laps ?? ''}" placeholder="à saisir"></label>
       <label class="field"><span class="calc-l">Arrêts souhaités<em>au rythme nominal</em></span>
-        <input type="number" step="1" min="0" max="60" data-cv="stops" value="${v.stops}"></label>
+        <input type="number" step="1" min="0" max="60" data-cv="stops" data-req value="${v.stops ?? ''}" placeholder="à saisir"></label>
     </div>
     ${manual ? `<p class="warnbox" style="margin-top:12px">✍️ Valeurs saisies à la main : le calcul sera approximatif. <b>Conseil :</b> faites une <b>Course rapide de 30 tours</b> avec les pilotes, puis revenez ici et touchez <b>⚡ Remplissage automatique</b>.</p>` : ''}
 
-    <button class="btn primary" id="cvGo" style="margin-top:12px">🧮 Calculer</button>
+    <div class="row" style="gap:10px;margin-top:12px;align-items:center">
+      <button class="btn primary" id="cvGo">🧮 Calculer</button>
+      <span class="need-hint" hidden>Remplis les cases en rouge pour calculer</span>
+    </div>
     <div id="cvRes">${resultHtml()}</div>
     </details>
   </section>`;
@@ -216,6 +234,7 @@ export function bindCurve(c) {
     st[inp.dataset.cv] = Number.isFinite(n) ? n : null;
     await saveSt(); redraw();
   }));
+  bindRequired(el.querySelector('#cvBox') || el, '#cvGo');
   $('#cvGo', el).onclick = () => {
     $('#cvRes', el).innerHTML = '<p class="muted" style="margin-top:12px">Calcul en cours…</p>';
     setTimeout(() => {

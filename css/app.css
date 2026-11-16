@@ -849,3 +849,7 @@ h1 .vsc-ico { width: 40px; height: 40px; font-size: .7rem; }
 .tyre-wear.cold { color: #60a5fa; }
 .tyre-wear.puncture { color: var(--accent); font-weight: 900; animation: blink 1s infinite; }
 .tyre-next { font-size: .75rem; font-weight: 800; color: var(--tc); }
+
+/* cases obligatoires des calculs automatiques */
+input.need { border: 2px solid var(--red, #e10600) !important; box-shadow: 0 0 0 3px rgba(225,6,0,.18); }
+.need-hint { color: #f87171; font-size: .85rem; font-weight: 600; }

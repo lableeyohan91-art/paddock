@@ -6,7 +6,7 @@
 import { esc, $, $$, toast, confirmBox, promptBox } from '../ui.js';
 import { LIMITS, activeBands } from '../fuel.js';
 import { optimizeFuel, bestOfDrivers, raceMedianOf, median } from '../fuel-calc.js';
-import { curveHtml, bindCurve, loadCurveState, lapsTip, curveIntro } from './fuel-curve.js';
+import { curveHtml, bindCurve, loadCurveState, lapsTip, curveIntro, bindRequired } from './fuel-curve.js';
 
 let app;
 let el;
@@ -290,8 +290,8 @@ function calcInputs() {
     record: calc.record ?? a.record,
     median: calc.median ?? a.median,
     pitLap: calc.pitLap ?? null,
-    laps: calc.laps ?? 50,
-    stops: calc.stops ?? 1,
+    laps: calc.laps ?? null,
+    stops: calc.stops ?? null,
   };
 }
 
@@ -324,22 +324,23 @@ function calcHtml() {
     <p class="muted" style="font-size:.8rem;margin:4px 0 12px">Choisis le circuit et coche les pilotes présents, puis touche ce bouton : le meilleur tour des pilotes cochés et leur temps médian (sur leurs 30 derniers tours de course) se remplissent tout seuls.</p>
     <div class="calc-grid">
       <label class="field"><span class="calc-l">Meilleur tour (s)<em>des pilotes cochés · cale les paliers rapides</em></span>
-        <input type="number" step="0.01" min="1" max="60" data-ci="record" value="${fmtS(v.record)}" placeholder="${a.record ? 'auto : ' + fmtS(a.record) : 'à saisir'}">
+        <input type="number" step="0.01" min="1" max="60" data-ci="record" data-req value="${fmtS(v.record)}" placeholder="${a.record ? 'auto : ' + fmtS(a.record) : 'à saisir'}">
         <small class="muted">${a.record ? 'Auto : ' + fmtS(a.record) + ' s' : 'Aucun tour enregistré'}</small></label>
       <label class="field"><span class="calc-l">Temps médian (s)<em>adapte aux pilotes présents</em></span>
-        <input type="number" step="0.01" min="1" max="60" data-ci="median" value="${fmtS(v.median)}" placeholder="${a.median ? 'auto : ' + fmtS(a.median) : 'à saisir'}">
+        <input type="number" step="0.01" min="1" max="60" data-ci="median" data-req value="${fmtS(v.median)}" placeholder="${a.median ? 'auto : ' + fmtS(a.median) : 'à saisir'}">
         <small class="muted">${a.median ? 'Auto : ' + fmtS(a.median) + ' s (30 derniers tours)' : 'Coche des pilotes ou saisis-le'}</small></label>
       <label class="field"><span class="calc-l">Tour avec arrêt au stand (s)<em>calcule le coût d’un arrêt</em></span>
-        <input type="number" step="0.01" min="1" max="60" data-ci="pitLap" value="${fmtS(v.pitLap)}" placeholder="à saisir">
+        <input type="number" step="0.01" min="1" max="60" data-ci="pitLap" data-req value="${fmtS(v.pitLap)}" placeholder="à saisir">
         <small class="muted">Chronomètre un tour où tu passes par les stands, t'arrêtes et repars aussitôt, <b>sans attendre le plein</b> : le temps de remplissage est calculé à part (essence à remettre ÷ vitesse de remplissage).${pitLoss !== null ? ` Ici, passer par les stands coûte <b>${pitLoss.toFixed(2)} s</b> de plus qu'un tour normal.` : ''}</small></label>
       <label class="field"><span class="calc-l">Nombre de tours<em>voulu par l’utilisateur · règle la taille du plein</em></span>
-        <input type="number" step="1" min="5" max="500" data-ci="laps" value="${v.laps}"></label>
+        <input type="number" step="1" min="5" max="500" data-ci="laps" data-req value="${v.laps ?? ''}" placeholder="à saisir"></label>
       <label class="field"><span class="calc-l">Arrêts souhaités<em>au rythme nominal</em></span>
-        <input type="number" step="1" min="0" max="20" data-ci="stops" value="${v.stops}"></label>
+        <input type="number" step="1" min="0" max="20" data-ci="stops" data-req value="${v.stops ?? ''}" placeholder="à saisir"></label>
     </div>
     ${calc.record != null || calc.median != null ? `<p class="warnbox" style="margin-top:12px">✍️ Valeurs saisies à la main : le calcul sera approximatif. <b>Conseil :</b> faites une <b>Course rapide de 30 tours</b> avec les pilotes, puis revenez ici et touchez <b>⚡ Remplissage automatique</b>.</p>` : ''}
     <div class="row" style="gap:8px;margin-top:12px">
       <button class="btn primary" id="calcGo">🧮 Calculer</button>
+      <span class="need-hint" hidden>Remplis les cases en rouge pour calculer</span>
     </div>
     <div id="calcRes">${calcResultHtml()}</div>
     </details>
@@ -403,6 +404,7 @@ function bindCalc() {
     if (!a.record && !a.median) toast('Aucun tour enregistré pour ce circuit et ces pilotes', 2500);
     else toast(`⚡ Rempli : ${a.record ? 'meilleur tour ' + fmtS(a.record) + ' s' : 'pas de meilleur tour'} · ${a.median ? 'temps médian ' + fmtS(a.median) + ' s' : 'pas de temps médian'}`, 2500);
   };
+  bindRequired(el.querySelector('#calcBox') || el, '#calcGo');
   $('#calcGo', el).onclick = () => {
     $('#calcRes', el).innerHTML = '<p class="muted" style="margin-top:12px">Calcul en cours…</p>';
     setTimeout(() => { // laisse l'écran afficher « Calcul en cours » avant de calculer
