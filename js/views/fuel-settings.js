@@ -305,7 +305,7 @@ function calcHtml() {
   <section class="panel">
     <details class="calc-box" id="calcBox" ${calcOpen ? 'open' : ''}>
     <summary><h2 style="margin:0">🧮 Calcul automatique des fourchettes</h2></summary>
-    <div style="height:10px"></div>
+    <p class="muted" style="margin:8px 0 12px;font-size:.88rem">Calcule les fourchettes pour équilibrer au mieux ta course.</p>
     <label class="row calc-track">📍 Circuit
       <select id="calcTrack">${app.data.tracks.map((t) => `<option value="${esc(t.id)}" ${t.id === calcTrack() ? 'selected' : ''}>${esc(t.name)}</option>`).join('')}</select>
     </label>
