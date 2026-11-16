@@ -312,7 +312,8 @@ function calcHtml() {
     ${recentTip()}
     <details class="calc-pick" id="calcPick" ${driversOpen ? 'open' : ''}>
       <summary>
-        <span>👥 Pilotes présents <b>(${a.present.filter((id) => app.driver(id)).length})</b></span>
+        <span class="calc-pick-title">👉 Choisir les pilotes présents <b>(${a.present.filter((id) => app.driver(id)).length})</b></span>
+        <span class="calc-pick-must">À faire en premier : le calcul se base sur eux</span>
         <span class="calc-pick-names">${a.present.map((id) => app.driver(id)?.name).filter(Boolean).map(esc).join(', ') || 'aucun'}</span>
       </summary>
       <div class="calc-drivers">
