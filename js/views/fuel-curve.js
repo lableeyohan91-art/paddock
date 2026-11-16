@@ -217,7 +217,7 @@ function resultHtml() {
       <p class="cv-mix">🔎 Meilleure stratégie possible pour un pilote malin : <b>${sec(r.bestMix.gap)}</b> sur le nominal (${esc(r.bestMix.desc)}, ${r.bestMix.stops} arrêt${r.bestMix.stops > 1 ? 's' : ''}).</p>
       <div class="calc-actions">
         <button class="btn primary" id="cvApply">✅ Appliquer ces réglages</button>
-        <button class="btn" id="cvSave">💾 Sauvegarder ce setup</button>
+        <button class="btn btn-save" id="cvSave">💾 Sauvegarder ce setup</button>
       </div>
     </div>`;
 }

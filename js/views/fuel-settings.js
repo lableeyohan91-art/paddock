@@ -367,7 +367,7 @@ function calcResultHtml() {
       <p class="muted" style="font-size:.8rem;margin:6px 0 10px">Pilote régulier, sans sortie de piste ni VSC : à vérifier sur la piste. Les fourchettes non gardées seront désactivées.</p>
       <div class="calc-actions">
         <button class="btn primary" id="calcApply">✅ Appliquer ces réglages</button>
-        <button class="btn" id="calcSave">💾 Sauvegarder ce setup</button>
+        <button class="btn btn-save" id="calcSave">💾 Sauvegarder ce setup</button>
       </div>
     </div>`;
 }

@@ -860,3 +860,4 @@ input.need { border: 2px solid var(--red, #e10600) !important; box-shadow: 0 0 0
 .swipe-hint { display: none; margin: 8px 0 4px; font-size: .82rem; font-weight: 600; color: #fbbf24; animation: swipeNudge 1.4s ease-in-out infinite; }
 .swipe-box.more:not(.seen) .swipe-hint { display: block; }
 @keyframes swipeNudge { 50% { transform: translateX(6px); } }
+.btn.btn-save { border: 2px solid var(--red, #e10600); }
