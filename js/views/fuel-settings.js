@@ -442,10 +442,7 @@ function bindApply() {
 
 /** Explication affichée en entrant dans l'onglet Paliers. */
 function refIntro() {
-  return `<p class="tab-intro">Chaque tour tombe dans un <b>palier</b> selon son temps, et chaque palier a sa consommation : plus on roule vite, plus on consomme.
-    Le calcul automatique propose les fourchettes, les consommations et la vitesse de remplissage les plus équilibrées pour ton circuit :
-    au rythme nominal, le plein impose le nombre d'arrêts voulu ; attaquer coûte de l'essence, économiser ne paie pas.
-    Il utilise le plus de fourchettes possible (jusqu'à 4 rapides et 4 lentes).</p>`;
+  return `<p class="tab-intro">Plus le tour est rapide, plus il consomme. Le calcul automatique équilibre le tout : au rythme normal, tu fais les arrêts prévus ; attaquer coûte de l'essence.</p>`;
 }
 
 function refHtml() {
