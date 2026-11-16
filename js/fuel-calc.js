@@ -199,9 +199,9 @@ export function driverStats(laps, driverId, trackId) {
   const all = mine.map((l) => l.time / 1000).filter((x) => x > 0);
   if (!all.length) return null;
   const sorted = [...race].sort((a, b) => a - b);
-  const top = sorted.slice(0, 10);
-  // rythme actuel : temps médian et régularité sur les 30 derniers tours de course
+  // rythme actuel : temps médian, 10 meilleurs tours et régularité sur les 30 derniers tours de course
   const recent = driverId ? raceLaps(laps, driverId, trackId).slice(0, RECENT_LAPS).map((l) => l.time / 1000).sort((a, b) => a - b) : sorted;
+  const top = recent.slice(0, 10);
   const q = (p) => recent[Math.min(recent.length - 1, Math.floor(p * recent.length))];
   const med = median(recent);
   return {

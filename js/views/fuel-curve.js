@@ -4,7 +4,7 @@
 
 import { esc, $, $$, toast, confirmBox, promptBox } from '../ui.js';
 import { CURVE_PROFILES } from '../fuel.js';
-import { optimizeCurve, driverStats, median, RECENT_LAPS } from '../fuel-calc.js';
+import { optimizeCurve, driverStats, median, bestOfDrivers, RECENT_LAPS } from '../fuel-calc.js';
 
 /**
  * Conseil en couleur : si un pilote coché a moins de 30 tours de course récents sur ce circuit,
@@ -56,7 +56,8 @@ function autoValues() {
   });
   const avg = (k) => { const v = stats.map((s) => s[k]).filter((x) => x > 0); return v.length ? r2(v.reduce((a, b) => a + b, 0) / v.length) : null; };
   const med = median(stats.map((s) => s.median).filter((x) => x > 0));
-  return { median: med === null ? null : r2(med), best: avg('best'), top10: avg('top10'), spread: avg('spread'), n: stats.filter((s) => s.median || s.best).length };
+  // meilleur tour : le meilleur des pilotes cochés (comme dans Paliers)
+  return { median: med === null ? null : r2(med), best: bestOfDrivers(ctx.laps, present(), trackOf()), top10: avg('top10'), spread: avg('spread'), n: stats.filter((s) => s.median || s.best).length };
 }
 
 function inputs() {
@@ -110,12 +111,12 @@ export function curveHtml(c) {
       </div>
     </details>
     <button class="btn small calc-fill" id="cvAuto">⚡ Remplissage automatique</button>
-    <p class="muted" style="font-size:.8rem;margin:4px 0 12px">Récupère sur les profils des pilotes cochés : temps médian sur leurs 30 derniers tours de course, moyenne des meilleurs tours et moyenne des 10 meilleurs tours en course${a ? ` — <b>rempli</b> (${a.n} pilote${a.n > 1 ? 's' : ''}${a.spread ? `, régularité ±${comma(a.spread)} %` : ''})` : ''}.</p>
+    <p class="muted" style="font-size:.8rem;margin:4px 0 12px">Récupère sur les pilotes cochés : leur meilleur tour, et sur leurs 30 derniers tours de course le temps médian et la moyenne des 10 meilleurs${a ? ` — <b>rempli</b> (${a.n} pilote${a.n > 1 ? 's' : ''}${a.spread ? `, régularité ±${comma(a.spread)} %` : ''})` : ''}.</p>
 
     <div class="calc-grid">
-      ${field('median', 'Temps médian (s)', 'le rythme nominal', a?.median ? `Auto : ${fmtS(a.median)} s` : '')}
-      ${field('best', 'Meilleur tour (s)', 'moyenne des pilotes', a?.best ? `Auto : ${fmtS(a.best)} s` : '')}
-      ${field('top10', '10 meilleurs tours (s)', 'rythme d’attaque', a?.top10 ? `Auto : ${fmtS(a.top10)} s` : 'Facultatif')}
+      ${field('median', 'Temps médian (s)', 'le rythme nominal', a?.median ? `Auto : ${fmtS(a.median)} s (30 derniers tours)` : '')}
+      ${field('best', 'Meilleur tour (s)', 'des pilotes cochés', a?.best ? `Auto : ${fmtS(a.best)} s` : '')}
+      ${field('top10', '10 meilleurs tours (s)', 'rythme d’attaque', a?.top10 ? `Auto : ${fmtS(a.top10)} s (sur les 30 derniers tours)` : 'Facultatif')}
       ${field('pitLap', 'Tour avec arrêt au stand (s)', 'coût d’un arrêt', 'Passage par les stands et arrêt, sans attendre le plein')}
       <label class="field"><span class="calc-l">Nombre de tours<em>taille du plein</em></span>
         <input type="number" step="1" min="5" max="1000" data-cv="laps" value="${v.laps}"></label>
