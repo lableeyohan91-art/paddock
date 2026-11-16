@@ -63,7 +63,7 @@ function setupsHtml() {
   return `
   <section class="panel setups">
     <div class="setups-head">
-      <h2 style="margin:0">💾 Setups ${setupsMode() === 'curve' ? 'Formule continue' : 'Temps de référence'}</h2>
+      <h2 style="margin:0">💾 Setups ${setupsMode() === 'curve' ? 'Progressif' : 'Paliers'}</h2>
       <span class="setup-state">${active
         ? `Actif : <b>${esc(active.name)}</b>${modified ? ' <span class="badge mod">modifié</span>' : ' <span class="badge ok">enregistré</span>'}`
         : '<span class="muted">Réglage actuel non enregistré</span>'}</span>
@@ -147,8 +147,8 @@ function draw() {
   <div class="subtabs small">
     <button data-sub="general" class="${sub === 'general' ? 'on' : ''}">Général</button>
     <button data-sub="conso" class="${sub === 'conso' ? 'on' : ''}">Fixe</button>
-    <button data-sub="ref" class="${sub === 'ref' ? 'on' : ''}">Temps de référence</button>
-    <button data-sub="curve" class="${sub === 'curve' ? 'on' : ''}">Formule continue</button>
+    <button data-sub="ref" class="${sub === 'ref' ? 'on' : ''}">Paliers</button>
+    <button data-sub="curve" class="${sub === 'curve' ? 'on' : ''}">Progressif</button>
   </div>
   ${sub === 'general' ? generalHtml() : sub === 'conso' ? consoHtml() : sub === 'curve' ? '<div class="dev-banner">🚧 En cours de développement</div>' + setupsHtml() + curveHtml(curveCtx()) : setupsHtml() + refHtml()}`;
   $$('[data-sub]', el).forEach((b) => (b.onclick = async () => { sub = b.dataset.sub; await loadSetups(); draw(); }));
@@ -191,7 +191,7 @@ function generalHtml() {
       <h2>Annonce « réserve »</h2>
       <label class="field">Annonce vocale quand l'essence passe sous (%)
         <input type="number" id="fLow" min="0" max="50" value="${cfg.lowWarnPct}" style="width:120px"></label>
-      <p class="muted" style="font-size:.85rem;margin:6px 0 0">Valable pour tous les modes : Fixe, Fourchettes et Formule continue.</p>
+      <p class="muted" style="font-size:.85rem;margin:6px 0 0">Valable pour tous les modes : Fixe, Paliers et Progressif.</p>
     </section>
   </div>`;
 }
@@ -214,7 +214,7 @@ function consoHtml() {
       <h2>Ravitaillement</h2>
       <label class="field">Ravitaillement au stand (% par seconde)
         <input type="number" id="fRefuel" min="1" max="100" value="${cfg.refuelPerSec}" style="width:120px"></label>
-      <p class="muted" style="font-size:.85rem;margin:6px 0 0">Une voiture dans la voie des stands se remplit à cette vitesse jusqu'à son réservoir. En Fourchettes et en Formule, le calcul automatique la règle lui-même.</p>
+      <p class="muted" style="font-size:.85rem;margin:6px 0 0">Une voiture dans la voie des stands se remplit à cette vitesse jusqu'à son réservoir. En Paliers et en Progressif, le calcul automatique la règle lui-même.</p>
     </section>
   </div>`;
 }
@@ -433,7 +433,7 @@ function bindApply() {
 function refHtml() {
   return calcHtml() + `
   <section class="panel" style="margin-top:14px">
-    <h2>Fourchettes de temps au tour</h2>
+    <h2>Paliers de temps au tour</h2>
     <p class="muted" style="margin-top:-6px;font-size:.88rem">
       Si le tour est bouclé dans une fourchette, on retire son pourcentage d'essence.
       Plus rapide que toutes les fourchettes : on prend la plus rapide ; plus lent que toutes : la plus lente.

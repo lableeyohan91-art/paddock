@@ -72,7 +72,7 @@ export function curveHtml(c) {
         ${hint ? `<small class="muted">${hint}</small>` : ''}</label>`;
   return `
   <section class="panel">
-    <h2>📈 Formule continue</h2>
+    <h2>📈 Progressif</h2>
     <p class="muted" style="margin:-4px 0 12px;font-size:.88rem">Chaque tour consomme selon son temps, au centième près (les pilotes ne voient que des valeurs arrondies) :
       <b>conso = nominale × (temps médian ÷ temps du tour)<sup>k</sup></b>. Plus de fourchettes : pas de temps « gratuit » au bord d'une fourchette.</p>
 
@@ -212,7 +212,7 @@ function bindResult() {
     Object.assign(cfg, structuredClone(result.cfg));
     result.applied = true;
     ctx.save();
-    toast('✅ Formule continue appliquée');
+    toast('✅ Réglage progressif appliqué');
   };
   const sv = $('#cvSave', el);
   if (sv) sv.onclick = async () => {

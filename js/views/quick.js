@@ -151,8 +151,8 @@ function render() {
       <div class="q-fuel-mode">
         <span class="muted" style="font-size:.85rem">Calcul de la consommation</span>
         <div class="seg" id="qFuelMode">
-          <button data-qfm="bands" class="${app.fuelCfg.mode === 'bands' ? 'on' : ''}">Fourchettes</button>
-          <button data-qfm="curve" class="${app.fuelCfg.mode === 'curve' ? 'on' : ''}">Formule</button>
+          <button data-qfm="bands" class="${app.fuelCfg.mode === 'bands' ? 'on' : ''}">Paliers</button>
+          <button data-qfm="curve" class="${app.fuelCfg.mode === 'curve' ? 'on' : ''}">Progressif</button>
           <button data-qfm="fixed" class="${app.fuelCfg.mode === 'fixed' ? 'on' : ''}">Fixe</button>
         </div>
         <span class="muted" style="font-size:.8rem">${app.fuelCfg.mode === 'fixed'
