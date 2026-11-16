@@ -15,6 +15,7 @@
 .pv-flag.yellow { background: var(--yellow); color: #1a1500; animation: blink 1s infinite; }
 .pv-flag.vsc { background: repeating-linear-gradient(90deg, var(--yellow) 0 18px, #1a1500 18px 30px); color: #fff; text-shadow: 0 1px 3px #000; }
 .pv-flag.red { background: var(--accent); color: #fff; animation: blink 1s infinite; }
+.pv-flag.red.resume { background: #7a0000; } /* reprise : rouge foncé, bien distinct du drapeau rouge */
 .pv-flag.chequered { background: repeating-linear-gradient(90deg, #fff 0 14px, #000 14px 28px); color: #fff; text-shadow: 0 1px 3px #000; }
 
 .pv-me { display: grid; grid-template-columns: auto 1fr; gap: 10px 14px; align-items: center; border-left: 6px solid var(--dc); }

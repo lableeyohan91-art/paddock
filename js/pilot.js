@@ -6,6 +6,13 @@
 import { FIREBASE_CONFIG } from './firebase-config.js';
 import { esc, $, $$, toast } from './ui.js';
 import { fmtTime, fmtClock } from './race.js';
+import { APP_VERSION } from './version.js';
+
+// styles rechargés à chaque nouvelle version (sinon un téléphone peut garder les anciens)
+document.querySelectorAll('link[rel="stylesheet"][href^="css/"]').forEach((l) => {
+  const href = l.getAttribute('href').split('?')[0];
+  if (!l.getAttribute('href').endsWith('v=' + APP_VERSION)) l.setAttribute('href', href + '?v=' + APP_VERSION);
+});
 
 const TYRES = {
   soft: { label: 'Tendre', short: 'T', color: '#e10600' },
@@ -108,7 +115,7 @@ function flagInfo() {
   if (d.state === 'ready') return ['idle', 'Prêt · en attente du GO'];
   if (d.state === 'armed') return ['idle', '🚦 Feux…'];
   if (d.state === 'finished') return ['chequered', '🏁 Terminé'];
-  if (d.flag === 'red') return ['red', d.redResuming ? '🚦 Reprise : attention aux feux' : '🚩 Drapeau rouge : tout le monde s\'arrête'];
+  if (d.flag === 'red') return [d.redResuming ? 'red resume' : 'red', d.redResuming ? '🚦 Reprise : attention aux feux' : '🚩 Drapeau rouge : tout le monde s\'arrête'];
   if (d.flag === 'vsc') return ['vsc', d.vscCountdown ? `Fin du VSC dans ${d.vscCountdown}` : 'VSC · vitesse limitée'];
   if (d.state === 'finishing') return ['chequered', '🏁 Dernier tour'];
   return ['green', 'Course en cours'];
