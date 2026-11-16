@@ -30,6 +30,9 @@ export async function renderFuel(container, a) {
   await loadSetups();
   lapsCache = await app.db.all('laps');
   calc = await app.db.getSetting('fuelCalc', {});
+  // pilotes cochés au départ : ceux du dernier calcul (Paliers ou Progressif)
+  const lastDrivers = await app.db.getSetting('fuelCalcDrivers', null);
+  if (Array.isArray(lastDrivers)) calc.drivers = [...lastDrivers];
   await loadCurveState(app);
   draw();
 }
@@ -406,6 +409,7 @@ function bindCalc() {
   };
   bindRequired(el.querySelector('#calcBox') || el, '#calcGo');
   $('#calcGo', el).onclick = () => {
+    app.db.setSetting('fuelCalcDrivers', calcAuto().present, { quiet: true }); // pilotes du dernier calcul
     // reprend ce qui est tapé dans les cases, même si la case n'a pas encore été validée
     const cur = calcInputs();
     $$('[data-ci]', el).forEach((inp) => {

@@ -72,6 +72,9 @@ const comma = (x, d = 1) => (+x).toFixed(d).replace('.', ',');
 
 export async function loadCurveState(app) {
   st = await app.db.getSetting('fuelCurveCalc', {});
+  // pilotes cochés au départ : ceux du dernier calcul (Paliers ou Progressif)
+  const lastDrivers = await app.db.getSetting('fuelCalcDrivers', null);
+  if (Array.isArray(lastDrivers)) st.drivers = [...lastDrivers];
 }
 const saveSt = () => ctx.app.db.setSetting('fuelCurveCalc', st, { quiet: true });
 
@@ -253,6 +256,7 @@ export function bindCurve(c) {
   }));
   bindRequired(el.querySelector('#cvBox') || el, '#cvGo');
   $('#cvGo', el).onclick = () => {
+    app.db.setSetting('fuelCalcDrivers', present(), { quiet: true }); // pilotes du dernier calcul
     // reprend ce qui est tapé dans les cases, même si la case n'a pas encore été validée
     const cur = inputs();
     $$('[data-cv]', el).forEach((inp) => {
