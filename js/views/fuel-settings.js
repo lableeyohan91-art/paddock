@@ -18,6 +18,7 @@ let calc = {};       // saisies du calculateur (gardées d'une fois sur l'autre)
 let calcResult = null;
 let driversOpen = false; // liste « Pilotes présents » dépliée ?
 let calcOpen = false;    // menu « Calcul automatique des valeurs » déplié ?
+let manualOpen = false;  // menu « Temps des paliers / réglage manuel » déplié ?
 
 /** Prochain affichage : ouvrir directement ce sous-onglet ('conso', 'ref' ou 'curve'). */
 export function openFuelTab(t) { sub = t; }
@@ -433,14 +434,15 @@ function bindApply() {
 function refHtml() {
   return calcHtml() + `
   <section class="panel" style="margin-top:14px">
-    <h2>Paliers de temps au tour</h2>
-    <p class="muted" style="margin-top:-6px;font-size:.88rem">
+    <details class="calc-box" id="manualBox" ${manualOpen ? 'open' : ''}>
+    <summary><h2 style="margin:0">✍️ Temps des paliers / réglage manuel</h2></summary>
+    <p class="muted" style="margin:10px 0 12px;font-size:.88rem">
       Si le tour est bouclé dans une fourchette, on retire son pourcentage d'essence.
       Plus rapide que toutes les fourchettes : on prend la plus rapide ; plus lent que toutes : la plus lente.
       Un temps qui tombe dans une fourchette désactivée compte comme nominal.
       Bornes : ${LIMITS.tMin} à ${LIMITS.tMax} s, ${LIMITS.pMin} à ${LIMITS.pMax} %.
     </p>
-    ${cfg.mode === 'fixed' ? '<p class="warnbox">Le calcul est réglé sur <b>Fixe</b> (onglet Consommation) : ces fourchettes ne sont pas utilisées pour l\'instant.</p>' : ''}
+    ${cfg.mode === 'fixed' ? '<p class="warnbox">Le calcul est réglé sur <b>Fixe</b> (préparation de course) : ces fourchettes ne sont pas utilisées pour l\'instant.</p>' : ''}
     <div class="bands">
       <div class="band head"><span></span><span>Fourchette</span><span>De (s)</span><span>À (s)</span><span>Conso</span><span></span></div>
       ${rows().map((r) => `
@@ -454,10 +456,13 @@ function refHtml() {
       </div>`).join('')}
     </div>
     <div class="band-scale" id="bandScale"></div>
+    </details>
   </section>`;
 }
 
 function bindRef() {
+  const mb = $('#manualBox', el);
+  if (mb) mb.ontoggle = () => { manualOpen = mb.open; };
   $$('.band[data-kind]', el).forEach((row) => {
     const kind = row.dataset.kind;
     const i = row.dataset.i === '' ? null : +row.dataset.i;
