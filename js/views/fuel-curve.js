@@ -3,7 +3,7 @@
 // (Prime à l'attaque, Équilibré, Gestion) à partir des tours des pilotes présents.
 
 import { esc, $, $$, toast, confirmBox, promptBox } from '../ui.js';
-import { CURVE_PROFILES } from '../fuel.js';
+import { CURVE_PROFILES, curveConsumption } from '../fuel.js';
 import { optimizeCurve, driverStats, median, bestOfDrivers, RECENT_LAPS } from '../fuel-calc.js';
 
 /**
@@ -21,6 +21,13 @@ export function lapsTip(app, ids, countOf) {
 let st = {};          // saisies (gardées d'une fois sur l'autre)
 let result = null;    // dernier calcul
 let pickOpen = false; // liste des pilotes dépliée ?
+let calcOpen = false;   // menu « Calcul automatique de la formule » déplié ?
+let manualOpen = false; // menu « Formule / réglage manuel » déplié ?
+
+/** Explication affichée en entrant dans l'onglet Progressif. */
+export function curveIntro() {
+  return `<p class="tab-intro">Chaque tour consomme selon son temps exact, sans paliers : plus il est rapide, plus il consomme. Le calcul automatique règle la formule selon le profil choisi.</p>`;
+}
 let ctx;              // { app, el, getCfg, setCfg, save, refreshAll, laps }
 
 const PROFILE_HELP = {
@@ -85,9 +92,9 @@ export function curveHtml(c) {
         ${hint ? `<small class="muted">${hint}</small>` : ''}</label>`;
   return `
   <section class="panel">
-    <h2>📈 Progressif</h2>
-    <p class="muted" style="margin:-4px 0 12px;font-size:.88rem">Chaque tour consomme selon son temps, au centième près (les pilotes ne voient que des valeurs arrondies) :
-      <b>conso = nominale × (temps médian ÷ temps du tour)<sup>k</sup></b>. Plus de fourchettes : pas de temps « gratuit » au bord d'une fourchette.</p>
+    <details class="calc-box" id="cvBox" ${calcOpen ? 'open' : ''}>
+    <summary><h2 style="margin:0">🧮 Calcul automatique de la formule</h2></summary>
+    <p class="muted" style="margin:8px 0 12px;font-size:.88rem">Calcule la formule pour équilibrer au mieux ta course.</p>
 
     <div class="field" style="margin-bottom:12px">Profil
       <div class="seg cv-profile">
@@ -127,6 +134,33 @@ export function curveHtml(c) {
 
     <button class="btn primary" id="cvGo" style="margin-top:12px">🧮 Calculer</button>
     <div id="cvRes">${resultHtml()}</div>
+    </details>
+  </section>
+  ${manualHtml()}`;
+}
+
+/** Formule appliquée, réglable à la main (comme le tableau des paliers). */
+function manualHtml() {
+  const c = ctx.getCfg().curve;
+  const ex = [-0.3, 0, 0.3].map((d) => {
+    const t = Math.round((c.medianSec + d) * 100) / 100;
+    return `${comma(t, 2)} s → <b>${comma(curveConsumption(c, t).pct, 2)} %</b>`;
+  }).join(' · ');
+  const inp = (f, label, why, step, min, max) => `
+      <label class="field"><span class="calc-l">${label}<em>${why}</em></span>
+        <input type="number" data-cm="${f}" step="${step}" min="${min}" max="${max}" value="${c[f]}"></label>`;
+  return `
+  <section class="panel" style="margin-top:14px">
+    <details class="calc-box" id="cvManual" ${manualOpen ? 'open' : ''}>
+    <summary><h2 style="margin:0">✍️ Formule / réglage manuel</h2></summary>
+    <p class="muted" style="margin:8px 0 12px;font-size:.88rem">conso = nominale × (temps médian ÷ temps du tour)<sup>k</sup>, au centième près.</p>
+    <div class="calc-grid">
+      ${inp('nominalPct', 'Consommation nominale (%)', 'au temps médian', 0.05, 0.2, 20)}
+      ${inp('medianSec', 'Temps médian (s)', 'le rythme normal', 0.01, 1, 60)}
+      ${inp('k', 'Sensibilité k', 'plus k est grand, plus attaquer coûte', 0.1, 0, 15)}
+    </div>
+    <p class="muted" style="margin:10px 0 0;font-size:.85rem">Exemples : ${ex}</p>
+    </details>
   </section>`;
 }
 
@@ -188,6 +222,17 @@ export function bindCurve(c) {
   $('#cvTrack', el).onchange = async (e) => { st.trackId = e.target.value; st.auto = null; await saveSt(); redraw(); };
   const pick = $('#cvPick', el);
   pick.ontoggle = () => { pickOpen = pick.open; };
+  const box = $('#cvBox', el);
+  if (box) box.ontoggle = () => { calcOpen = box.open; };
+  const mb = $('#cvManual', el);
+  if (mb) mb.ontoggle = () => { manualOpen = mb.open; };
+  $$('[data-cm]', el).forEach((inp) => (inp.onchange = () => {
+    const n = parseFloat(inp.value);
+    if (!Number.isFinite(n)) return;
+    ctx.getCfg().curve[inp.dataset.cm] = n;
+    ctx.save();
+    redraw();
+  }));
   $$('[data-cvd]', el).forEach((cb) => (cb.onchange = async () => {
     const set = new Set(present());
     if (cb.checked) set.add(cb.dataset.cvd); else set.delete(cb.dataset.cvd);
