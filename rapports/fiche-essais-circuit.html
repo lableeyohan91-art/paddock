@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fiche d'essais circuit</title>
+<style>
+  :root { --bg: #ffffff; --text: #111; --muted: #555; --line: #ddd; --ok: #16a34a; --accent: #e10600; --box: #f6f6f6; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #0d1117; --text: #eee; --muted: #9aa4b2; --line: #2a3039; --box: #161b22; } }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 720px; margin: 0 auto; padding: 16px; }
+  h1 { font-size: 1.4rem; margin: 4px 0 2px; }
+  .sub { color: var(--muted); font-size: .9rem; margin-bottom: 14px; }
+  .prep { background: var(--box); border-left: 4px solid var(--accent); padding: 10px 12px; border-radius: 8px; margin-bottom: 16px; }
+  section { border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; margin-bottom: 12px; }
+  h2 { font-size: 1.05rem; margin: 0 0 8px; }
+  h2 small { color: var(--muted); font-weight: 500; }
+  label { display: flex; gap: 10px; align-items: flex-start; padding: 6px 0; border-top: 1px solid var(--line); cursor: pointer; }
+  label:first-of-type { border-top: 0; }
+  input[type=checkbox] { width: 22px; height: 22px; flex: none; margin-top: 1px; accent-color: var(--ok); }
+  .ok { color: var(--ok); font-weight: 700; }
+  .warn { background: var(--box); border-radius: 8px; padding: 8px 10px; font-size: .9rem; margin-top: 6px; }
+  textarea { width: 100%; min-height: 70px; margin-top: 6px; background: var(--box); color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 8px; font: inherit; }
+  footer { color: var(--muted); font-size: .85rem; margin: 16px 0 24px; }
+  @media print { textarea { min-height: 50px; } section { break-inside: avoid; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>🏁 Paddock — fiche d'essais circuit</h1>
+  <div class="sub">Corrections v1.33 à v1.35 (double appui, VSC et drapeau rouge depuis la vue pilote) + nouvelle connexion v1.28</div>
+
+  <div class="prep">
+    <b>Avant de commencer</b>
+    <label><input type="checkbox"><span>L'écran de course affiche <b>v1.35</b> (ou plus) à côté de PADDOCK</span></label>
+    <label><input type="checkbox"><span>2 ou 3 téléphones avec la <b>vue pilote rechargée</b> (rescanner le QR code)</span></label>
+    <label><input type="checkbox"><span>Circuit connecté, voitures posées sur la piste</span></label>
+  </div>
+
+  <section>
+    <h2>1. Double appui sur GO <small>(bug n° 1)</small></h2>
+    <label><input type="checkbox"><span>Préparer une course, appuyer <b>2 fois très vite</b> sur GO</span></label>
+    <label><input type="checkbox"><span>Recommencer avec <b>3 appuis</b></span></label>
+    <div class="warn"><span class="ok">Attendu :</span> le bouton se grise, les feux se déroulent normalement, la course part. <b>Pas de drapeau rouge.</b></div>
+    <textarea placeholder="Notes…"></textarea>
+  </section>
+
+  <section>
+    <h2>2. Double appui sur Drapeau rouge (écran principal)</h2>
+    <label><input type="checkbox"><span>En course, appuyer <b>2 fois vite</b> sur 🚩 → la course s'arrête et <b>reste arrêtée</b></span></label>
+    <label><input type="checkbox"><span>Attendre 3 s, appuyer 1 fois → les feux se rallument, la course repart</span></label>
+    <textarea placeholder="Notes…"></textarea>
+  </section>
+
+  <section>
+    <h2>3. VSC demandé par deux pilotes <small>(bug n° 2)</small></h2>
+    <label><input type="checkbox"><span>2 pilotes appuient sur <b>VSC</b> en même temps (« 1, 2, 3, appuyez ») → le VSC démarre et <b>reste actif</b></span></label>
+    <label><input type="checkbox"><span>Un pilote appuie sur <b>Fin du VSC</b> → décompte « Fin de VSC dans… 3, 2, 1, Go », voitures débridées <b>au Go</b></span></label>
+    <label><input type="checkbox"><span>Variante : un pilote appuie sur Fin du VSC <b>juste après</b> le déclenchement (moins de 2 s) → <b>ignoré</b></span></label>
+    <textarea placeholder="Notes…"></textarea>
+  </section>
+
+  <section>
+    <h2>4. Drapeau rouge demandé par deux pilotes <small>(bug n° 3)</small></h2>
+    <label><input type="checkbox"><span>2 pilotes confirment <b>Drapeau rouge</b> presque en même temps → la course s'arrête et <b>reste arrêtée</b></span></label>
+    <label><input type="checkbox"><span>Un pilote redemande Drapeau rouge <b>quelques secondes après</b> → <b>rien ne se passe</b></span></label>
+    <label><input type="checkbox"><span>Un pilote appuie sur <b>Reprise</b> → une confirmation s'affiche, puis les feux se rallument et la course repart</span></label>
+    <label><input type="checkbox"><span>Un 2e pilote appuie aussi sur Reprise juste après → <b>pas de second départ</b></span></label>
+    <textarea placeholder="Notes…"></textarea>
+  </section>
+
+  <section>
+    <h2>5. Faux départ + « Nouvelle relance » <small>(pas testé au simulateur)</small></h2>
+    <label><input type="checkbox"><span>Provoquer un faux départ (une voiture part pendant les feux)</span></label>
+    <label><input type="checkbox"><span>Appuyer <b>2 fois vite</b> sur 🟢 Nouvelle relance → <b>une seule relance</b>, feux normaux</span></label>
+    <textarea placeholder="Notes…"></textarea>
+  </section>
+
+  <section>
+    <h2>6. Nouvelle connexion (v1.28) — à surveiller pendant tous les essais</h2>
+    <label><input type="checkbox"><span>Fenêtre de connexion : <b>erreurs</b> à 0 ou presque</span></label>
+    <label><input type="checkbox"><span>Ligne <b>Liaison</b> : « écriture sans réponse »</span></label>
+    <label><input type="checkbox"><span>Tous les tours comptés, aussi pendant et juste après un VSC ou un drapeau rouge</span></label>
+    <textarea placeholder="Notes…"></textarea>
+  </section>
+
+  <footer>
+    <b>En cas de souci :</b> noter le numéro de l'essai, puis dans la fenêtre de connexion (bouton en haut à droite) toucher <b>📋 Copier le diagnostic</b> et l'envoyer.<br>
+    La connexion d'avant (v1.27) est sauvegardée : on peut y revenir à tout moment.
+  </footer>
+</main>
+</body>
+</html>
