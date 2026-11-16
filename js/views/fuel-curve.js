@@ -98,9 +98,10 @@ export function curveHtml(c) {
     <label class="row calc-track">📍 Circuit
       <select id="cvTrack">${app.data.tracks.map((t) => `<option value="${esc(t.id)}" ${t.id === trackOf() ? 'selected' : ''}>${esc(t.name)}</option>`).join('')}</select>
     </label>
+    ${lapsTip(app, present(), (id) => driverStats(ctx.laps, id, trackOf())?.recent || 0)}
     <details class="calc-pick" id="cvPick" ${pickOpen ? 'open' : ''}>
       <summary>
-        <span>Pilotes présents <b>(${present().filter((id) => app.driver(id)).length})</b></span>
+        <span>👥 Pilotes présents <b>(${present().filter((id) => app.driver(id)).length})</b></span>
         <span class="calc-pick-names">${present().map((id) => app.driver(id)?.name).filter(Boolean).map(esc).join(', ') || 'aucun'}</span>
       </summary>
       <div class="calc-drivers">
@@ -109,7 +110,6 @@ export function curveHtml(c) {
     </details>
     <button class="btn small calc-fill" id="cvAuto">⚡ Remplissage automatique</button>
     <p class="muted" style="font-size:.8rem;margin:4px 0 12px">Récupère sur les profils des pilotes cochés : temps médian sur leurs 30 derniers tours de course, moyenne des meilleurs tours et moyenne des 10 meilleurs tours en course${a ? ` — <b>rempli</b> (${a.n} pilote${a.n > 1 ? 's' : ''}${a.spread ? `, régularité ±${comma(a.spread)} %` : ''})` : ''}.</p>
-    ${lapsTip(app, present(), (id) => driverStats(ctx.laps, id, trackOf())?.recent || 0)}
 
     <div class="calc-grid">
       ${field('median', 'Temps médian (s)', 'le rythme nominal', a?.median ? `Auto : ${fmtS(a.median)} s` : '')}

@@ -309,9 +309,10 @@ function calcHtml() {
     <label class="row calc-track">📍 Circuit
       <select id="calcTrack">${app.data.tracks.map((t) => `<option value="${esc(t.id)}" ${t.id === calcTrack() ? 'selected' : ''}>${esc(t.name)}</option>`).join('')}</select>
     </label>
+    ${recentTip()}
     <details class="calc-pick" id="calcPick" ${driversOpen ? 'open' : ''}>
       <summary>
-        <span>Pilotes présents <b>(${a.present.filter((id) => app.driver(id)).length})</b></span>
+        <span>👥 Pilotes présents <b>(${a.present.filter((id) => app.driver(id)).length})</b></span>
         <span class="calc-pick-names">${a.present.map((id) => app.driver(id)?.name).filter(Boolean).map(esc).join(', ') || 'aucun'}</span>
       </summary>
       <div class="calc-drivers">
@@ -320,7 +321,6 @@ function calcHtml() {
     </details>
     <button class="btn small calc-fill" id="calcAuto">⚡ Remplissage automatique</button>
     <p class="muted" style="font-size:.8rem;margin:4px 0 12px">Choisis le circuit et coche les pilotes présents, puis touche ce bouton : le meilleur tour des pilotes cochés et leur temps médian (sur leurs 30 derniers tours de course) se remplissent tout seuls.</p>
-    ${recentTip()}
     <div class="calc-grid">
       <label class="field"><span class="calc-l">Meilleur tour (s)<em>des pilotes cochés · cale les paliers rapides</em></span>
         <input type="number" step="0.01" min="1" max="60" data-ci="record" value="${fmtS(v.record)}" placeholder="${a.record ? 'auto : ' + fmtS(a.record) : 'à saisir'}">
