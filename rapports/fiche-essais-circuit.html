@@ -29,11 +29,11 @@
 <body>
 <main>
   <h1>🏁 Paddock — fiche d'essais circuit</h1>
-  <div class="sub">Corrections v1.33 à v1.35 (double appui, VSC et drapeau rouge depuis la vue pilote) + nouvelle connexion v1.28</div>
+  <div class="sub">Corrections v1.33 à v1.35 (double appui, VSC et drapeau rouge depuis la vue pilote) + nouvelle connexion v1.28 + essence en formule continue v1.36</div>
 
   <div class="prep">
     <b>Avant de commencer</b>
-    <label><input type="checkbox"><span>L'écran de course affiche <b>v1.35</b> (ou plus) à côté de PADDOCK</span></label>
+    <label><input type="checkbox"><span>L'écran de course affiche <b>v1.36</b> (ou plus) à côté de PADDOCK</span></label>
     <label><input type="checkbox"><span>2 ou 3 téléphones avec la <b>vue pilote rechargée</b> (rescanner le QR code)</span></label>
     <label><input type="checkbox"><span>Circuit connecté, voitures posées sur la piste</span></label>
   </div>
@@ -82,6 +82,22 @@
     <label><input type="checkbox"><span>Fenêtre de connexion : <b>erreurs</b> à 0 ou presque</span></label>
     <label><input type="checkbox"><span>Ligne <b>Liaison</b> : « écriture sans réponse »</span></label>
     <label><input type="checkbox"><span>Tous les tours comptés, aussi pendant et juste après un VSC ou un drapeau rouge</span></label>
+    <textarea placeholder="Notes…"></textarea>
+  </section>
+
+  <section>
+    <h2>7. Essence en formule continue <small>(v1.36)</small></h2>
+    <label><input type="checkbox"><span>Préparation de course, essence <b>Activée</b> : choisir <b>Formule</b> → le choix est en vert, <b>pas de barre réservoir</b>, la phrase indique le profil et le lien « Régler la formule »</span></label>
+    <label><input type="checkbox"><span>Avant le départ, régler le réservoir d'une voiture au Garage à 50 % → au <b>DÉPART</b> puis au <b>GO</b>, la jauge repart bien à <b>100 %</b></span></label>
+    <label><input type="checkbox"><span>En course : la jauge baisse <b>plus vite</b> sur les tours rapides et <b>moins vite</b> sur les tours lents ; l'écran affiche des % <b>sans décimale</b></span></label>
+    <label><input type="checkbox"><span>Un tour raté (sortie de piste) consomme quand même un peu (au moins la moitié de la nominale)</span></label>
+    <label><input type="checkbox"><span>Passage au stand : la voiture se remplit jusqu'à 100 % ; panne sèche toujours bridée</span></label>
+    <label><input type="checkbox"><span>Vue pilote : la jauge d'essence suit, en % arrondi</span></label>
+    <div class="warn"><span class="ok">Après une course d'environ 50 tours :</span></div>
+    <label><input type="checkbox"><span>Réglages → Essence → <b>Formule continue</b> : choisir le circuit, cocher les pilotes, <b>⚡ Remplissage automatique</b> → médian, meilleur tour et 10 meilleurs tours remplis tout seuls, <b>sans</b> l'avertissement jaune</span></label>
+    <label><input type="checkbox"><span>Saisir le <b>tour avec arrêt au stand</b>, le nombre de tours, les arrêts → <b>🧮 Calculer</b> pour chacun des 3 profils (Attaque, Équilibré, Gestion) : les écarts du tableau ont l'air logiques ?</span></label>
+    <label><input type="checkbox"><span>La <b>courbe</b> : la zone verte (plus rapide que le nominal) est en haut, le point vert au nominal</span></label>
+    <label><input type="checkbox"><span><b>Appliquer</b> puis <b>Sauvegarder ce setup</b> → le setup apparaît dans la liste et dans la préparation de course</span></label>
     <textarea placeholder="Notes…"></textarea>
   </section>
 
