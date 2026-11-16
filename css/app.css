@@ -783,11 +783,11 @@ h1 .vsc-ico { width: 40px; height: 40px; font-size: .7rem; }
 .calc-track { gap: 10px; margin-bottom: 10px; font-weight: 700; }
 .calc-track select { flex: 1; }
 .calc-fill { margin: -2px 0 0; }
-.calc-pick { margin-bottom: 10px; border: 1px solid rgba(56,189,248,.55); border-radius: 10px; background: rgba(56,189,248,.08); }
-.calc-pick:not([open]) summary:hover { background: rgba(56,189,248,.14); border-radius: 10px; }
+.calc-pick { margin-bottom: 10px; border: 1px solid rgba(167,139,250,.6); border-radius: 10px; background: rgba(167,139,250,.08); }
+.calc-pick:not([open]) summary:hover { background: rgba(167,139,250,.16); border-radius: 10px; }
 .calc-pick summary { cursor: pointer; padding: 10px 12px; display: grid; gap: 2px; list-style: none; }
 .calc-pick summary::-webkit-details-marker { display: none; }
-.calc-pick summary::after { content: "Choisir ▾"; position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: #0284c7; color: #fff; font-size: .8rem; font-weight: 600; padding: 4px 10px; border-radius: 999px; }
+.calc-pick summary::after { content: "Choisir ▾"; position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: #7c3aed; color: #fff; font-size: .8rem; font-weight: 600; padding: 4px 10px; border-radius: 999px; }
 .calc-pick summary { position: relative; padding-right: 100px; }
 .calc-pick[open] summary::after { content: "Fermer ▴"; }
 .calc-pick-names { font-size: .82rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
