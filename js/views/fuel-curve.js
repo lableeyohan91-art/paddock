@@ -33,6 +33,23 @@ export function bindRequired(scope, btnSel) {
   check();
 }
 
+/**
+ * Tableaux de résultats plus larges que l'écran : dégradé à droite et message « fais glisser »,
+ * qui disparaissent une fois arrivé au bout (ou si tout tient à l'écran).
+ */
+export function bindSwipe(scope) {
+  scope.querySelectorAll('.swipe-box').forEach((box) => {
+    const w = box.querySelector('.swipe');
+    const upd = () => {
+      const more = w.scrollWidth - w.clientWidth - w.scrollLeft > 4;
+      box.classList.toggle('more', more);
+      if (w.scrollLeft > 10 || w.scrollWidth <= w.clientWidth + 4) box.classList.add('seen');
+    };
+    w.addEventListener('scroll', upd, { passive: true });
+    upd();
+  });
+}
+
 let st = {};          // saisies (gardées d'une fois sur l'autre)
 let result = null;    // dernier calcul
 let pickOpen = false; // liste des pilotes dépliée ?
@@ -189,13 +206,13 @@ function resultHtml() {
     <div class="calc-res">
       <p style="margin:12px 0 8px"><b>${CURVE_PROFILES[c.profile].label}</b> pour <b>${v.laps} tours</b> : nominale <b>${comma(c.nominalPct, 2)} %</b> par tour à ${comma(c.medianSec, 2)} s,
         pente <b>k = ${comma(c.k, 2)}</b>, plein en <b>${r.cfg.refuelPerSec} % / s</b>, passage par les stands +${comma(r.pitLoss, 2)} s (+ le remplissage).</p>
-      <div class="table-wrap"><table class="calc-table">
+      <div class="swipe-box"><div class="swipe-hint">👉 Fais glisser le tableau : arrêts, temps de course et écart à droite</div><div class="table-wrap swipe"><table class="calc-table">
         <thead><tr><th>Rythme</th><th>Tour</th><th>Conso</th><th>Tours</th><th>Arrêts</th><th>Course</th><th>Écart</th></tr></thead>
         <tbody>${r.rows.map((x) => `<tr class="${x.name === 'Nominal' ? 'nom' : ''}">
           <td><b>${x.name}</b></td><td class="num">${comma(x.t, 2)} s</td><td class="num">${comma(x.pct, 1)} %</td><td class="num">${x.perTank}</td><td class="num">${x.stops}</td>
           <td class="num">${Math.floor(x.total / 60)} min ${comma(x.total % 60).padStart(4, '0')}</td>
           <td class="num ${x.gap < -0.05 ? 'good' : x.gap > 0.05 ? 'bad' : ''}">${x.name === 'Nominal' ? '—' : sec(x.gap)}</td></tr>`).join('')}</tbody>
-      </table></div>
+      </table></div></div>
       ${chartSvg(r)}
       <p class="cv-mix">🔎 Meilleure stratégie possible pour un pilote malin : <b>${sec(r.bestMix.gap)}</b> sur le nominal (${esc(r.bestMix.desc)}, ${r.bestMix.stops} arrêt${r.bestMix.stops > 1 ? 's' : ''}).</p>
       <div class="calc-actions">
@@ -236,6 +253,14 @@ export function bindCurve(c) {
   }));
   bindRequired(el.querySelector('#cvBox') || el, '#cvGo');
   $('#cvGo', el).onclick = () => {
+    // reprend ce qui est tapé dans les cases, même si la case n'a pas encore été validée
+    const cur = inputs();
+    $$('[data-cv]', el).forEach((inp) => {
+      const n = parseFloat(inp.value);
+      const k = inp.dataset.cv;
+      if (Number.isFinite(n) ? n !== +cur[k] : cur[k] != null) st[k] = Number.isFinite(n) ? n : null;
+    });
+    saveSt();
     $('#cvRes', el).innerHTML = '<p class="muted" style="margin-top:12px">Calcul en cours…</p>';
     setTimeout(() => {
       result = optimizeCurve(inputs());
@@ -248,6 +273,7 @@ export function bindCurve(c) {
 
 function bindResult() {
   const { el, app } = ctx;
+  bindSwipe(el);
   const ap = $('#cvApply', el);
   if (ap) ap.onclick = async () => {
     if (!(await confirmBox('Passer la consommation en formule continue avec ces réglages ?'))) return;

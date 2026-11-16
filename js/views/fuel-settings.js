@@ -6,7 +6,7 @@
 import { esc, $, $$, toast, confirmBox, promptBox } from '../ui.js';
 import { LIMITS, activeBands } from '../fuel.js';
 import { optimizeFuel, bestOfDrivers, raceMedianOf, median } from '../fuel-calc.js';
-import { curveHtml, bindCurve, loadCurveState, lapsTip, curveIntro, bindRequired } from './fuel-curve.js';
+import { curveHtml, bindCurve, loadCurveState, lapsTip, curveIntro, bindRequired, bindSwipe } from './fuel-curve.js';
 
 let app;
 let el;
@@ -356,14 +356,14 @@ function calcResultHtml() {
   return `
     <div class="calc-res">
       <p style="margin:12px 0 8px">Pour <b>${v.laps} tours</b> : plein en <b>${r.cfg.refuelPerSec} % / s</b>, chaque arrêt coûte <b>${r.pitLoss.toFixed(2)} s</b> de passage par les stands + le temps de remplissage. Temps de course de chaque rythme, s'il est tenu toute la course :</p>
-      <div class="table-wrap"><table class="calc-table">
+      <div class="swipe-box"><div class="swipe-hint">👉 Fais glisser le tableau : arrêts, temps de course et écart à droite</div><div class="table-wrap swipe"><table class="calc-table">
         <thead><tr><th>Rythme</th><th>Temps au tour</th><th>Conso</th><th>Tours</th><th>Arrêts</th><th>Course</th><th>Écart</th></tr></thead>
         <tbody>${r.rows.map((x) => `<tr class="${x.name === 'Nominale' ? 'nom' : ''}">
           <td><b>${x.name}</b></td><td class="num">${x.min.toFixed(2)} – ${x.name.startsWith('Lent') && x === r.rows[r.rows.length - 1] ? '…' : x.max.toFixed(2)}</td>
           <td class="num">${String(x.pct).replace('.', ',')} %</td><td class="num">${x.perTank}</td><td class="num">${x.stops}</td>
           <td class="num">${Math.floor(x.total / 60)} min ${(x.total % 60).toFixed(1).padStart(4, '0').replace('.', ',')}</td>
           <td class="num ${x.gap < -0.05 ? 'good' : x.gap > 0.05 ? 'bad' : ''}">${x.name === 'Nominale' ? '—' : (x.gap >= 0 ? '+' : '−') + sec(Math.abs(x.gap))}</td></tr>`).join('')}</tbody>
-      </table></div>
+      </table></div></div>
       <p class="muted" style="font-size:.8rem;margin:6px 0 10px">Pilote régulier, sans sortie de piste ni VSC : à vérifier sur la piste. Les fourchettes non gardées seront désactivées.</p>
       <div class="calc-actions">
         <button class="btn primary" id="calcApply">✅ Appliquer ces réglages</button>
@@ -406,6 +406,14 @@ function bindCalc() {
   };
   bindRequired(el.querySelector('#calcBox') || el, '#calcGo');
   $('#calcGo', el).onclick = () => {
+    // reprend ce qui est tapé dans les cases, même si la case n'a pas encore été validée
+    const cur = calcInputs();
+    $$('[data-ci]', el).forEach((inp) => {
+      const n = parseFloat(inp.value);
+      const k = inp.dataset.ci;
+      if (Number.isFinite(n) ? n !== +cur[k] : cur[k] != null) calc[k] = Number.isFinite(n) ? n : null;
+    });
+    saveCalc();
     $('#calcRes', el).innerHTML = '<p class="muted" style="margin-top:12px">Calcul en cours…</p>';
     setTimeout(() => { // laisse l'écran afficher « Calcul en cours » avant de calculer
       calcResult = optimizeFuel(calcInputs());
@@ -417,6 +425,7 @@ function bindCalc() {
 }
 
 function bindApply() {
+  bindSwipe(el);
   const b = $('#calcApply', el);
   if (!b) return;
   b.onclick = async () => {

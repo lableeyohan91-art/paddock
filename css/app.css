@@ -853,3 +853,10 @@ h1 .vsc-ico { width: 40px; height: 40px; font-size: .7rem; }
 /* cases obligatoires des calculs automatiques */
 input.need { border: 2px solid var(--red, #e10600) !important; box-shadow: 0 0 0 3px rgba(225,6,0,.18); }
 .need-hint { color: #f87171; font-size: .85rem; font-weight: 600; }
+/* tableaux à faire glisser */
+.swipe-box { position: relative; }
+.swipe-box::after { content: ""; position: absolute; top: 28px; right: 0; bottom: 0; width: 46px; pointer-events: none; background: linear-gradient(to right, transparent, var(--panel, #161b22)); opacity: 0; transition: opacity .2s; }
+.swipe-box.more::after { opacity: 1; }
+.swipe-hint { display: none; margin: 8px 0 4px; font-size: .82rem; font-weight: 600; color: #fbbf24; animation: swipeNudge 1.4s ease-in-out infinite; }
+.swipe-box.more:not(.seen) .swipe-hint { display: block; }
+@keyframes swipeNudge { 50% { transform: translateX(6px); } }
