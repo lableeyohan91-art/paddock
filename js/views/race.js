@@ -221,11 +221,21 @@ function renderControls() {
   }
   el.innerHTML = html;
   const on = (id, fn) => { const b = $('#' + id, el); if (b) b.onclick = fn; };
-  on('bStart', () => app.startSession());
+  // GO, relance, drapeau rouge : bouton bloqué 2 s après un appui (un 2e appui enverrait START
+  // à la Control Unit, qui arrêterait la course)
+  const once = (id, fn) => on(id, (e) => {
+    const b = e.currentTarget;
+    if (b.disabled || performance.now() < (app._btnLock?.[id] || 0)) return;
+    app._btnLock = { ...(app._btnLock || {}), [id]: performance.now() + 2000 };
+    b.disabled = true;
+    setTimeout(() => { b.disabled = false; }, 2000);
+    return fn(e);
+  });
+  once('bStart', () => app.startSession());
   on('bConn', () => app.openConnectDialog());
   on('bVsc', () => { app.toggleVsc(); renderControls(); });
-  on('bRed', async () => { await app.toggleRed(); renderControls(); });
-  on('bRelaunch', async () => { await app.relaunchLights(); renderControls(); });
+  once('bRed', async () => { await app.toggleRed(); renderControls(); });
+  once('bRelaunch', async () => { await app.relaunchLights(); renderControls(); });
   on('bStop', async () => { if (await confirmBox('Terminer la session maintenant ?')) s.stop(); });
   on('bAgain', () => app.prepareSession(app.lastPrepare || {}));
   on('bResults', () => showResults(app));

@@ -1034,6 +1034,7 @@ export const app = {
   async relaunchLights() {
     const s = this.session;
     if (!s || !cu.connected) return;
+    if (performance.now() - (s._relaunchAt || 0) < 2000) return; // double appui : ignoré
     s.falseStart = false;
     s._sawLights = s._sawAllLights = s._sawRedLights = s._sawAllRedLights = false;
     s._startChangedAt = performance.now();
@@ -1048,6 +1049,8 @@ export const app = {
   async startSession() {
     const s = this.session;
     if (!s) return;
+    // déjà en feux ou en course : un 2e départ enverrait START à la CU, qui arrêterait la course
+    if (s.state !== 'ready') return;
     if (!cu.connected) {
       toast('Connecte d\'abord le circuit ou le simulateur');
       this.openConnectDialog();
@@ -1076,6 +1079,9 @@ export const app = {
   async toggleRed() {
     const s = this.session;
     if (!s || !['running', 'finishing'].includes(s.state)) return;
+    // double appui (ou deux demandes rapprochées) : le 2e est ignoré, sinon il relancerait aussitôt
+    if (performance.now() - (s._redToggledAt || 0) < 2000) return;
+    s._redToggledAt = performance.now();
     if (s.flag !== 'red') {
       this.cancelVscCountdown();
       if (s.flag === 'vsc') this.vscResendUntil = performance.now() + 5000;
