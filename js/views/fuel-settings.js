@@ -340,7 +340,6 @@ function calcHtml() {
       <label class="field"><span class="calc-l">Arrêts souhaités<em>au rythme nominal</em></span>
         <input type="number" step="1" min="0" max="20" data-ci="stops" data-req value="${v.stops ?? ''}" placeholder="à saisir"></label>
     </div>
-    ${calc.record != null || calc.median != null ? `<p class="warnbox" style="margin-top:12px">✍️ Valeurs saisies à la main : le calcul sera approximatif. <b>Conseil :</b> faites une <b>Course rapide de 30 tours</b> avec les pilotes, puis revenez ici et touchez <b>⚡ Remplissage automatique</b>.</p>` : ''}
     <div class="row" style="gap:8px;margin-top:12px">
       <button class="btn primary" id="calcGo">🧮 Calculer</button>
       <span class="need-hint" hidden>Remplis les cases en rouge pour calculer</span>

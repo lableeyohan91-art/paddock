@@ -121,7 +121,6 @@ export function curveHtml(c) {
   const app = ctx.app;
   const v = inputs();
   const a = st.auto;
-  const manual = !a || ['median', 'best', 'top10'].some((k) => st[k] !== undefined && st[k] !== null);
   const field = (key, label, why, hint) => `
       <label class="field"><span class="calc-l">${label}<em>${why}</em></span>
         <input type="number" step="0.01" min="1" max="60" data-cv="${key}" ${key === 'top10' ? '' : 'data-req'} value="${fmtS(v[key])}" placeholder="à saisir">
@@ -166,7 +165,6 @@ export function curveHtml(c) {
       <label class="field"><span class="calc-l">Arrêts souhaités<em>au rythme nominal</em></span>
         <input type="number" step="1" min="0" max="60" data-cv="stops" data-req value="${v.stops ?? ''}" placeholder="à saisir"></label>
     </div>
-    ${manual ? `<p class="warnbox" style="margin-top:12px">✍️ Valeurs saisies à la main : le calcul sera approximatif. <b>Conseil :</b> faites une <b>Course rapide de 30 tours</b> avec les pilotes, puis revenez ici et touchez <b>⚡ Remplissage automatique</b>.</p>` : ''}
 
     <div class="row" style="gap:10px;margin-top:12px;align-items:center">
       <button class="btn primary" id="cvGo">🧮 Calculer</button>
