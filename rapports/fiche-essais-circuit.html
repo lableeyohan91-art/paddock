@@ -119,6 +119,35 @@
     <b>En cas de souci :</b> noter le numéro de l'essai, puis dans la fenêtre de connexion (bouton en haut à droite) toucher <b>📋 Copier le diagnostic</b> et l'envoyer.<br>
     La connexion d'avant (v1.27) est sauvegardée : on peut y revenir à tout moment.
   </footer>
+  <p style="text-align:center;margin:0 0 24px"><button id="resetDone" style="font:inherit;padding:8px 14px;border-radius:10px;border:1px solid var(--line);background:var(--box);color:var(--text)">↺ Réafficher les essais cochés</button></p>
 </main>
+<script>
+// Une case cochée fait disparaître sa ligne (et l'essai entier quand toutes ses cases sont cochées).
+// Gardé sur ce téléphone : en rouvrant la fiche, on ne voit plus que ce qui reste à faire.
+(() => {
+  const KEY = 'paddock.fiche.faits';
+  let done = [];
+  try { done = JSON.parse(localStorage.getItem(KEY) || '[]'); } catch (e) { done = []; }
+  const save = () => { try { localStorage.setItem(KEY, JSON.stringify(done)); } catch (e) { /* stockage indisponible */ } };
+  const boxes = [...document.querySelectorAll('label input[type=checkbox]')];
+  const keyOf = (cb) => cb.closest('label').innerText.trim().slice(0, 80);
+  const apply = () => {
+    boxes.forEach((cb) => { const hide = done.includes(keyOf(cb)); cb.checked = hide; cb.closest('label').style.display = hide ? 'none' : ''; });
+    document.querySelectorAll('section, .prep').forEach((s) => {
+      const ls = [...s.querySelectorAll('label')];
+      if (ls.length) s.style.display = ls.every((l) => l.style.display === 'none') ? 'none' : '';
+    });
+  };
+  boxes.forEach((cb) => cb.addEventListener('change', () => {
+    const k = keyOf(cb);
+    if (cb.checked && !done.includes(k)) done.push(k);
+    if (!cb.checked) done = done.filter((x) => x !== k);
+    save();
+    setTimeout(apply, 250); // petit délai pour voir la case se cocher
+  }));
+  document.getElementById('resetDone').onclick = () => { done = []; save(); apply(); };
+  apply();
+})();
+</script>
 </body>
 </html>
