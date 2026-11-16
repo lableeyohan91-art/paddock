@@ -151,7 +151,7 @@ function draw() {
     <button data-sub="ref" class="${sub === 'ref' ? 'on' : ''}">Paliers</button>
     <button data-sub="curve" class="${sub === 'curve' ? 'on' : ''}">Progressif</button>
   </div>
-  ${sub === 'general' ? generalHtml() : sub === 'conso' ? consoHtml() : sub === 'curve' ? '<div class="dev-banner">🚧 En cours de développement</div>' + setupsHtml() + curveHtml(curveCtx()) : setupsHtml() + refHtml()}`;
+  ${sub === 'general' ? generalHtml() : sub === 'conso' ? consoHtml() : sub === 'curve' ? '<div class="dev-banner">🚧 En cours de développement</div>' + setupsHtml() + curveHtml(curveCtx()) : refIntro() + setupsHtml() + refHtml()}`;
   $$('[data-sub]', el).forEach((b) => (b.onclick = async () => { sub = b.dataset.sub; await loadSetups(); draw(); }));
   if (sub === 'conso' || sub === 'general') bindConso();
   else if (sub === 'curve') bindCurve(curveCtx());
@@ -304,8 +304,8 @@ function calcHtml() {
   return `
   <section class="panel">
     <details class="calc-box" id="calcBox" ${calcOpen ? 'open' : ''}>
-    <summary><h2 style="margin:0">🧮 Calcul automatique des valeurs</h2></summary>
-    <p class="muted" style="margin:10px 0 12px;font-size:.88rem">Il propose les fourchettes, les consommations et la vitesse de remplissage les plus équilibrées pour ton circuit : au rythme nominal, le plein impose le nombre d'arrêts voulu ; attaquer coûte de l'essence, économiser ne paie pas. Il utilise le plus de fourchettes possible (jusqu'à 4 rapides et 4 lentes).</p>
+    <summary><h2 style="margin:0">🧮 Calcul automatique des fourchettes</h2></summary>
+    <div style="height:10px"></div>
     <label class="row calc-track">📍 Circuit
       <select id="calcTrack">${app.data.tracks.map((t) => `<option value="${esc(t.id)}" ${t.id === calcTrack() ? 'selected' : ''}>${esc(t.name)}</option>`).join('')}</select>
     </label>
@@ -438,6 +438,14 @@ function bindApply() {
     toast(`💾 Setup « ${name} » enregistré`);
     await refreshAll();
   };
+}
+
+/** Explication affichée en entrant dans l'onglet Paliers. */
+function refIntro() {
+  return `<p class="tab-intro">Chaque tour tombe dans un <b>palier</b> selon son temps, et chaque palier a sa consommation : plus on roule vite, plus on consomme.
+    Le calcul automatique propose les fourchettes, les consommations et la vitesse de remplissage les plus équilibrées pour ton circuit :
+    au rythme nominal, le plein impose le nombre d'arrêts voulu ; attaquer coûte de l'essence, économiser ne paie pas.
+    Il utilise le plus de fourchettes possible (jusqu'à 4 rapides et 4 lentes).</p>`;
 }
 
 function refHtml() {
