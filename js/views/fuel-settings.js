@@ -10,7 +10,7 @@ import { curveHtml, bindCurve, loadCurveState } from './fuel-curve.js';
 
 let app;
 let el;
-let sub = 'conso';
+let sub = 'general';
 let cfg;           // copie de travail
 let saveTimer = null;
 let lapsCache = [];  // tours enregistrés (record, temps médians)
@@ -142,16 +142,17 @@ function curveCtx() {
 function draw() {
   el.innerHTML = `
   <div class="subtabs small">
+    <button data-sub="general" class="${sub === 'general' ? 'on' : ''}">Général</button>
     <button data-sub="conso" class="${sub === 'conso' ? 'on' : ''}">Fixe</button>
     <button data-sub="ref" class="${sub === 'ref' ? 'on' : ''}">Temps de référence</button>
     <button data-sub="curve" class="${sub === 'curve' ? 'on' : ''}">Formule continue</button>
   </div>
-  ${sub === 'conso' ? consoHtml() : sub === 'curve' ? '<div class="dev-banner">🚧 En cours de développement</div>' + setupsHtml() + curveHtml(curveCtx()) : setupsHtml() + refHtml()}`;
+  ${sub === 'general' ? generalHtml() : sub === 'conso' ? consoHtml() : sub === 'curve' ? '<div class="dev-banner">🚧 En cours de développement</div>' + setupsHtml() + curveHtml(curveCtx()) : setupsHtml() + refHtml()}`;
   $$('[data-sub]', el).forEach((b) => (b.onclick = () => { sub = b.dataset.sub; draw(); }));
-  if (sub === 'conso') bindConso();
+  if (sub === 'conso' || sub === 'general') bindConso();
   else if (sub === 'curve') bindCurve(curveCtx());
   else { bindRef(); bindCalc(); }
-  if (sub !== 'conso') bindSetups(); // setups d'essence : pas dans « Consommation »
+  if (sub !== 'conso' && sub !== 'general') bindSetups(); // setups d'essence : pas dans « Consommation »
   updateLive();
 }
 
@@ -168,28 +169,15 @@ function updateSetupState() {
 
 // ---------- Sous-onglet Consommation ----------
 
-function consoHtml() {
+/** Onglet Général : réglages valables pour tous les modes de consommation. */
+function generalHtml() {
   return `
   <div class="grid grid-2">
     <section class="panel">
-      <h2>Consommation fixe</h2>
-      <div class="fuel-nominal">
-        <input type="range" id="fNomR" step="0.5" min="${LIMITS.pMin}" max="${LIMITS.pMax}" value="${cfg.nominalPct}">
-        <div class="fuel-nominal-v"><input type="number" id="fNom" step="0.5" min="${LIMITS.pMin}" max="${LIMITS.pMax}" value="${cfg.nominalPct}"> % / tour</div>
-      </div>
-      <p class="muted" id="fAutonomy" style="margin:8px 0 0"></p>
-      <p class="muted" style="font-size:.85rem;margin:6px 0 0">Utilisée quand la préparation de course est sur <b>Fixe</b> : chaque tour consomme cette valeur, quel que soit le temps. Le choix Fixe / Fourchettes / Formule se fait dans la préparation de course.</p>
-    </section>
-
-    <section class="panel">
-      <h2>Stand et alertes</h2>
-      <div class="row" style="gap:16px">
-        <label class="field">Ravitaillement au stand (% par seconde)
-          <input type="number" id="fRefuel" min="1" max="100" value="${cfg.refuelPerSec}" style="width:120px"></label>
-        <label class="field">Annonce « réserve » sous (%)
-          <input type="number" id="fLow" min="0" max="50" value="${cfg.lowWarnPct}" style="width:120px"></label>
-      </div>
-      <p class="muted" style="font-size:.85rem;margin-bottom:0">Une voiture dans la voie des stands se remplit jusqu'à son réservoir.</p>
+      <h2>Annonce « réserve »</h2>
+      <label class="field">Annonce vocale quand l'essence passe sous (%)
+        <input type="number" id="fLow" min="0" max="50" value="${cfg.lowWarnPct}" style="width:120px"></label>
+      <p class="muted" style="font-size:.85rem;margin:6px 0 0">Valable pour tous les modes : Fixe, Fourchettes et Formule continue.</p>
     </section>
 
     <section class="panel">
@@ -200,7 +188,30 @@ function consoHtml() {
         <input type="range" id="fEmptyFix" min="0" max="15" step="1" value="${cfg.emptySpeedFixed}">
         <span class="bar-v num" id="fEmptyFixV">${Math.round((cfg.emptySpeedFixed / 15) * 100)} %</span>
       </div>
-      <p class="muted" style="font-size:.85rem;margin-bottom:0">Toutes les voitures à sec roulent à cette vitesse.</p>
+      <p class="muted" style="font-size:.85rem;margin-bottom:0">Toutes les voitures à sec roulent à cette vitesse, quel que soit le mode.</p>
+    </section>
+  </div>`;
+}
+
+/** Onglet Fixe : consommation fixe par tour et ravitaillement, quand la course est en mode Fixe. */
+function consoHtml() {
+  return `
+  <div class="grid grid-2">
+    <section class="panel">
+      <h2>Consommation fixe</h2>
+      <div class="fuel-nominal">
+        <input type="range" id="fNomR" step="0.5" min="${LIMITS.pMin}" max="${LIMITS.pMax}" value="${cfg.nominalPct}">
+        <div class="fuel-nominal-v"><input type="number" id="fNom" step="0.5" min="${LIMITS.pMin}" max="${LIMITS.pMax}" value="${cfg.nominalPct}"> % / tour</div>
+      </div>
+      <p class="muted" id="fAutonomy" style="margin:8px 0 0"></p>
+      <p class="muted" style="font-size:.85rem;margin:6px 0 0">Utilisée quand la préparation de course est sur <b>Fixe</b> : chaque tour consomme cette valeur, quel que soit le temps.</p>
+    </section>
+
+    <section class="panel">
+      <h2>Ravitaillement</h2>
+      <label class="field">Ravitaillement au stand (% par seconde)
+        <input type="number" id="fRefuel" min="1" max="100" value="${cfg.refuelPerSec}" style="width:120px"></label>
+      <p class="muted" style="font-size:.85rem;margin:6px 0 0">Une voiture dans la voie des stands se remplit à cette vitesse jusqu'à son réservoir. En Fourchettes et en Formule, le calcul automatique la règle lui-même.</p>
     </section>
   </div>`;
 }
@@ -216,14 +227,16 @@ function bindConso() {
     $('#fNomR', el).oninput = (e) => setNom(e.target.value);
     $('#fNom', el).onchange = (e) => setNom(e.target.value);
   }
-  $('#fRefuel', el).onchange = (e) => { cfg.refuelPerSec = +e.target.value; save(true); };
-  $('#fLow', el).onchange = (e) => { cfg.lowWarnPct = +e.target.value; save(true); };
+  const rf = $('#fRefuel', el);
+  if (rf) rf.onchange = (e) => { cfg.refuelPerSec = +e.target.value; save(true); };
+  const lw = $('#fLow', el);
+  if (lw) lw.onchange = (e) => { cfg.lowWarnPct = +e.target.value; save(true); };
   const fixIn = $('#fEmptyFix', el);
   if (fixIn) fixIn.oninput = () => {
     cfg.emptySpeedFixed = +fixIn.value;
-    const p = Math.round((cfg.emptySpeedFixed / 15) * 100);
-    fixIn.parentElement.style.setProperty('--p', p + '%');
-    $('#fEmptyFixV', el).textContent = p + ' %';
+    const pc = Math.round((cfg.emptySpeedFixed / 15) * 100);
+    fixIn.parentElement.style.setProperty('--p', pc + '%');
+    $('#fEmptyFixV', el).textContent = pc + ' %';
     save();
   };
 }
