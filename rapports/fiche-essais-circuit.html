@@ -33,7 +33,7 @@
 
   <div class="prep">
     <b>Avant de commencer</b>
-    <label><input type="checkbox"><span>L'écran de course affiche <b>v1.41</b> (ou plus) à côté de PADDOCK</span></label>
+    <label><input type="checkbox"><span>L'écran de course affiche <b>v1.42</b> (ou plus) à côté de PADDOCK</span></label>
     <label><input type="checkbox"><span>2 ou 3 téléphones avec la <b>vue pilote rechargée</b> (rescanner le QR code)</span></label>
     <label><input type="checkbox"><span>Circuit connecté, voitures posées sur la piste</span></label>
   </div>
@@ -63,9 +63,10 @@
 
   <section>
     <h2>4. Drapeau rouge demandé par deux pilotes <small>(bug n° 3)</small></h2>
-    <label><input type="checkbox"><span>2 pilotes confirment <b>Drapeau rouge</b> presque en même temps → la course s'arrête et <b>reste arrêtée</b></span></label>
+    <label><input type="checkbox"><span>2 pilotes appuient sur <b>Drapeau rouge</b> (plus de confirmation) presque en même temps → la course s'arrête et <b>reste arrêtée</b></span></label>
     <label><input type="checkbox"><span>Un pilote redemande Drapeau rouge <b>quelques secondes après</b> → <b>rien ne se passe</b></span></label>
-    <label><input type="checkbox"><span>Un pilote appuie sur <b>Reprise</b> → une confirmation s'affiche, puis les feux se rallument et la course repart</span></label>
+    <label><input type="checkbox"><span>Un pilote appuie sur <b>Reprise</b> → <b>sans confirmation</b>, les feux se rallument et la course repart</span></label>
+    <label><input type="checkbox"><span>Le drapeau rouge s'affiche sur <b>toutes</b> les vues pilote (iPad compris) en quelques secondes au plus</span></label>
     <label><input type="checkbox"><span>Un 2e pilote appuie aussi sur Reprise juste après → <b>pas de second départ</b></span></label>
     <textarea placeholder="Notes…"></textarea>
   </section>
@@ -74,6 +75,7 @@
     <h2>5. Faux départ + « Nouvelle relance » <small>(pas testé au simulateur)</small></h2>
     <label><input type="checkbox"><span>Provoquer un faux départ (une voiture part pendant les feux)</span></label>
     <label><input type="checkbox"><span>Appuyer <b>2 fois vite</b> sur 🟢 Nouvelle relance → <b>une seule relance</b>, feux normaux</span></label>
+    <label><input type="checkbox"><span>Le bouton <b>🟢 Nouvelle relance</b> apparaît aussi sur <b>les vues pilote</b> et relance les feux</span></label>
     <textarea placeholder="Notes…"></textarea>
   </section>
 

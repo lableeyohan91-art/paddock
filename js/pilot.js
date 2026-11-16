@@ -4,7 +4,7 @@
 // déposées dans live/{code}/cmds ; le téléphone du circuit les applique.
 
 import { FIREBASE_CONFIG } from './firebase-config.js';
-import { esc, $, $$, toast, confirmBox } from './ui.js';
+import { esc, $, $$, toast } from './ui.js';
 import { fmtTime, fmtClock } from './race.js';
 
 const TYRES = {
@@ -44,15 +44,28 @@ async function start() {
     // si le même téléphone a les deux ouverts
     await fb.setPersistence(auth, fb.inMemoryPersistence);
     await fb.signInAnonymously(auth);
-    fb.onSnapshot(fb.doc(fs, 'live', code), (snap) => {
-      if (!snap.exists()) { data = null; status.textContent = 'Code ' + code; render(); return; }
-      try { data = JSON.parse(snap.data().json); } catch { data = null; }
-      lastUpdate = Date.now();
-      status.textContent = '● En direct';
-      status.classList.add('on');
-      render();
-    }, (e) => fail(e));
+    fb.onSnapshot(fb.doc(fs, 'live', code), onData, (e) => fail(e));
+    // retour sur la page (Safari met les pages en pause) : on relit tout de suite l'état
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh(); });
   } catch (e) { fail(e); }
+}
+
+function onData(snap) {
+  if (!snap.exists()) { data = null; status.textContent = 'Code ' + code; render(); return; }
+  try { data = JSON.parse(snap.data().json); } catch { data = null; }
+  lastUpdate = Date.now();
+  status.textContent = '● En direct';
+  status.classList.add('on');
+  render();
+}
+
+/** Relit l'état de la course (mise à jour manquée, page remise au premier plan). */
+let refreshing = false;
+async function refresh() {
+  if (!fs || refreshing) return;
+  refreshing = true;
+  try { onData(await fb.getDoc(fb.doc(fs, 'live', code))); } catch { /* réseau : on réessaiera */ }
+  refreshing = false;
 }
 
 function fail(e) {
@@ -147,6 +160,7 @@ function renderPilot() {
       ${c.recent?.length ? `<div class="pv-recent muted">Derniers tours : ${c.recent.slice().reverse().map((t) => `<span class="num">${fmtTime(t)}</span>`).join(' · ')}</div>` : ''}
     </section>
 
+    ${d.relaunch ? '<section class="panel pv-actions"><button class="btn go" id="pvRelaunch">🟢 Nouvelle relance</button><span class="pv-act-l">Feux bloqués ou faux départ</span></section>' : ''}
     <section class="panel pv-actions">
       <button class="btn icon-sq vsc-btn ${d.flag === 'vsc' ? 'go' : ''}" id="pvVsc" ${!live || d.flag === 'red' || d.vscCountdown ? 'disabled' : ''} title="Virtual Safety Car">${d.vscCountdown || 'VSC'}</button>
       <span class="pv-act-l">${d.flag === 'vsc' ? 'Fin du VSC' : 'VSC'}</span>
@@ -229,14 +243,12 @@ function bind(c, bindGarage = true) {
     const want = data.flag === 'vsc' ? 'off' : 'on';
     if (await send('vsc', { want })) toast(want === 'off' ? 'Fin du VSC demandée' : 'VSC demandé', 1500);
   };
+  const rl = $('#pvRelaunch', view);
+  if (rl) rl.onclick = async () => { rl.disabled = true; if (await send('relaunch')) toast('Nouvelle relance demandée', 1500); };
   const red = $('#pvRed', view);
   // la commande dit ce que le pilote veut (drapeau rouge / reprise), avec confirmation dans les deux cas
   if (red) red.onclick = async () => {
     const want = data.flag === 'red' ? 'off' : 'on';
-    const ask = want === 'on'
-      ? 'Drapeau rouge : toutes les voitures s\'arrêtent. Confirmer ?'
-      : 'Reprise : les feux vont se rallumer et la course repartir. Confirmer ?';
-    if (!(await confirmBox(ask))) return;
     if (await send('red', { want })) toast(want === 'off' ? 'Reprise demandée' : 'Drapeau rouge demandé', 1500);
   };
   $$('[data-tyre]', view).forEach((b) => (b.onclick = async () => {
@@ -258,9 +270,11 @@ setInterval(() => {
   if (!data || me === null) return;
   const el = $('#pvClock', view);
   if (el) el.textContent = clockText();
-  if (lastUpdate && Date.now() - lastUpdate > 60000 && ['running', 'finishing'].includes(data.state)) {
-    status.textContent = '⚠️ Plus de nouvelles du circuit';
+  // le circuit envoie un signal toutes les 5 s : sans nouvelles depuis 8 s, on relit l'état
+  if (lastUpdate && Date.now() - lastUpdate > 8000) {
+    status.textContent = '⚠️ Mise à jour…';
     status.classList.remove('on');
+    refresh();
   }
 }, 250);
 

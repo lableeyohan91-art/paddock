@@ -1048,6 +1048,12 @@ export const app = {
    * Relance les feux (séquence bloquée, faux départ) : nouvel appui sur START,
    * et 2e appui si la CU reste en attente.
    */
+  /** Le bouton « Nouvelle relance » doit-il apparaître (faux départ, feux bloqués) ? */
+  canRelaunch() {
+    const s = this.session;
+    return !!s && (s.state === 'armed' || !!s.redResuming) && raceView.lightsStuck(s);
+  },
+
   async relaunchLights() {
     const s = this.session;
     if (!s || !cu.connected) return;

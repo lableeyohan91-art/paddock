@@ -98,6 +98,7 @@ function snapshot() {
     flag: s.flag,
     vscCountdown: s.vscCountdown || null,
     redResuming: !!s.redResuming,
+    relaunch: app.canRelaunch?.() || false, // bouton « Nouvelle relance » (faux départ)
     startWall,
     endWall: s.endedAt && startWall !== null ? startWall + s.elapsedMs : null,
     leaderLaps: s.leaderLaps,
@@ -141,11 +142,15 @@ function onPublishError(e) {
   }
 }
 
+let lastWrite = 0;
 async function publish(force = false) {
   if (!api || !live.code || !app) return;
   const json = JSON.stringify(snapshot());
-  if (!force && json === lastJson) return; // rien de neuf : aucune écriture
+  // rien de neuf : pas d'écriture, sauf un signal toutes les 5 s (les vues pilote savent
+  // ainsi qu'elles sont à jour, et en rattrapent une manquée)
+  if (!force && json === lastJson && Date.now() - lastWrite < 5000) return;
   lastJson = json;
+  lastWrite = Date.now();
   await api.fb.setDoc(ref(), { owner: api.uid, json, updatedAt: Date.now() });
 }
 
@@ -186,6 +191,11 @@ function handle(cmd) {
     if (want === 'off' && s.flag !== 'red') return; // pas de drapeau rouge : rien à reprendre
     app.toggleRed();
     toast(s.flag === 'red' ? `🚩 Drapeau rouge${who}` : `Reprise demandée${who}`);
+  } else if (cmd.type === 'relaunch') {
+    // faux départ : relance demandée depuis une vue pilote
+    if (!app.canRelaunch()) return;
+    app.relaunchLights();
+    toast(`🟢 Nouvelle relance${who}`);
   } else if (cmd.type === 'tyre') {
     // gomme choisie par le pilote (pneus de départ avant le GO, sinon pour le prochain arrêt)
     app.setTyreNext(cmd.a, cmd.compound);
