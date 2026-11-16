@@ -177,13 +177,6 @@ function generalHtml() {
   return `
   <div class="grid grid-2">
     <section class="panel">
-      <h2>Annonce « réserve »</h2>
-      <label class="field">Annonce vocale quand l'essence passe sous (%)
-        <input type="number" id="fLow" min="0" max="50" value="${cfg.lowWarnPct}" style="width:120px"></label>
-      <p class="muted" style="font-size:.85rem;margin:6px 0 0">Valable pour tous les modes : Fixe, Fourchettes et Formule continue.</p>
-    </section>
-
-    <section class="panel">
       <h2>⛽ Panne sèche (0 %)</h2>
       <p class="muted" style="margin-top:-6px;font-size:.88rem">Vitesse de la voiture quand son réservoir est vide, jusqu'à ce qu'elle ravitaille au stand.</p>
       <div class="bar" style="--c:var(--yellow);--p:${Math.round((cfg.emptySpeedFixed / 15) * 100)}%;margin-top:14px">
@@ -192,6 +185,13 @@ function generalHtml() {
         <span class="bar-v num" id="fEmptyFixV">${Math.round((cfg.emptySpeedFixed / 15) * 100)} %</span>
       </div>
       <p class="muted" style="font-size:.85rem;margin-bottom:0">Toutes les voitures à sec roulent à cette vitesse, quel que soit le mode.</p>
+    </section>
+
+    <section class="panel">
+      <h2>Annonce « réserve »</h2>
+      <label class="field">Annonce vocale quand l'essence passe sous (%)
+        <input type="number" id="fLow" min="0" max="50" value="${cfg.lowWarnPct}" style="width:120px"></label>
+      <p class="muted" style="font-size:.85rem;margin:6px 0 0">Valable pour tous les modes : Fixe, Fourchettes et Formule continue.</p>
     </section>
   </div>`;
 }
