@@ -713,6 +713,7 @@ export const app = {
     const m = modal(`
       <h2>Connexion au circuit</h2>
       ${reason ? `<p class="warnbox" style="margin:-4px 0 12px">${esc(reason)}</p>` : ''}
+      ${/SamsungBrowser/i.test(navigator.userAgent) ? '<p class="warnbox" style="margin:-4px 0 12px">📱 Tu utilises <b>Samsung Internet</b> : le Bluetooth y fonctionne mal avec le circuit. Ouvre Paddock dans <b>Google Chrome</b> pour te connecter.</p>' : ''}
       <div class="choice">
         <button id="cBle" ${bt ? '' : 'disabled'}>
           <strong>🔵 Carrera AppConnect (Bluetooth)</strong>

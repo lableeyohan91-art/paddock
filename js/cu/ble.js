@@ -102,23 +102,28 @@ export class BleConnection {
         await sleep(600);
       }
     }
+    this.log('Bluetooth connecté, recherche du service AppConnect…');
     let service;
     try {
-      service = await server.getPrimaryService(SERVICE_UUID);
-    } catch {
+      service = await withTimeout(server.getPrimaryService(SERVICE_UUID), 8000, 'Service AppConnect introuvable (délai)');
+    } catch (e) {
       this.device.gatt.disconnect();
-      throw new Error(`« ${this.device.name || 'Cet appareil'} » n'est pas un Carrera AppConnect`);
+      throw new Error(`« ${this.device.name || 'Cet appareil'} » n'est pas un Carrera AppConnect (${e.message})`);
     }
-    this.out = await service.getCharacteristic(OUTPUT_UUID);
-    this.notify = await service.getCharacteristic(NOTIFY_UUID);
+    this.out = await withTimeout(service.getCharacteristic(OUTPUT_UUID), 5000, 'Canal d\'envoi introuvable');
+    this.notify = await withTimeout(service.getCharacteristic(NOTIFY_UUID), 5000, 'Canal de réponse introuvable');
     const p = this.out.properties;
+    const n = this.notify.properties;
     if (!this.writeMode) this.writeMode = p.writeWithoutResponse ? 'noresponse' : 'response';
+    this.log(`Canaux trouvés (envoi : ${p.writeWithoutResponse ? 'sans réponse' : ''}${p.write ? ' avec accusé' : ''} · réponse : ${n.notify ? 'notifications' : ''}${n.read ? ' lecture' : ''})`);
     try {
-      await this.notify.startNotifications();
+      // certains navigateurs (Samsung Internet…) ne répondent jamais à cette demande : délai max
+      await withTimeout(this.notify.startNotifications(), 4000, 'pas de réponse du navigateur');
       this.notify.removeEventListener('characteristicvaluechanged', this._onNotify);
       this.notify.addEventListener('characteristicvaluechanged', this._onNotify);
+      this.log('Notifications activées');
     } catch (e) {
-      // notifications refusées : on lira les réponses directement
+      // notifications refusées ou bloquées : on lira les réponses directement
       this.log(`Notifications indisponibles (${e.message}) : lecture directe des réponses`);
       this.readMode = true;
     }
@@ -223,7 +228,7 @@ export class BleConnection {
         this._writeFails = 0;
         if (this._pending === mine) {
           await sleep(15);
-          const v = await this.notify.readValue();
+          const v = await withTimeout(this.notify.readValue(), 1000, 'Lecture bloquée');
           this._buf = dec.decode(v);
           this._finish();
         }
