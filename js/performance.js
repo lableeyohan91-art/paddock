@@ -121,14 +121,15 @@ export const vscSpeed = (pct) => Math.max(0, Math.min(15, Math.round((15 * pct) 
  * Ex. 20 % → vitesse 3/15 pour tout le monde. Une voiture déjà plus lente n'est pas accélérée.
  * Panne sèche prioritaire : une voiture à sec garde la vitesse de panne sèche, sans VSC en plus.
  */
-export function vscModifier(getFlag, getPct, getBase, isOutOfFuel = () => false) {
+export function vscModifier(getFlag, getPct, getBase, isOutOfFuel = () => false, getTarget = null) {
   return {
     id: 'vsc',
     label: 'Virtual Safety Car',
     compute(address) {
       if (getFlag() !== 'vsc') return null;
       if (isOutOfFuel(address)) return null;
-      const target = vscSpeed(getPct());
+      // VSC adaptatif : cran propre à chaque voiture (étalonnage), sinon le même pour tous
+      const target = getTarget?.(address) ?? vscSpeed(getPct());
       const base = getBase(address) || 15;
       return { speed: Math.min(1, target / base), brake: 1, note: `VSC (vitesse ${target}/15)` };
     },

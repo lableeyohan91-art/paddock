@@ -5,6 +5,7 @@ import { audio, say } from '../audio.js';
 import { MODE } from '../cu/protocol.js';
 import { renderFuel, openFuelTab } from './fuel-settings.js';
 import { vscSpeed } from '../performance.js';
+import { reach, cranFor } from '../vsc-cal.js';
 import { autoCfg } from '../autovsc.js';
 import { COMPOUNDS, COMPOUND_INFO, DEFAULT_TYRES } from '../tyres.js';
 import { LIGHT_SCENES, COLOR_SLOTS, paletteColor, sceneCss, cssOf } from '../devices/lightsync.js';
@@ -211,14 +212,65 @@ function vscTabs() {
   return `<div class="subtabs small">
     <button class="${vscTab === 'button' ? 'on' : ''}" data-vsctab="button">Bouton VSC</button>
     <button class="${vscTab === 'auto' ? 'on' : ''}" data-vsctab="auto">VSC automatique</button>
+    <button class="${vscTab === 'adaptive' ? 'on' : ''}" data-vsctab="adaptive">VSC adaptatif</button>
   </div>`;
 }
 function bindVscTabs() {
   root.querySelectorAll('[data-vsctab]').forEach((b) => (b.onclick = () => { vscTab = b.dataset.vsctab; renderVsc(); bindTabs(); }));
 }
 
+/**
+ * Réglages → VSC → VSC adaptatif : sous VSC, chaque voiture roule au temps au tour cible,
+ * grâce à son étalonnage (Garage → voiture → VSC adaptatif) sur le circuit de la course.
+ */
+function renderAdaptiveVsc() {
+  const a = app.vscCfg.adaptive || { on: false, targetSec: 8 };
+  const trackId = app.setup?.trackId;
+  const slots = (app.setup?.slots || []).filter((s) => s.active && s.carId);
+  const s2 = (x) => (+x).toFixed(2).replace('.', ',');
+  const rows = slots.map((s) => {
+    const car = app.car(s.carId);
+    const r = car && reach(car, trackId);
+    const c = car && cranFor(car, trackId, a.targetSec);
+    return { s, car, r, c };
+  });
+  const bad = rows.filter((x) => x.c && !x.c.ok);
+  const missing = rows.filter((x) => !x.r);
+  const ranges = rows.filter((x) => x.r).map((x) => x.r);
+  const common = ranges.length ? { min: Math.max(...ranges.map((r) => r.min)), max: Math.min(...ranges.map((r) => r.max)) } : null;
+  root.innerHTML = sectionHead() + vscTabs() + `
+  <section class="panel">
+    <div class="row" style="justify-content:space-between">
+      <h2 style="margin:0">VSC adaptatif</h2>
+      <label class="switch"><input type="checkbox" id="vaOn" ${a.on ? 'checked' : ''}><span></span> ${a.on ? 'Activé' : 'Désactivé'}</label>
+    </div>
+    <p class="muted" style="font-size:.88rem;margin:8px 0 12px">À 20 %, toutes les voitures ne roulent pas à la même allure : chaque moteur est différent. Le VSC adaptatif donne à <b>chaque voiture son propre cran</b> pour qu'elle tourne au plus près du <b>temps au tour cible</b>, grâce à son étalonnage (<b>Garage → voiture → 🟨 VSC adaptatif</b>, tests faits sur ce circuit). Une voiture pas étalonnée reçoit le VSC normal.</p>
+    <label class="field" style="max-width:260px">Temps au tour cible sous VSC (s)
+      <input type="number" id="vaTarget" step="0.1" min="2" max="60" value="${a.targetSec}"></label>
+    <p class="muted" style="font-size:.85rem;margin:10px 0 6px">Voitures de la course préparée, sur <b>${esc(app.track(trackId)?.name || 'ce circuit')}</b> :</p>
+    <div class="va-rows">
+      ${rows.length ? rows.map(({ s, car, r, c }) => `<div class="va-row ${!r ? 'none' : c.ok ? 'ok' : 'ko'}">
+        <span><b>Manette ${s.address + 1}</b> · ${esc(car?.name || '—')}</span>
+        <span class="muted">${r ? `possible de ${s2(r.min)} à ${s2(r.max)} s` : 'pas étalonnée sur ce circuit'}</span>
+        <span>${!r ? `VSC normal (cran ${vscSpeed(app.vscCfg.speedPct)})` : c.ok ? `✅ cran ${c.cran} (≈ ${s2(c.sec)} s)` : `❌ ne peut pas rouler en ${s2(a.targetSec)} s`}</span>
+      </div>`).join('') : '<p class="muted">Aucune voiture dans la course préparée.</p>'}
+    </div>
+    ${bad.length ? `<p class="warnbox" style="margin-top:10px;border-color:var(--accent)">❌ Les voitures sélectionnées ne permettent pas de rouler en <b>${s2(a.targetSec)} s</b>.
+      ${common && common.min <= common.max ? `Choisis un temps entre <b>${s2(common.min)}</b> et <b>${s2(common.max)} s</b>.` : 'Elles n\'ont aucun temps en commun : refais les tests ou change de voitures.'}</p>` : ''}
+    ${missing.length && rows.length ? `<p class="muted" style="font-size:.8rem;margin-top:8px">⚪ ${missing.length} voiture${missing.length > 1 ? 's' : ''} sans étalonnage sur ce circuit : faites les tests dans le Garage.</p>` : ''}
+  </section>`;
+  $('#vaOn', root).onchange = async (e) => { await app.saveVscCfg({ adaptive: { ...a, on: e.target.checked } }); renderAdaptiveVsc(); bindTabs(); };
+  $('#vaTarget', root).onchange = async (e) => {
+    const v = Math.max(2, Math.min(60, parseFloat(e.target.value) || a.targetSec));
+    await app.saveVscCfg({ adaptive: { ...a, targetSec: Math.round(v * 100) / 100 } });
+    renderAdaptiveVsc(); bindTabs();
+  };
+  bindVscTabs();
+}
+
 function renderVsc() {
   if (vscTab === 'auto') { renderAutoVsc(); return; }
+  if (vscTab === 'adaptive') { renderAdaptiveVsc(); return; }
   const pct = app.vscCfg.speedPct;
   root.innerHTML = sectionHead() + vscTabs() + `
   <section class="panel">

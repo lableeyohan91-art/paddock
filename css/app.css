@@ -795,6 +795,23 @@ h1 .vsc-ico { width: 40px; height: 40px; font-size: .7rem; }
 .calc-l { display: flex; align-items: baseline; gap: 8px; white-space: nowrap; min-width: 0; }
 .calc-l em { font-style: normal; font-size: .78rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; margin-left: auto; }
 .table-wrap { overflow-x: auto; }
+/* Garage : VSC adaptatif (étalonnage par voiture) */
+.car-card { border: 1px solid var(--line); border-radius: 10px; padding: 6px 8px; margin-bottom: 8px; }
+.car-card .item { border: 0; padding: 0; }
+.cal summary { cursor: pointer; font-weight: 700; padding: 6px 2px; }
+.va-rows { display: grid; gap: 6px; }
+.va-row { display: grid; grid-template-columns: 1.2fr 1fr 1fr; gap: 8px; align-items: center; background: var(--panel-2); border-radius: 8px; padding: 8px 10px; border-left: 4px solid var(--muted); font-size: .9rem; }
+.va-row.ok { border-left-color: var(--green); }
+.va-row.ko { border-left-color: var(--accent); }
+@media (max-width: 560px) { .va-row { grid-template-columns: 1fr; } }
+.cal-rows { display: grid; gap: 6px; }
+.cal-row { display: grid; grid-template-columns: 90px 1fr auto auto; gap: 8px; align-items: center; background: var(--panel-2); border-radius: 8px; padding: 6px 8px; }
+.cal-row .bad { color: var(--accent); font-weight: 700; }
+.cal-deduced, .cal-cond { font-size: .8rem; margin: 6px 0 0; }
+.cal-live { display: flex; align-items: baseline; gap: 12px; margin: 10px 0; }
+.cal-count { font-size: 2rem; font-weight: 900; }
+.cal-laps { display: flex; flex-wrap: wrap; gap: 6px 10px; font-size: .9rem; }
+@media (max-width: 520px) { .cal-row { grid-template-columns: 1fr 1fr; } }
 .calc-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; max-width: 520px; }
 .calc-actions .btn { white-space: normal; line-height: 1.2; font-size: .9rem; padding-left: 8px; padding-right: 8px; }
 .dev-banner { background: var(--accent); color: #fff; font-weight: 900; font-size: 1.15rem; text-align: center; text-transform: uppercase; letter-spacing: .04em; padding: 14px 12px; border-radius: 12px; margin-bottom: 14px; }

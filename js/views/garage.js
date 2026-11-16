@@ -3,6 +3,7 @@
 // Ferrari, il retrouve son réglage Ferrari, quelle que soit la manette.
 // En dessous : gestion des voitures et circuits (les pilotes ont leur onglet).
 
+import { calSectionHtml, bindCalSections } from './vsc-test.js';
 import { esc, $, $$, confirmBox, toast } from '../ui.js';
 const PLACE_CARS_MSG = "Les réglages doivent s'effectuer avec les voitures posées sur la piste.";
 
@@ -82,9 +83,12 @@ function render() {
       <h2>Voitures</h2>
       <div class="list">
         ${cars.map((c) => `
+        <div class="car-card">
         <div class="item" data-store="cars" data-id="${esc(c.id)}">
           <input type="text" data-k="name" value="${esc(c.name)}" maxlength="40" placeholder="Nom (ex. Ferrari 499P)">
           <button class="btn small ghost" data-del title="Supprimer">🗑</button>
+        </div>
+        ${calSectionHtml(app, c)}
         </div>`).join('')}
       </div>
       <button class="btn" style="margin-top:10px" data-add="cars">+ Ajouter une voiture</button>
@@ -106,6 +110,7 @@ function render() {
   </div>`;
   bindTunes();
   bindLists();
+  bindCalSections(app, root, () => { if (root && app.view === 'garage') render(); });
 }
 
 const timers = new Map();

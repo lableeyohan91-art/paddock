@@ -2,6 +2,7 @@
 
 import { ControlUnit } from './cu/controlunit.js';
 import { APP_VERSION } from './version.js';
+import { cranFor } from './vsc-cal.js';
 
 // feuille de style rechargée à chaque nouvelle version (sinon un téléphone peut garder l'ancienne)
 {
@@ -60,7 +61,7 @@ const VIEWS = { race: raceView, garage: garageView, drivers: driversView, driver
 
 const cu = new ControlUnit();
 const DEFAULT_TUNE = { speed: 8, brake: 6 }; // réglage d'un couple pilote + voiture jamais joué : ~54 % accélération, 40 % freinage
-const DEFAULT_VSC = { speedPct: 20 }; // vitesse fixe imposée à toutes les voitures sous VSC, en % de la vitesse max
+const DEFAULT_VSC = { speedPct: 20, adaptive: { on: false, targetSec: 8 } }; // vitesse fixe imposée à toutes les voitures sous VSC, en % de la vitesse max
 export const GHOST = 6; // adresse de la voiture autonome (fantôme) ; 7 = pace car
 const perf = new PerformanceEngine(cu);
 const weather = new Weather();
@@ -338,6 +339,21 @@ export const app = {
         s.emit('update');
       }
     }
+  },
+
+  /**
+   * VSC adaptatif : cran de cette voiture pour rouler au temps cible (étalonnage du garage,
+   * sur le circuit de la séance). null = pas d'adaptatif, ou voiture pas étalonnée ici :
+   * elle reçoit alors le VSC normal (même cran pour tous).
+   */
+  vscTargetFor(address) {
+    const a = this.vscCfg.adaptive;
+    const s = this.session;
+    if (!a?.on || !s) return null;
+    const c = s.comps.get(address);
+    const car = c?.car?.id && this.car(c.car.id);
+    const r = car && cranFor(car, s.trackId, a.targetSec);
+    return r ? r.cran : null;
   },
 
   async saveVscCfg(values) {
@@ -835,7 +851,7 @@ export const app = {
     perf.removeModifier('flag');
     if (!s.quick) perf.addModifier(weather.modifier()); // pas de météo en course rapide
     perf.removeModifier('vsc');
-    perf.addModifier(vscModifier(() => this.session?.flag, () => this.vscCfg.speedPct, (a) => perf.bases.get(a)?.speed, (a) => this.isOutOfFuel(a)));
+    perf.addModifier(vscModifier(() => this.session?.flag, () => this.vscCfg.speedPct, (a) => perf.bases.get(a)?.speed, (a) => this.isOutOfFuel(a), (a) => this.vscTargetFor(a)));
     perf.removeModifier('fuel');
     perf.addModifier(this.emptyTankModifier());
     perf.removeModifier('tyres');
