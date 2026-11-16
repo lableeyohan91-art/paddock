@@ -146,7 +146,7 @@ function draw() {
     <button data-sub="ref" class="${sub === 'ref' ? 'on' : ''}">Temps de référence</button>
     <button data-sub="curve" class="${sub === 'curve' ? 'on' : ''}">Formule continue</button>
   </div>
-  ${sub === 'conso' ? consoHtml() : sub === 'curve' ? setupsHtml() + curveHtml(curveCtx()) : setupsHtml() + refHtml()}`;
+  ${sub === 'conso' ? consoHtml() : sub === 'curve' ? '<div class="dev-banner">🚧 En cours de développement</div>' + setupsHtml() + curveHtml(curveCtx()) : setupsHtml() + refHtml()}`;
   $$('[data-sub]', el).forEach((b) => (b.onclick = () => { sub = b.dataset.sub; draw(); }));
   if (sub === 'conso') bindConso();
   else if (sub === 'curve') bindCurve(curveCtx());

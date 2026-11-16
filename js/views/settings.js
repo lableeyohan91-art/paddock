@@ -242,6 +242,7 @@ function renderAdaptiveVsc() {
   const common = ranges.length ? { min: Math.max(...ranges.map((r) => r.min)), max: Math.min(...ranges.map((r) => r.max)) } : null;
   const toGarage = (txt) => `<a href="#" class="q-link" data-go-garage>${txt}</a>`;
   root.innerHTML = sectionHead() + vscTabs() + `
+  <div class="dev-banner">🚧 En cours de développement</div>
   <section class="panel">
     <div class="row" style="justify-content:space-between">
       <h2 style="margin:0">VSC adaptatif</h2>
