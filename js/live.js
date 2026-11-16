@@ -170,6 +170,12 @@ function handle(cmd) {
   const who = cmd.by ? ` (${cmd.by})` : '';
   if (cmd.type === 'vsc') {
     if (s.vscCountdown) return;
+    // intention du pilote : « on » = VSC, « off » = fin du VSC (anciennes vues pilote : bascule)
+    const want = cmd.want || (s.flag === 'vsc' ? 'off' : 'on');
+    if (want === 'on' && s.flag === 'vsc') return;  // déjà en VSC : on le garde
+    if (want === 'off' && s.flag !== 'vsc') return; // pas de VSC à terminer
+    // fin demandée juste après le déclenchement : le pilote voyait encore l'ancien état
+    if (want === 'off' && performance.now() - (s.vscSince || 0) < 2000) return;
     app.toggleVsc();
     toast(s.flag === 'vsc' ? `🟨 VSC déclenché${who}` : `Fin du VSC demandée${who}`);
   } else if (cmd.type === 'red') {
@@ -207,4 +213,10 @@ export async function drawQr(el, text) {
   qr.addData(text);
   qr.make();
   el.innerHTML = qr.createSvgTag({ cellSize: 5, margin: 2, scalable: true });
+}
+
+/** Traite une commande de pilote comme si elle venait de Firestore (essais au simulateur). */
+export function handleCommand(theApp, cmd) {
+  if (!app) app = theApp;
+  handle({ at: Date.now(), ...cmd });
 }

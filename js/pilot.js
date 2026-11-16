@@ -223,7 +223,12 @@ async function send(type, extra = {}) {
 function bind(c, bindGarage = true) {
   $('#pvChange', view).onclick = () => { me = null; try { localStorage.removeItem(PICK_KEY); } catch { /* ignore */ } render(); };
   const vsc = $('#pvVsc', view);
-  if (vsc) vsc.onclick = async () => { if (await send('vsc')) toast(data.flag === 'vsc' ? 'Fin du VSC demandée' : 'VSC demandé', 1500); };
+  // la commande dit ce que le pilote veut (d'après son écran), pas « change l'état » :
+  // deux pilotes qui appuient en même temps ne s'annulent plus
+  if (vsc) vsc.onclick = async () => {
+    const want = data.flag === 'vsc' ? 'off' : 'on';
+    if (await send('vsc', { want })) toast(want === 'off' ? 'Fin du VSC demandée' : 'VSC demandé', 1500);
+  };
   const red = $('#pvRed', view);
   if (red) red.onclick = async () => {
     if (data.flag !== 'red' && !(await confirmBox('Drapeau rouge : toutes les voitures s\'arrêtent. Confirmer ?'))) return;
