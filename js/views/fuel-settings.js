@@ -356,7 +356,7 @@ function calcResultHtml() {
     <div class="calc-res">
       <p style="margin:12px 0 8px">Pour <b>${v.laps} tours</b> : plein en <b>${r.cfg.refuelPerSec} % / s</b>, chaque arrêt coûte <b>${r.pitLoss.toFixed(2)} s</b> de passage par les stands + le temps de remplissage. Temps de course de chaque rythme, s'il est tenu toute la course :</p>
       <div class="table-wrap"><table class="calc-table">
-        <thead><tr><th>Rythme</th><th>Temps au tour</th><th>Conso</th><th>Tours / plein</th><th>Arrêts</th><th>Course</th><th>Écart</th></tr></thead>
+        <thead><tr><th>Rythme</th><th>Temps au tour</th><th>Conso</th><th>Tours</th><th>Arrêts</th><th>Course</th><th>Écart</th></tr></thead>
         <tbody>${r.rows.map((x) => `<tr class="${x.name === 'Nominale' ? 'nom' : ''}">
           <td><b>${x.name}</b></td><td class="num">${x.min.toFixed(2)} – ${x.name.startsWith('Lent') && x === r.rows[r.rows.length - 1] ? '…' : x.max.toFixed(2)}</td>
           <td class="num">${String(x.pct).replace('.', ',')} %</td><td class="num">${x.perTank}</td><td class="num">${x.stops}</td>

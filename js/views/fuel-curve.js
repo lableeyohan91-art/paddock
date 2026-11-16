@@ -199,7 +199,7 @@ function resultHtml() {
       <p style="margin:12px 0 8px"><b>${CURVE_PROFILES[c.profile].label}</b> pour <b>${v.laps} tours</b> : nominale <b>${comma(c.nominalPct, 2)} %</b> par tour à ${comma(c.medianSec, 2)} s,
         pente <b>k = ${comma(c.k, 2)}</b>, plein en <b>${r.cfg.refuelPerSec} % / s</b>, passage par les stands +${comma(r.pitLoss, 2)} s (+ le remplissage).</p>
       <div class="table-wrap"><table class="calc-table">
-        <thead><tr><th>Rythme</th><th>Tour</th><th>Conso</th><th>Tours / plein</th><th>Arrêts</th><th>Course</th><th>Écart</th></tr></thead>
+        <thead><tr><th>Rythme</th><th>Tour</th><th>Conso</th><th>Tours</th><th>Arrêts</th><th>Course</th><th>Écart</th></tr></thead>
         <tbody>${r.rows.map((x) => `<tr class="${x.name === 'Nominal' ? 'nom' : ''}">
           <td><b>${x.name}</b></td><td class="num">${comma(x.t, 2)} s</td><td class="num">${comma(x.pct, 1)} %</td><td class="num">${x.perTank}</td><td class="num">${x.stops}</td>
           <td class="num">${Math.floor(x.total / 60)} min ${comma(x.total % 60).padStart(4, '0')}</td>
