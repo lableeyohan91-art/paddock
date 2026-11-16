@@ -251,7 +251,7 @@ export function editDriver(d, onSaved) {
     const box = $('#pMedianAuto', el);
     if (!box) return;
     box.innerHTML = r
-      ? `Calcul automatique : <b>${r.sec.toFixed(2)} s</b> (sur ${r.laps} tours de course). Laisse vide pour l'utiliser, ou saisis ton propre temps.`
+      ? `Calcul automatique : <b>${r.sec.toFixed(2)} s</b> (sur ses ${r.laps} derniers tours de course). Laisse vide pour l'utiliser, ou saisis ton propre temps.`
       : 'Pas encore de tours de course : saisis un temps, ou laisse vide.';
     if (r) $('#pMedian', el).placeholder = `auto : ${r.sec.toFixed(2)}`;
   });

@@ -29,13 +29,28 @@ export function trackRecord(laps, trackId) {
   return t.length ? r2(Math.min(...t) / 1000) : null;
 }
 
-/** Temps médian au tour d'un pilote en course (s), calculé sur ses tours roulés en course, drapeau vert. */
+/** Nombre de tours de course récents utilisés pour le temps médian d'un pilote. */
+export const RECENT_LAPS = 30;
+
+/** Tours de course d'un pilote (roulés, drapeau vert), du plus récent au plus ancien. */
+function raceLaps(laps, driverId, trackId) {
+  return onTrack(laps, trackId)
+    .filter((l) => l.driverId === driverId && !l.imported && l.sessionType === 'race' && (!l.flag || l.flag === 'green') && l.time > 0)
+    .sort((a, b) => (b.date || 0) - (a.date || 0) || (b.id > a.id ? 1 : -1));
+}
+
+/** Temps médian au tour d'un pilote en course (s), sur ses 30 derniers tours de course, drapeau vert. */
 export function raceMedianOf(laps, driverId, trackId) {
-  const t = onTrack(laps, trackId)
-    .filter((l) => l.driverId === driverId && !l.imported && l.sessionType === 'race' && (!l.flag || l.flag === 'green'))
-    .map((l) => l.time / 1000);
+  const t = raceLaps(laps, driverId, trackId).slice(0, RECENT_LAPS).map((l) => l.time / 1000);
   const m = median(t);
   return m === null ? null : { sec: r2(m), laps: t.length };
+}
+
+/** Meilleur tour (s) parmi les pilotes donnés sur ce circuit (tours roulés ou importés). */
+export function bestOfDrivers(laps, driverIds, trackId) {
+  const set = new Set(driverIds);
+  const t = onTrack(laps, trackId).filter((l) => set.has(l.driverId)).map((l) => l.time).filter((x) => x > 0);
+  return t.length ? r2(Math.min(...t) / 1000) : null;
 }
 
 /** Temps total d'une course de L tours à un rythme (temps au tour t, conso p %/tour). */
@@ -185,14 +200,17 @@ export function driverStats(laps, driverId, trackId) {
   if (!all.length) return null;
   const sorted = [...race].sort((a, b) => a - b);
   const top = sorted.slice(0, 10);
-  const q = (p) => sorted[Math.min(sorted.length - 1, Math.floor(p * sorted.length))];
-  const med = median(race);
+  // rythme actuel : temps médian et régularité sur les 30 derniers tours de course
+  const recent = driverId ? raceLaps(laps, driverId, trackId).slice(0, RECENT_LAPS).map((l) => l.time / 1000).sort((a, b) => a - b) : sorted;
+  const q = (p) => recent[Math.min(recent.length - 1, Math.floor(p * recent.length))];
+  const med = median(recent);
   return {
     median: med === null ? null : r2(med),
     best: r2(Math.min(...all)),
     top10: top.length ? r2(top.reduce((s, x) => s + x, 0) / top.length) : null,
-    spread: sorted.length >= 8 && med ? Math.round(((q(0.75) - q(0.25)) / med) * 1000) / 10 : null,
+    spread: recent.length >= 8 && med ? Math.round(((q(0.75) - q(0.25)) / med) * 1000) / 10 : null,
     laps: race.length,
+    recent: recent.length,
   };
 }
 

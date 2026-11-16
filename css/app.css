@@ -500,6 +500,8 @@ nav.tabs button.live i { animation: blink 1.2s infinite; }
 .fuel-nominal-v input { width: 80px; font-size: 1.3rem; font-weight: 800; text-align: center; }
 .panel.inner { background: var(--panel-2); padding: 12px; }
 .warnbox { background: rgba(250,204,21,.12); border: 1px solid rgba(250,204,21,.4); border-radius: 8px; padding: 8px 12px; font-size: .88rem; }
+.tipbox { background: rgba(56,189,248,.12); border: 1px solid rgba(56,189,248,.45); color: #bae6fd; border-radius: 8px; padding: 8px 12px; font-size: .86rem; margin: 0 0 12px; }
+.tipbox small { color: #7dd3fc; opacity: .85; }
 .bands { display: grid; gap: 6px; }
 .band { display: grid; grid-template-columns: 28px 90px 92px 92px 92px 1fr; gap: 8px; align-items: center; padding: 6px 8px; border-radius: 8px; background: var(--panel-2); border-left: 4px solid var(--line); }
 .band.head { background: none; font-size: .72rem; text-transform: uppercase; color: var(--muted); letter-spacing: .05em; padding-top: 0; padding-bottom: 0; }

@@ -5,8 +5,8 @@
 
 import { esc, $, $$, toast, confirmBox, promptBox } from '../ui.js';
 import { LIMITS, activeBands } from '../fuel.js';
-import { optimizeFuel, trackRecord, raceMedianOf, median } from '../fuel-calc.js';
-import { curveHtml, bindCurve, loadCurveState } from './fuel-curve.js';
+import { optimizeFuel, bestOfDrivers, raceMedianOf, median } from '../fuel-calc.js';
+import { curveHtml, bindCurve, loadCurveState, lapsTip } from './fuel-curve.js';
 
 let app;
 let el;
@@ -258,11 +258,17 @@ function rows() {
 
 // ---------- Calcul automatique des valeurs (calculateur d'équilibrage) ----------
 
-/** Temps médian d'un pilote : sa case du profil, sinon calculé sur ses tours de course. */
+/** Temps médian d'un pilote : ses 30 derniers tours de course sur ce circuit, sinon la case de son profil. */
 function driverMedian(d) {
-  if (d.raceMedian > 0) return { sec: d.raceMedian, src: 'profil' };
   const r = raceMedianOf(lapsCache, d.id, calcTrack());
-  return r ? { sec: r.sec, src: `${r.laps} tours` } : null;
+  if (r) return { sec: r.sec, laps: r.laps, src: `${r.laps} tours` };
+  if (d.raceMedian > 0) return { sec: d.raceMedian, laps: 0, src: 'profil' };
+  return null;
+}
+
+/** Conseil affiché si un pilote coché a moins de 30 tours de course récents sur ce circuit. */
+function recentTip() {
+  return lapsTip(app, calcAuto().present, (id) => raceMedianOf(lapsCache, id, calcTrack())?.laps || 0);
 }
 
 /** Valeurs automatiques : record du circuit, temps médian des pilotes cochés. */
@@ -275,7 +281,7 @@ function calcAuto() {
   const present = calc.drivers || (app.setup?.slots || []).filter((s) => s.active && s.driverId).map((s) => s.driverId);
   const meds = app.data.drivers.filter((d) => present.includes(d.id)).map((d) => driverMedian(d)?.sec);
   const m = median(meds);
-  return { present, record: trackRecord(lapsCache, calcTrack()), median: m === null ? null : Math.round(m * 100) / 100 };
+  return { present, record: bestOfDrivers(lapsCache, present, calcTrack()), median: m === null ? null : Math.round(m * 100) / 100 };
 }
 
 function calcInputs() {
@@ -313,14 +319,15 @@ function calcHtml() {
       </div>
     </details>
     <button class="btn small calc-fill" id="calcAuto">⚡ Remplissage automatique</button>
-    <p class="muted" style="font-size:.8rem;margin:4px 0 12px">Choisis le circuit et coche les pilotes présents, puis touche ce bouton : le record et le temps médian se remplissent tout seuls avec leurs tours enregistrés.</p>
+    <p class="muted" style="font-size:.8rem;margin:4px 0 12px">Choisis le circuit et coche les pilotes présents, puis touche ce bouton : le meilleur tour des pilotes cochés et leur temps médian (sur leurs 30 derniers tours de course) se remplissent tout seuls.</p>
+    ${recentTip()}
     <div class="calc-grid">
-      <label class="field"><span class="calc-l">Record du circuit (s)<em>cale les fourchettes rapides</em></span>
+      <label class="field"><span class="calc-l">Meilleur tour (s)<em>des pilotes cochés · cale les paliers rapides</em></span>
         <input type="number" step="0.01" min="1" max="60" data-ci="record" value="${fmtS(v.record)}" placeholder="${a.record ? 'auto : ' + fmtS(a.record) : 'à saisir'}">
         <small class="muted">${a.record ? 'Auto : ' + fmtS(a.record) + ' s' : 'Aucun tour enregistré'}</small></label>
       <label class="field"><span class="calc-l">Temps médian (s)<em>adapte aux pilotes présents</em></span>
         <input type="number" step="0.01" min="1" max="60" data-ci="median" value="${fmtS(v.median)}" placeholder="${a.median ? 'auto : ' + fmtS(a.median) : 'à saisir'}">
-        <small class="muted">${a.median ? 'Auto : ' + fmtS(a.median) + ' s (pilotes cochés)' : 'Coche des pilotes ou saisis-le'}</small></label>
+        <small class="muted">${a.median ? 'Auto : ' + fmtS(a.median) + ' s (30 derniers tours)' : 'Coche des pilotes ou saisis-le'}</small></label>
       <label class="field"><span class="calc-l">Tour avec arrêt au stand (s)<em>calcule le coût d’un arrêt</em></span>
         <input type="number" step="0.01" min="1" max="60" data-ci="pitLap" value="${fmtS(v.pitLap)}" placeholder="à saisir">
         <small class="muted">Chronomètre un tour où tu passes par les stands, t'arrêtes et repars aussitôt, <b>sans attendre le plein</b> : le temps de remplissage est calculé à part (essence à remettre ÷ vitesse de remplissage).${pitLoss !== null ? ` Ici, passer par les stands coûte <b>${pitLoss.toFixed(2)} s</b> de plus qu'un tour normal.` : ''}</small></label>

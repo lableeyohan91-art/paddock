@@ -4,7 +4,19 @@
 
 import { esc, $, $$, toast, confirmBox, promptBox } from '../ui.js';
 import { CURVE_PROFILES } from '../fuel.js';
-import { optimizeCurve, driverStats, median } from '../fuel-calc.js';
+import { optimizeCurve, driverStats, median, RECENT_LAPS } from '../fuel-calc.js';
+
+/**
+ * Conseil en couleur : si un pilote coché a moins de 30 tours de course récents sur ce circuit,
+ * proposer une Course rapide de 30 tours avant le calcul automatique.
+ */
+export function lapsTip(app, ids, countOf) {
+  const short = [...new Set(ids)].map((id) => app.driver(id)).filter(Boolean)
+    .map((d) => ({ d, n: countOf(d.id) })).filter((x) => x.n < RECENT_LAPS);
+  if (!short.length) return '';
+  const list = short.map((x) => `${esc(x.d.name)} : ${x.n}/${RECENT_LAPS}`).join(' · ');
+  return `<p class="tipbox">💡 Pour optimiser les réglages, faites d'abord une <b>Course rapide de ${RECENT_LAPS} tours</b> avec les pilotes présents, puis lancez le calcul automatique.<br><small>Tours de course récents sur ce circuit — ${list}</small></p>`;
+}
 
 let st = {};          // saisies (gardées d'une fois sur l'autre)
 let result = null;    // dernier calcul
@@ -39,7 +51,7 @@ function autoValues() {
   const app = ctx.app;
   const stats = app.data.drivers.filter((d) => present().includes(d.id)).map((d) => {
     const s = driverStats(ctx.laps, d.id, trackOf()) || {};
-    if (d.raceMedian > 0) s.median = d.raceMedian; // case du profil prioritaire
+    if (!(s.median > 0) && d.raceMedian > 0) s.median = d.raceMedian; // case du profil : seulement en secours
     return s;
   });
   const avg = (k) => { const v = stats.map((s) => s[k]).filter((x) => x > 0); return v.length ? r2(v.reduce((a, b) => a + b, 0) / v.length) : null; };
@@ -96,7 +108,8 @@ export function curveHtml(c) {
       </div>
     </details>
     <button class="btn small calc-fill" id="cvAuto">⚡ Remplissage automatique</button>
-    <p class="muted" style="font-size:.8rem;margin:4px 0 12px">Récupère sur les profils des pilotes cochés : temps médian en course, moyenne des meilleurs tours et moyenne des 10 meilleurs tours en course${a ? ` — <b>rempli</b> (${a.n} pilote${a.n > 1 ? 's' : ''}${a.spread ? `, régularité ±${comma(a.spread)} %` : ''})` : ''}.</p>
+    <p class="muted" style="font-size:.8rem;margin:4px 0 12px">Récupère sur les profils des pilotes cochés : temps médian sur leurs 30 derniers tours de course, moyenne des meilleurs tours et moyenne des 10 meilleurs tours en course${a ? ` — <b>rempli</b> (${a.n} pilote${a.n > 1 ? 's' : ''}${a.spread ? `, régularité ±${comma(a.spread)} %` : ''})` : ''}.</p>
+    ${lapsTip(app, present(), (id) => driverStats(ctx.laps, id, trackOf())?.recent || 0)}
 
     <div class="calc-grid">
       ${field('median', 'Temps médian (s)', 'le rythme nominal', a?.median ? `Auto : ${fmtS(a.median)} s` : '')}
@@ -108,7 +121,7 @@ export function curveHtml(c) {
       <label class="field"><span class="calc-l">Arrêts souhaités<em>au rythme nominal</em></span>
         <input type="number" step="1" min="0" max="60" data-cv="stops" value="${v.stops}"></label>
     </div>
-    ${manual ? `<p class="warnbox" style="margin-top:12px">✍️ Valeurs saisies à la main : le calcul sera approximatif. <b>Conseil :</b> faites une course d'environ <b>50 tours</b> avec les pilotes, puis revenez ici et touchez <b>⚡ Remplissage automatique</b>.</p>` : ''}
+    ${manual ? `<p class="warnbox" style="margin-top:12px">✍️ Valeurs saisies à la main : le calcul sera approximatif. <b>Conseil :</b> faites une <b>Course rapide de 30 tours</b> avec les pilotes, puis revenez ici et touchez <b>⚡ Remplissage automatique</b>.</p>` : ''}
 
     <button class="btn primary" id="cvGo" style="margin-top:12px">🧮 Calculer</button>
     <div id="cvRes">${resultHtml()}</div>
