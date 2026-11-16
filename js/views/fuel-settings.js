@@ -483,7 +483,6 @@ function refHtml() {
         <span class="band-warn" data-warn></span>
       </div>`).join('')}
     </div>
-    <div class="band-scale" id="bandScale"></div>
     </details>
   </section>`;
 }
