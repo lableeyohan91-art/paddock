@@ -142,7 +142,7 @@ function renderPilot() {
       <div><div class="pv-title">${esc(d.title)}</div><div class="muted pv-sub" id="pvLapTxt">${esc(lapText())}</div></div>
       <div class="clock num pv-clock" id="pvClock">${clockText()}</div>
     </div>
-    <div class="pv-flag ${fcls}">${esc(ftxt)}</div>
+    ${d.relaunch ? '' : `<div class="pv-flag ${fcls}">${esc(ftxt)}</div>`}
 
     <section class="panel pv-me" style="--dc:${esc(c.color)}">
       <div class="pv-pos">${c.pos ? 'P' + c.pos : '–'}</div>
