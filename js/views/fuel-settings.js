@@ -4,7 +4,7 @@
 //    chacune réglable (2-30 s, 1-40 %) et activable/désactivable.
 
 import { esc, $, $$, toast, confirmBox, promptBox } from '../ui.js';
-import { LIMITS, activeBands, CURVE_PROFILES } from '../fuel.js';
+import { LIMITS, activeBands } from '../fuel.js';
 import { optimizeFuel, trackRecord, raceMedianOf, median } from '../fuel-calc.js';
 import { curveHtml, bindCurve, loadCurveState } from './fuel-curve.js';
 
@@ -142,7 +142,7 @@ function curveCtx() {
 function draw() {
   el.innerHTML = `
   <div class="subtabs small">
-    <button data-sub="conso" class="${sub === 'conso' ? 'on' : ''}">Consommation</button>
+    <button data-sub="conso" class="${sub === 'conso' ? 'on' : ''}">Fixe</button>
     <button data-sub="ref" class="${sub === 'ref' ? 'on' : ''}">Temps de référence</button>
     <button data-sub="curve" class="${sub === 'curve' ? 'on' : ''}">Formule continue</button>
   </div>
@@ -172,31 +172,14 @@ function consoHtml() {
   return `
   <div class="grid grid-2">
     <section class="panel">
-      <h2>Calcul de la consommation</h2>
-      <div class="seg" id="fMode">
-        <button data-mode="bands" class="${cfg.mode === 'bands' ? 'on' : ''}">Fourchettes</button>
-        <button data-mode="curve" class="${cfg.mode === 'curve' ? 'on' : ''}">Formule continue</button>
-        <button data-mode="fixed" class="${cfg.mode === 'fixed' ? 'on' : ''}">Fixe</button>
-      </div>
-      <p class="muted" style="font-size:.85rem;margin-bottom:0">${cfg.mode === 'bands'
-        ? 'Plus on roule vite, plus on consomme, par paliers : voir l\'onglet « Temps de référence ».'
-        : cfg.mode === 'curve'
-          ? `Plus on roule vite, plus on consomme, au centième près (profil ${CURVE_PROFILES[cfg.curve.profile].short}) : voir l'onglet « Formule continue ».`
-          : 'Chaque tour consomme la valeur nominale, quel que soit le temps.'}</p>
-    </section>
-
-    ${cfg.mode === 'curve' ? `<section class="panel">
-      <h2>Consommation nominale</h2>
-      <p style="margin:0"><b>${String(cfg.curve.nominalPct).replace('.', ',')} %</b> par tour au temps médian (${String(cfg.curve.medianSec).replace('.', ',')} s), pente k = ${String(cfg.curve.k).replace('.', ',')}.</p>
-      <p class="muted" style="font-size:.85rem;margin:6px 0 0">Réglée dans l'onglet « Formule continue ».</p>
-    </section>` : `<section class="panel">
-      <h2>Consommation nominale</h2>
+      <h2>Consommation fixe</h2>
       <div class="fuel-nominal">
         <input type="range" id="fNomR" step="0.5" min="${LIMITS.pMin}" max="${LIMITS.pMax}" value="${cfg.nominalPct}">
         <div class="fuel-nominal-v"><input type="number" id="fNom" step="0.5" min="${LIMITS.pMin}" max="${LIMITS.pMax}" value="${cfg.nominalPct}"> % / tour</div>
       </div>
       <p class="muted" id="fAutonomy" style="margin:8px 0 0"></p>
-    </section>`}
+      <p class="muted" style="font-size:.85rem;margin:6px 0 0">Utilisée quand la préparation de course est sur <b>Fixe</b> : chaque tour consomme cette valeur, quel que soit le temps. Le choix Fixe / Fourchettes / Formule se fait dans la préparation de course.</p>
+    </section>
 
     <section class="panel">
       <h2>Stand et alertes</h2>
@@ -223,7 +206,6 @@ function consoHtml() {
 }
 
 function bindConso() {
-  $$('[data-mode]', el).forEach((b) => (b.onclick = () => { cfg.mode = b.dataset.mode; save(); draw(); }));
   const setNom = (v) => {
     cfg.nominalPct = Math.round(Math.min(LIMITS.pMax, Math.max(LIMITS.pMin, +v || LIMITS.pMin)) * 2) / 2;
     $('#fNomR', el).value = cfg.nominalPct;
