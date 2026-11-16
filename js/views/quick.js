@@ -151,18 +151,18 @@ function render() {
       <div class="q-fuel-mode">
         <span class="muted" style="font-size:.85rem">Calcul de la consommation</span>
         <div class="seg" id="qFuelMode">
+          <button data-qfm="fixed" class="${app.fuelCfg.mode === 'fixed' ? 'on' : ''}">Fixe</button>
           <button data-qfm="bands" class="${app.fuelCfg.mode === 'bands' ? 'on' : ''}">Paliers</button>
           <button data-qfm="curve" class="${app.fuelCfg.mode === 'curve' ? 'on' : ''}">Progressif</button>
-          <button data-qfm="fixed" class="${app.fuelCfg.mode === 'fixed' ? 'on' : ''}">Fixe</button>
         </div>
         <span class="muted" style="font-size:.8rem">${app.fuelCfg.mode === 'fixed'
           ? `Chaque tour consomme ${String(app.fuelCfg.nominalPct).replace('.', ',')} % d'essence, quel que soit le temps. <a href="#" id="qFuelNom">Se change dans Réglages → Essence</a>.`
           : app.fuelCfg.mode === 'curve'
             ? `Plus on roule vite, plus on consomme, au centième près (${({ attaque: 'prime à l\'attaque', equilibre: 'équilibré', gestion: 'gestion' })[app.fuelCfg.curve.profile]}). <a href="#" id="qCurveCfg">Régler la formule</a>.`
-            : 'Plus on roule vite, plus on consomme (fourchettes de temps de référence).'}</span>
+            : 'Plus on roule vite, plus on consomme (paliers de temps au tour).'}</span>
       </div>
       <div class="q-fuel">
-        ${app.fuelCfg.mode === 'fixed' ? '' : `<label class="field"><span>Setup d'essence · <a href="#" class="q-link" id="qFuelCfg">${app.fuelCfg.mode === 'curve' ? 'Régler la formule' : 'Régler les temps de référence'}</a></span>
+        ${app.fuelCfg.mode === 'fixed' ? '' : `<label class="field"><span>Setup d'essence · <a href="#" class="q-link" id="qFuelCfg">${app.fuelCfg.mode === 'curve' ? 'Régler la formule' : 'Régler les paliers'}</a></span>
           <select id="qSetup">${modeSetups().length ? modeSetups().map((s) => `<option value="${esc(s.id)}" ${s.id === activeSetup[setupMode()] ? 'selected' : ''}>${esc(s.name)}</option>`).join('')
             : '<option value="">Réglage actuel</option>'}</select></label>`}
         <div>
