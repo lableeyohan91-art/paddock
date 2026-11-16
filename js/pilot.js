@@ -230,9 +230,14 @@ function bind(c, bindGarage = true) {
     if (await send('vsc', { want })) toast(want === 'off' ? 'Fin du VSC demandée' : 'VSC demandé', 1500);
   };
   const red = $('#pvRed', view);
+  // la commande dit ce que le pilote veut (drapeau rouge / reprise), avec confirmation dans les deux cas
   if (red) red.onclick = async () => {
-    if (data.flag !== 'red' && !(await confirmBox('Drapeau rouge : toutes les voitures s\'arrêtent. Confirmer ?'))) return;
-    if (await send('red')) toast(data.flag === 'red' ? 'Reprise demandée' : 'Drapeau rouge demandé', 1500);
+    const want = data.flag === 'red' ? 'off' : 'on';
+    const ask = want === 'on'
+      ? 'Drapeau rouge : toutes les voitures s\'arrêtent. Confirmer ?'
+      : 'Reprise : les feux vont se rallumer et la course repartir. Confirmer ?';
+    if (!(await confirmBox(ask))) return;
+    if (await send('red', { want })) toast(want === 'off' ? 'Reprise demandée' : 'Drapeau rouge demandé', 1500);
   };
   $$('[data-tyre]', view).forEach((b) => (b.onclick = async () => {
     if (await send('tyre', { a: c.a, compound: b.dataset.tyre })) toast(`Pneus ${TYRES[b.dataset.tyre].label} demandés`, 1500);

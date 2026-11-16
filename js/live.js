@@ -180,6 +180,10 @@ function handle(cmd) {
     toast(s.flag === 'vsc' ? `🟨 VSC déclenché${who}` : `Fin du VSC demandée${who}`);
   } else if (cmd.type === 'red') {
     if (s.flag === 'red' && s.redResuming) return;
+    // intention du pilote : « on » = drapeau rouge, « off » = reprise (anciennes vues pilote : bascule)
+    const want = cmd.want || (s.flag === 'red' ? 'off' : 'on');
+    if (want === 'on' && s.flag === 'red') return;  // course déjà arrêtée : elle le reste
+    if (want === 'off' && s.flag !== 'red') return; // pas de drapeau rouge : rien à reprendre
     app.toggleRed();
     toast(s.flag === 'red' ? `🚩 Drapeau rouge${who}` : `Reprise demandée${who}`);
   } else if (cmd.type === 'tyre') {
