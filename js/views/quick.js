@@ -186,16 +186,6 @@ function render() {
       <p class="muted" style="margin:8px 0 0;font-size:.85rem">${prefs.autoVsc
         ? 'Se déclenche et s\'arrête tout seul · <a href="#" class="q-link" id="qVscCfg">Réglages</a>'
         : 'Course sans VSC automatique : seul le bouton VSC fonctionne.'}</p>
-    </section>
-
-    <section class="panel" style="margin-top:14px">
-      <div class="row" style="justify-content:space-between">
-        <h2 style="margin:0">5. Pneus</h2>
-        <label class="switch"><input type="checkbox" id="qTyres" ${prefs.tyresOn ? 'checked' : ''}><span></span> ${prefs.tyresOn ? 'Activés' : 'Désactivés'}</label>
-      </div>
-      <p class="muted" style="margin:8px 0 0;font-size:.85rem">${prefs.tyresOn
-        ? 'Usure, chauffe et changement au stand (Réglages → Pneus). Chaque pilote choisit sa gomme sur sa vue pilote, ou toi sur l\'écran de course.'
-        : 'Course sans gestion des pneus.'}</p>
     </section>` : ''}
 
     <div class="q-go">
@@ -284,8 +274,6 @@ function bind() {
   if (av) av.onchange = (e) => { prefs.autoVsc = e.target.checked; savePrefs(); render(); };
   const vl = $('#qVscCfg', root);
   if (vl) vl.onclick = (e) => { e.preventDefault(); app.openAutoVscSettings(); };
-  const ty = $('#qTyres', root);
-  if (ty) ty.onchange = (e) => { prefs.tyresOn = e.target.checked; savePrefs(); render(); };
   const sel = $('#qSetup', root);
   if (sel && modeSetups().length) sel.onchange = async () => {
     await app.loadFuelSetup(sel.value);
@@ -306,7 +294,7 @@ function bind() {
     if (parts.some((s) => !s.driverId)) { toast('Choisis un pilote pour chaque participant coché'); return; }
     // Départ : on prépare la séance et on passe à l'écran de course ; le lancement se fait avec GO
     const pqLaps = !isRace() && prefs.pqByLaps;
-    await app.prepareQuickRace({ laps: pqLaps ? prefs.pqLaps : prefs.laps, fuelOn: prefs.fuelOn, tank15: tank15(), title: title(), type: mode().type, kind: app.quickMode || app.setup?.prepMode || 'quick', autoVsc: prefs.autoVsc, tyresOn: isRace() && prefs.tyresOn, minutes: isRace() ? (prefs.raceByTime ? prefs.raceMinutes : 0) : pqLaps ? 0 : prefs.minutes });
+    await app.prepareQuickRace({ laps: pqLaps ? prefs.pqLaps : prefs.laps, fuelOn: prefs.fuelOn, tank15: tank15(), title: title(), type: mode().type, kind: app.quickMode || app.setup?.prepMode || 'quick', autoVsc: prefs.autoVsc, tyresOn: false /* pneus : en cours de développement */, minutes: isRace() ? (prefs.raceByTime ? prefs.raceMinutes : 0) : pqLaps ? 0 : prefs.minutes });
   };
 }
 

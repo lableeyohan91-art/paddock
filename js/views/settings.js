@@ -242,7 +242,7 @@ function renderAdaptiveVsc() {
   const common = ranges.length ? { min: Math.max(...ranges.map((r) => r.min)), max: Math.min(...ranges.map((r) => r.max)) } : null;
   const toGarage = (txt) => `<a href="#" class="q-link" data-go-garage>${txt}</a>`;
   root.innerHTML = sectionHead() + vscTabs() + `
-  <div class="dev-banner">🚧 En cours de développement</div>
+  <div class="dev-banner">🚧 En cours de développement · pas encore utilisé en course</div>
   <section class="panel">
     <div class="row" style="justify-content:space-between">
       <h2 style="margin:0">VSC adaptatif</h2>
@@ -342,7 +342,7 @@ function renderTyres() {
   const lapsTo = (h, g) => (g.wearPerLap ? Math.floor((100 - h) / g.wearPerLap) : '∞');
   const ex = (b) => Math.round((b * t.cliffKeep) / 100);
   root.innerHTML = sectionHead() + `
-  <div class="dev-banner">🚧 En cours de développement</div>
+  <div class="dev-banner">🚧 En cours de développement · pas encore utilisé en course</div>
   <section class="panel">
     <h2>Arrêt au stand</h2>
     <div class="row" style="gap:14px;flex-wrap:wrap">

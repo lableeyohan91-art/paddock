@@ -61,6 +61,12 @@ const VIEWS = { race: raceView, garage: garageView, drivers: driversView, driver
 
 const cu = new ControlUnit();
 const DEFAULT_TUNE = { speed: 8, brake: 6 }; // réglage d'un couple pilote + voiture jamais joué : ~54 % accélération, 40 % freinage
+/**
+ * Fonctions en cours de développement : réglables dans Réglages et au Garage,
+ * mais jamais utilisées en jeu tant qu'elles valent false.
+ */
+export const IN_GAME = { tyres: false, vscAdaptive: false };
+
 const DEFAULT_VSC = { speedPct: 20, adaptive: { on: false, targetSec: 8 } }; // vitesse fixe imposée à toutes les voitures sous VSC, en % de la vitesse max
 export const GHOST = 6; // adresse de la voiture autonome (fantôme) ; 7 = pace car
 const perf = new PerformanceEngine(cu);
@@ -261,7 +267,7 @@ export const app = {
 
   /** Les pneus sont-ils gérés pour la séance en cours ? */
   tyresOn() {
-    return !!this.session?.cfg.tyres?.enabled;
+    return IN_GAME.tyres && !!this.session?.cfg.tyres?.enabled;
   },
 
   /**
@@ -349,7 +355,7 @@ export const app = {
   vscTargetFor(address) {
     const a = this.vscCfg.adaptive;
     const s = this.session;
-    if (!a?.on || !s) return null;
+    if (!IN_GAME.vscAdaptive || !a?.on || !s) return null;
     const c = s.comps.get(address);
     const car = c?.car?.id && this.car(c.car.id);
     const r = car && cranFor(car, s.trackId, a.targetSec);
