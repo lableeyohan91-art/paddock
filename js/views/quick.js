@@ -53,6 +53,9 @@ const MODES = {
 const mode = () => MODES[app.quickMode || app.setup?.prepMode] || MODES.quick;
 const title = () => mode().title;
 const isRace = () => mode().type === 'race';
+/** Course rapide : toujours aux tours, sans prise de tête (pas de course en durée). */
+const isQuick = () => mode() === MODES.quick;
+const byTime = () => isRace() && !isQuick() && prefs.raceByTime;
 const savePrefs = () => app.db.setSetting('quickRace', prefs);
 const pct15 = (v) => Math.round((v / 15) * 100);
 /** Setups proposés : seulement ceux du mode choisi (Fourchettes ou Formule). */
@@ -113,10 +116,10 @@ function render() {
     <section class="panel" style="margin-top:14px">
       ${isRace() ? `
       <div class="row" style="justify-content:space-between;margin-bottom:10px">
-        <h2 style="margin:0">2. ${prefs.raceByTime ? 'Durée' : 'Nombre de tours'}</h2>
-        <button class="btn small ghost" id="qUnit" title="Changer entre nombre de tours et durée">⇄ ${prefs.raceByTime ? 'Passer en tours' : 'Passer en durée'}</button>
+        <h2 style="margin:0">2. ${byTime() ? 'Durée' : 'Nombre de tours'}</h2>
+        ${isQuick() ? '' : `<button class="btn small ghost" id="qUnit" title="Changer entre nombre de tours et durée">⇄ ${byTime() ? 'Passer en tours' : 'Passer en durée'}</button>`}
       </div>
-      ${prefs.raceByTime ? `
+      ${byTime() ? `
       <div class="q-laps">
         ${RACE_MIN_CHIPS.map((m) => `<button class="chip ${prefs.raceMinutes === m ? 'on' : ''}" data-rmin="${m}">${m} min</button>`).join('')}
         <input type="number" id="qRMin" min="1" max="600" value="${prefs.raceMinutes}" aria-label="Durée en minutes">
@@ -204,7 +207,7 @@ function render() {
       <button class="depart" id="qStart">
         <span class="depart-lights"><i></i><i></i><i></i><i></i><i></i></span>
         <span class="depart-txt">DÉPART</span>
-        <span class="depart-sub">${isRace() ? (prefs.raceByTime ? prefs.raceMinutes + ' min' : prefs.laps + ' tours') : prefs.pqByLaps ? prefs.pqLaps + ' tours' : prefs.minutes + ' min'} · ${n} pilote${n > 1 ? 's' : ''} · ${prefs.fuelOn ? `essence ${pct15(tank15())} %` : 'sans essence'}</span>
+        <span class="depart-sub">${isRace() ? (byTime() ? prefs.raceMinutes + ' min' : prefs.laps + ' tours') : prefs.pqByLaps ? prefs.pqLaps + ' tours' : prefs.minutes + ' min'} · ${n} pilote${n > 1 ? 's' : ''} · ${prefs.fuelOn ? `essence ${pct15(tank15())} %` : 'sans essence'}</span>
       </button>
     </div>
   </div>`;
@@ -313,7 +316,7 @@ function bind() {
     if (parts.some((s) => !s.driverId)) { toast('Choisis un pilote pour chaque participant coché'); return; }
     // Départ : on prépare la séance et on passe à l'écran de course ; le lancement se fait avec GO
     const pqLaps = !isRace() && prefs.pqByLaps;
-    await app.prepareQuickRace({ laps: pqLaps ? prefs.pqLaps : prefs.laps, fuelOn: prefs.fuelOn, tank15: tank15(), title: title(), type: mode().type, kind: app.quickMode || app.setup?.prepMode || 'quick', autoVsc: prefs.autoVsc, tyresOn: false /* pneus : en cours de développement */, minutes: isRace() ? (prefs.raceByTime ? prefs.raceMinutes : 0) : pqLaps ? 0 : prefs.minutes });
+    await app.prepareQuickRace({ laps: pqLaps ? prefs.pqLaps : prefs.laps, fuelOn: prefs.fuelOn, tank15: tank15(), title: title(), type: mode().type, kind: app.quickMode || app.setup?.prepMode || 'quick', autoVsc: prefs.autoVsc, tyresOn: false /* pneus : en cours de développement */, minutes: isRace() ? (byTime() ? prefs.raceMinutes : 0) : pqLaps ? 0 : prefs.minutes });
   };
 }
 
