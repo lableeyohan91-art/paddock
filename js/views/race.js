@@ -1,5 +1,6 @@
 // Écran de course en direct : feux, chrono, classement, météo, contrôles.
 
+import { showResultsPage } from './results.js';
 import { esc, $, $$, modal, confirmBox } from '../ui.js';
 import { TYPES, fmtTime, fmtClock } from '../race.js';
 import { SKY } from '../weather.js';
@@ -495,23 +496,8 @@ function swapDialog(address) {
   sync();
 }
 
+/** Fin de séance : page de résultats (podium, meilleur tour, graphique, onglet Pilotes). */
 export function showResults(a) {
   app = a;
-  const s = app.session;
-  if (!s) return;
-  const res = s.results().filter((r) => r.laps > 0 || r.bestLap);
-  const isRace = s.cfg.type === 'race';
-  const top = res.slice(0, 3);
-  const pod = [top[1], top[0], top[2]].map((r, i) => r ? `
-    <div class="p${[2, 1, 3][i]}"><b>${[2, 1, 3][i]}</b>${esc(r.driverName)}<br><small>${isRace ? r.laps + ' tours' : fmtTime(r.bestLap)}</small></div>` : '').join('');
-  modal(`
-    <h2>🏁 Résultats — ${esc(TYPES[s.cfg.type])}</h2>
-    ${res.length ? `<div class="podium">${pod}</div>` : '<p class="muted">Aucun tour enregistré.</p>'}
-    <table class="simple">
-      <tr><th>P</th><th>Pilote</th><th>Tours</th><th>Meilleur</th>${isRace ? '<th>Écart</th>' : ''}</tr>
-      ${res.map((r) => `<tr><td>${r.position}</td><td>${esc(r.driverName)}<br><small class="muted">${esc(r.carName)}</small></td>
-        <td class="num">${r.laps}</td><td class="num">${fmtTime(r.bestLap)}</td>${isRace ? `<td class="num">${esc(r.gap)}</td>` : ''}</tr>`).join('')}
-    </table>
-    <p class="muted" style="font-size:.85rem">${(s.simulated ?? app.isSim) ? '🎮 Session simulée : non enregistrée dans les statistiques.' : 'Session enregistrée dans les statistiques.'}</p>
-    <div class="row" style="justify-content:flex-end"><button class="btn primary" data-close>Fermer</button></div>`);
+  showResultsPage(app);
 }

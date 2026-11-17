@@ -871,3 +871,22 @@ input.need { border: 2px solid var(--red, #e10600) !important; box-shadow: 0 0 0
 
 /* parc fermé : curseur de vitesse verrouillé */
 .bar input[type=range]:disabled { opacity: .35; cursor: not-allowed; filter: grayscale(1); }
+
+/* page de fin de course */
+.modal.results-page { width: min(760px, 100%); }
+.rs-best { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 12px; padding: 12px 14px; border-radius: 12px; background: var(--panel-2); border-left: 5px solid var(--dc); }
+.rs-best span:first-child { color: var(--muted); font-size: .85rem; width: 100%; }
+.rs-best b { font-size: 1.15rem; }
+.rs-best .num { font-size: 1.15rem; font-weight: 800; color: var(--yellow); }
+.rs-chart { width: 100%; height: auto; display: block; background: var(--panel-2); border-radius: 12px; }
+.rs-grid { stroke: var(--line); stroke-width: 1; }
+.rs-ax { fill: var(--muted); font-size: 12px; font-family: inherit; }
+.rs-ax-t { font-size: 11px; }
+.rs-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 8px 2px 0; font-size: .85rem; }
+.rs-legend i { display: inline-block; width: 14px; height: 4px; border-radius: 2px; margin-right: 6px; vertical-align: middle; }
+.rs-drivers { display: grid; gap: 8px; }
+.rs-drv { background: var(--panel-2); border-radius: 12px; padding: 10px 12px; border-left: 5px solid var(--dc); }
+.rs-drv-h { margin-bottom: 6px; }
+.rs-drv-g { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 6px 12px; }
+.rs-drv-g span { display: flex; flex-direction: column; font-size: .78rem; color: var(--muted); }
+.rs-drv-g b { font-size: 1rem; color: var(--text); }

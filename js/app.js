@@ -583,6 +583,7 @@ export const app = {
     const { pct, band } = consumption(this.fuelCfg, lapMs);
     comp.fuelPct = Math.max(0, comp.fuelPct - pct);
     comp.lastFuelUse = pct;
+    comp.fuelUsed = (comp.fuelUsed || 0) + pct; // total consommé (page de fin de course)
     comp.lastFuelBand = band;
     if (!comp.lowWarned && comp.fuelPct > 0 && comp.fuelPct <= this.fuelCfg.lowWarnPct) {
       comp.lowWarned = true;
