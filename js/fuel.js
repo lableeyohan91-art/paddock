@@ -35,6 +35,8 @@ export function defaultFuelConfig() {
     emptyMode: 'fixed',   // panne sèche : vitesse fixe (0-15, comme au garage)
     emptySpeedPct: 40,    //   mode 'pct' : vitesse limitée à ce % jusqu'au ravitaillement
     emptySpeedFixed: 4,   //   mode 'fixed' : vitesse imposée (0-15)
+    // Essence selon le poids : réservoir plein (≥ 80 %) = plus lourd, presque vide (< 30 %) = plus léger
+    weight: { on: false, heavy: 1, light: 1 }, // crans de vitesse retirés / ajoutés (1 à 3)
   };
 }
 
@@ -161,5 +163,7 @@ export function sanitize(cfg) {
   c.emptySpeedPct = Math.round(num(c.emptySpeedPct, 10, 100, d.emptySpeedPct));
   c.emptyMode = 'fixed'; // panne sèche : toujours une vitesse fixe (le mode « % de sa vitesse » a été retiré)
   c.emptySpeedFixed = Math.round(num(c.emptySpeedFixed, 0, 15, d.emptySpeedFixed));
+  const w = cfg?.weight || {};
+  c.weight = { on: !!w.on, heavy: Math.round(num(w.heavy, 1, 3, d.weight.heavy)), light: Math.round(num(w.light, 1, 3, d.weight.light)) };
   return c;
 }

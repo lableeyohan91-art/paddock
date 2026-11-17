@@ -452,7 +452,8 @@ export const app = {
   async loadFuelSetup(id) {
     const s = (await this.fuelSetups()).find((x) => x.id === id);
     if (!s) return false;
-    await this.saveFuelCfg({ ...s.cfg, enabled: this.fuelCfg.enabled });
+    // « Essence selon le poids » est un réglage général : un setup chargé ne le change pas
+    await this.saveFuelCfg({ ...s.cfg, enabled: this.fuelCfg.enabled, weight: this.fuelCfg.weight });
     await db.setSetting(this.activeSetupKey(this.setupMode(s)), id);
     return true;
   },
@@ -511,6 +512,38 @@ export const app = {
     };
   },
 
+  /**
+   * Essence selon le poids : réservoir de 80 à 100 % → X crans de moins que la vitesse réglée,
+   * de 30 à 80 % → vitesse réglée, sous 30 % → X crans de plus (bornée à 15).
+   * Sous VSC et en panne sèche, la vitesse imposée l'emporte.
+   */
+  fuelWeightStep(address) {
+    const s = this.session;
+    const w = this.fuelCfg.weight;
+    if (!w?.on || !this.fuelOn() || !s || !['running', 'finishing'].includes(s.state)) return 0;
+    const c = s.comps.get(address);
+    if (!c || c.fuelPct === null || c.fuelPct === undefined || c.fuelPct <= 0) return 0;
+    const ratio = (c.fuelPct / (c.tankPct || 100)) * 100; // % de SON réservoir
+    if (ratio >= 80) return -w.heavy;
+    if (ratio < 30) return w.light;
+    return 0;
+  },
+
+  weightModifier() {
+    return {
+      id: 'weight',
+      label: "Poids de l'essence",
+      compute: (address) => {
+        const step = this.fuelWeightStep(address);
+        if (!step || this.session?.flag === 'vsc' || this.isOutOfFuel(address)) return null;
+        const base = perf.bases.get(address)?.speed;
+        if (!base) return null;
+        const target = Math.max(0, Math.min(15, base + step));
+        return { speed: target / base, note: step < 0 ? `⛽ Réservoir lourd (${step} cran${step < -1 ? 's' : ''})` : `⛽ Réservoir léger (+${step} cran${step > 1 ? 's' : ''})` };
+      },
+    };
+  },
+
   /** Retire l'essence du tour qui vient d'être bouclé. Renvoie le % consommé. */
   burnFuel(comp, lapMs) {
     if (!this.fuelOn()) return null;
@@ -529,6 +562,7 @@ export const app = {
       this.log(`${comp.driver.name} : panne sèche`);
       perf.update(); // bride la voiture tout de suite
     }
+    if (this.fuelCfg.weight?.on) perf.update(); // poids : nouveau cran dès le passage d'un seuil
     return pct;
   },
 
@@ -881,6 +915,8 @@ export const app = {
     perf.addModifier(vscModifier(() => this.session?.flag, () => this.vscCfg.speedPct, (a) => perf.bases.get(a)?.speed, (a) => this.isOutOfFuel(a), (a) => this.vscTargetFor(a)));
     perf.removeModifier('fuel');
     perf.addModifier(this.emptyTankModifier());
+    perf.removeModifier('weight');
+    perf.addModifier(this.weightModifier());
     perf.removeModifier('tyres');
     perf.addModifier(this.tyreModifier());
     entries.forEach((e) => perf.setBase(e.address, e.car.speed, e.car.brake));
