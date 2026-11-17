@@ -17,7 +17,7 @@ const MIN_CHIPS = [1, 2, 5, 10];                     // essais libres, qualifica
 const PQ_LAP_CHIPS = [3, 5, 10, 20];                 // essais libres, qualification (tours)
 const RACE_MIN_CHIPS = [5, 10, 30, 60];              // course au temps (endurance), minutes
 const RACE_LAP_CHIPS = [20, 30, 50, 75, 100];     // course, course rapide
-export const PLACE_CARS_MSG = '* Toutes les voitures posées sur la piste';
+export const PLACE_CARS_MSG = '* Toutes les voitures posées sur la piste pour effectuer le réglage';
 
 export async function mount(main, a) {
   app = a;
