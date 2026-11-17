@@ -127,7 +127,7 @@ input[type=checkbox] { accent-color: var(--accent); width: 18px; height: 18px; }
 .seg { display: inline-flex; background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 3px; flex-wrap: wrap; }
 .seg button { border: 0; background: none; padding: 8px 14px; border-radius: 8px; cursor: pointer; color: var(--muted); font-weight: 600; }
 .seg button.on { background: var(--panel-2); color: var(--text); }
-#fMode button.on, #qFuelMode button.on, .cv-profile button.on { background: var(--green); color: #04130a; }
+#fMode button.on, #qFuelMode button.on, #qVscMode button.on, .cv-profile button.on { background: var(--green); color: #04130a; }
 .cv-profile { margin: 6px 0 4px; display: flex; flex-wrap: nowrap; width: 100%; }
 .cv-profile button { flex: 1; min-width: 0; padding-left: 6px; padding-right: 6px; white-space: nowrap; }
 .cv-chart { width: 100%; height: auto; margin-top: 12px; background: var(--panel-2); border-radius: 10px; }
