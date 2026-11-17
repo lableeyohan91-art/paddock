@@ -1,12 +1,13 @@
 // VSC adaptatif : étalonnage de chaque voiture, par circuit.
 // Un « test 12 tours » mesure le temps au tour médian d'une voiture à un cran donné
-// (manette enfoncée à 100 %). Avec 4 mesures (0 %, 13 %, 27 %, 33 % = crans 0, 2, 4, 5),
+// (manette enfoncée à 100 %). Avec 5 mesures (0 %, 7 %, 13 %, 27 %, 33 % = crans 0, 1, 2, 4, 5),
 // on déduit le temps à chaque cran de 0 à 5, puis le cran qui fait rouler la voiture
 // au plus près du temps au tour cible du VSC.
 // Mesures rangées dans la voiture : car.vscCal[trackId][cran] = { sec, laps, date } ou { impossible: true, date }.
 
 export const CAL_TESTS = [
   { cran: 0, pct: 0 },
+  { cran: 1, pct: 7 },
   { cran: 2, pct: 13 },
   { cran: 4, pct: 27 },
   { cran: 5, pct: 33 },
