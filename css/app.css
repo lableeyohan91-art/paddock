@@ -823,6 +823,13 @@ h1 .vsc-ico { width: 40px; height: 40px; font-size: .7rem; }
 .cal-row { display: grid; grid-template-columns: 90px 1fr auto auto; gap: 8px; align-items: center; background: var(--panel-2); border-radius: 8px; padding: 6px 8px; }
 .cal-row .bad { color: var(--accent); font-weight: 700; }
 .cal-deduced, .cal-cond { font-size: .8rem; margin: 6px 0 0; }
+.cal-loading { margin: 14px 0; }
+/* écran du test d'étalonnage : ce qui est masqué doit l'être vraiment (sinon .btn / .cal-live l'emportent) */
+.cal-loading[hidden], .cal-live[hidden], .cal-laps[hidden], #ctCancel[hidden], #ctDone[hidden] { display: none !important; }
+.cal-loading-l { display: block; font-weight: 700; margin-bottom: 8px; }
+.cal-loading-bar { height: 10px; border-radius: 5px; background: var(--line); overflow: hidden; }
+.cal-loading-bar span { display: block; height: 100%; width: 0; background: var(--yellow); border-radius: 5px; animation: cal-load 2s linear forwards; }
+@keyframes cal-load { to { width: 100%; } }
 .cal-live { display: flex; align-items: baseline; gap: 12px; margin: 10px 0; }
 .cal-count { font-size: 2rem; font-weight: 900; }
 .cal-laps { display: flex; flex-wrap: wrap; gap: 6px 10px; font-size: .9rem; }

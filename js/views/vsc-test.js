@@ -1,4 +1,4 @@
-// Garage → chaque voiture → « 🟨 VSC adaptatif » : étalonnage par circuit (tests 12 tours)
+// Garage → chaque voiture → « 🟨 VSC adaptatif » : étalonnage par circuit (tests 6 tours)
 // et écran de test (la voiture roule au cran du test, manette enfoncée à 100 %).
 
 import { esc, $, $$, toast, modal, confirmBox } from '../ui.js';
@@ -78,7 +78,11 @@ async function saveCal(app, car, trackId, cran, value) {
   await app.loadData();
 }
 
-/** Écran de test : la voiture roule au cran du test, on chronomètre 12 tours. */
+/**
+ * Écran de test : la voiture roule au cran du test, on chronomètre CAL_LAPS tours.
+ * Au démarrage, une barre de chargement de 2 s ; à la fin, la voiture reste au cran du test
+ * jusqu'à l'appui sur « Terminer » (son réglage n'est rétabli qu'à ce moment-là).
+ */
 function openTest(app, car, trackId, cran, address, rerender) {
   const { cu, perf } = app;
   if (app.isRacing) { toast('Une séance est en cours : arrête-la avant de faire un test'); return; }
@@ -89,19 +93,32 @@ function openTest(app, car, trackId, cran, address, rerender) {
     <h2>🟨 Test ${test.pct} % — ${esc(car.name)}</h2>
     <p class="muted" style="margin-top:-4px">Manette ${address + 1} · cran ${cran}/15 · ${esc(app.track(trackId)?.name || '')}</p>
     <p class="warnbox"><b>Manette enfoncée à 100 %</b> pendant tout le test. La voiture doit être sur la piste.</p>
-    <div class="cal-live"><span class="cal-count num" id="ctCount">0 / ${CAL_LAPS}</span><span class="muted" id="ctState">En attente du premier passage sur la ligne…</span></div>
-    <div class="cal-laps num" id="ctLaps"></div>
+    <div class="cal-loading" id="ctLoading"><span class="cal-loading-l">Démarrage du test…</span><div class="cal-loading-bar"><span></span></div></div>
+    <div class="cal-live" id="ctLive" hidden><span class="cal-count num" id="ctCount">0 / ${CAL_LAPS}</span><span class="muted" id="ctState">En attente du premier passage sur la ligne…</span></div>
+    <div class="cal-laps num" id="ctLaps" hidden></div>
     <div class="row" style="justify-content:flex-end;gap:8px;margin-top:12px">
       <button class="btn ghost" id="ctCancel">Annuler le test</button>
       <button class="btn primary" id="ctDone" hidden>Terminer</button>
-    </div>`, { onClose: () => stop(false) });
+    </div>`, { onClose: () => stop() });
 
-  // la voiture passe au cran du test (renvoyé chaque seconde : une voiture reposée le reprend)
-  perf.stop();
+  // barre « Démarrage du test » pendant 2 s, puis la voiture passe au cran du test
+  // (renvoyé chaque seconde : une voiture reposée le reprend)
+  let keep = null;
+  let started = false;
+  let saved = false;
   const send = () => cu.setSpeed(address, cran);
-  send();
-  const keep = setInterval(send, 1000);
-  if (app.isSim && !cu.conn.running) cu.conn.go?.(); // simulateur : les voitures roulent
+  const startTimer = setTimeout(() => {
+    if (stopped) return;
+    started = true;
+    perf.stop();
+    send();
+    keep = setInterval(send, 1000);
+    if (app.isSim && !cu.conn.running) cu.conn.go?.(); // simulateur : les voitures roulent
+    cu.addEventListener('timer', onTimer);
+    $('#ctLoading', m.el).hidden = true;
+    $('#ctLive', m.el).hidden = false;
+    $('#ctLaps', m.el).hidden = false;
+  }, 2000);
 
   const onTimer = (e) => {
     const t = e.detail;
@@ -113,29 +130,34 @@ function openTest(app, car, trackId, cran, address, rerender) {
     $('#ctLaps', m.el).innerHTML = laps.map((x, i) => `<span class="${i === 0 ? 'muted' : ''}" title="${i === 0 ? 'tour de lancement, non compté' : ''}">${sec2(x)}</span>`).join('');
     if (laps.length >= CAL_LAPS) finish(laps);
   };
-  cu.addEventListener('timer', onTimer);
 
   async function finish(laps) {
     finished = true;
+    cu.removeEventListener('timer', onTimer);
     const counted = laps.slice(1); // le 1er tour (lancement) est écarté
     const sec = Math.round(medianOf(counted) * 1000) / 1000;
     await saveCal(app, car, trackId, cran, { sec, laps: counted.length, date: Date.now() });
-    stop(true);
-    $('#ctState', m.el).innerHTML = `✅ Temps médian : <b>${sec2(sec)} s</b> (${counted.length} tours, le tour de lancement écarté). Enregistré.`;
+    saved = true;
+    rerender();
+    // la voiture reste au cran du test : son réglage n'est rétabli qu'avec « Terminer »
+    $('#ctState', m.el).innerHTML = `✅ Temps médian : <b>${sec2(sec)} s</b> (${counted.length} tours, le tour de lancement écarté). Enregistré. Touchez <b>Terminer</b> pour rendre à la voiture son réglage.`;
     $('#ctCancel', m.el).hidden = true;
     $('#ctDone', m.el).hidden = false;
   }
 
   let stopped = false;
-  function stop(keepResult) {
+  function stop() {
     if (stopped) return;
     stopped = true;
     finished = true;
+    clearTimeout(startTimer);
     clearInterval(keep);
     cu.removeEventListener('timer', onTimer);
-    app.applyTune(address, ['speed', 'brake']); // la voiture retrouve son réglage
-    if (app.session && app.session.state !== 'finished') perf.start();
-    if (!keepResult) toast('Test annulé', 1500);
+    if (started) {
+      app.applyTune(address, ['speed', 'brake']); // la voiture retrouve son réglage
+      if (app.session && app.session.state !== 'finished') perf.start();
+    }
+    if (!saved) toast('Test annulé', 1500);
     rerender();
   }
   $('#ctCancel', m.el).onclick = async () => {
