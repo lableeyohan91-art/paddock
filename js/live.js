@@ -110,6 +110,8 @@ function snapshot() {
     overallBest: s.overallBest ? { time: s.overallBest.time, address: s.overallBest.address } : null,
     comps: list.map((c) => {
       const t = app.getTune(c.driver?.id, c.car?.id);
+      // séance en cours : vitesse et freinage RÉELS envoyés au circuit (poids de l'essence, VSC, panne sèche…)
+      const real = ['armed', 'running', 'finishing'].includes(s.state) ? app.perf?.current.get(c.address) : null;
       return {
         a: c.address,
         name: c.driver?.name || `Manette ${c.address + 1}`,
@@ -126,8 +128,8 @@ function snapshot() {
         pitStops: c.pitStops,
         finished: c.finished,
         tyre: c.tyre ? { c: c.tyre.compound, w: Math.round(c.tyre.wear), n: c.tyre.next, st: tyreState(app.tyres, c.tyre) } : null,
-        speed: t.speed,
-        brake: t.brake,
+        speed: real ? real.speed : t.speed,
+        brake: real ? real.brake : t.brake,
       };
     }),
   };
