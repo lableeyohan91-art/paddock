@@ -223,7 +223,7 @@ function bindVscTabs() {
  * Réglages → VSC → VSC adaptatif : sous VSC, chaque voiture roule au temps au tour cible,
  * grâce à son étalonnage (Garage → voiture → VSC adaptatif) sur le circuit de la course.
  */
-function renderAdaptiveVsc() {
+function renderAdaptiveVsc() { // utilisé en course depuis la v1.85 (s'il est activé ici)
   const a = app.vscCfg.adaptive || { on: false, targetSec: 8 };
   const trackId = app.track(a.trackId) ? a.trackId : app.setup?.trackId;
   // voitures choisies pour régler le temps cible (par défaut : celles de la course préparée)
@@ -242,7 +242,7 @@ function renderAdaptiveVsc() {
   const common = ranges.length ? { min: Math.max(...ranges.map((r) => r.min)), max: Math.min(...ranges.map((r) => r.max)) } : null;
   const toGarage = (txt) => `<a href="#" class="q-link" data-go-garage>${txt}</a>`;
   root.innerHTML = sectionHead() + vscTabs() + `
-  <div class="dev-banner">🚧 En cours de développement · pas encore utilisé en course</div>
+  <div class="dev-banner">🚧 En cours de développement</div>
   <section class="panel">
     <div class="row" style="justify-content:space-between">
       <h2 style="margin:0">VSC adaptatif</h2>

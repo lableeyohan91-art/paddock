@@ -65,7 +65,7 @@ const DEFAULT_TUNE = { speed: 8, brake: 6 }; // réglage d'un couple pilote + vo
  * Fonctions en cours de développement : réglables dans Réglages et au Garage,
  * mais jamais utilisées en jeu tant qu'elles valent false.
  */
-export const IN_GAME = { tyres: false, vscAdaptive: false };
+export const IN_GAME = { tyres: false, vscAdaptive: true }; // VSC adaptatif remis en course (v1.85)
 
 const DEFAULT_VSC = { speedPct: 20, adaptive: { on: false, targetSec: 8 } }; // vitesse fixe imposée à toutes les voitures sous VSC, en % de la vitesse max
 export const GHOST = 6; // adresse de la voiture autonome (fantôme) ; 7 = pace car
