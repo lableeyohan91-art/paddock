@@ -815,7 +815,7 @@ h1 .vsc-ico { width: 40px; height: 40px; font-size: .7rem; }
 .va-row { display: grid; grid-template-columns: 1.2fr 1fr 1fr; gap: 8px; align-items: center; background: var(--panel-2); border-radius: 8px; padding: 8px 10px; border-left: 4px solid var(--muted); font-size: .9rem; }
 .va-row.ok { border-left-color: var(--green); }
 .va-row.ko { border-left-color: var(--accent); }
-.va-row { cursor: pointer; }
+.va-row { cursor: default; }
 .va-row.off { opacity: .55; border-left-color: transparent; }
 .va-row input { width: 18px; height: 18px; vertical-align: -3px; margin-right: 4px; }
 @media (max-width: 560px) { .va-row { grid-template-columns: 1fr; } }

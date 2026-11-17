@@ -207,6 +207,7 @@ function renderAutoVsc() {
   num('#avEndSec', 'endSec', 3, 60);
 }
 
+let vaPickOpen = false; // VSC adaptatif : choix des voitures déplié ?
 let vscTab = 'button'; // onglets du VSC : « Bouton VSC » et « VSC automatique »
 function vscTabs() {
   return `<div class="subtabs small">
@@ -255,13 +256,22 @@ function renderAdaptiveVsc() { // utilisé en course depuis la v1.85 (s'il est a
         <input type="number" id="vaTarget" step="0.1" min="0.5" max="60" value="${a.targetSec}"></label>
       ${common && common.min <= common.max ? `<button class="btn small" id="vaSuggest" title="Temps que toutes les voitures cochées peuvent tenir">Conseillé : ${s2(common.min)} s</button>` : ''}
     </div>
-    <p class="muted" style="font-size:.85rem;margin:12px 0 6px">Coche les voitures qui rouleront ensemble (par défaut : celles de la course préparée) :</p>
+    <details class="calc-pick" id="vaPick" style="margin-top:14px" ${vaPickOpen ? 'open' : ''}>
+      <summary>
+        <span class="calc-pick-title">👉 Choisir les voitures <b>(${sel.length})</b></span>
+        <span class="calc-pick-must">Celles qui rouleront ensemble (par défaut : la course préparée)</span>
+        <span class="calc-pick-names">${sel.map((x) => esc(x.car.name)).join(', ') || 'aucune'}</span>
+      </summary>
+      <div class="calc-drivers">
+        ${rows.length ? rows.map(({ car, r, c, on }) => `<label class="calc-drv" style="--dc:${!r ? 'var(--muted)' : c.ok ? 'var(--green)' : 'var(--accent)'}"><input type="checkbox" data-va-car="${esc(car.id)}" ${on ? 'checked' : ''}><span>${esc(car.name)}</span></label>`).join('') : '<span class="muted">Aucune voiture au garage.</span>'}
+      </div>
+    </details>
     <div class="va-rows">
-      ${rows.length ? rows.map(({ car, r, c, on }) => `<label class="va-row ${!on ? 'off' : !r ? 'none' : c.ok ? 'ok' : 'ko'}">
-        <span><input type="checkbox" data-va-car="${esc(car.id)}" ${on ? 'checked' : ''}> <b>${esc(car.name)}</b></span>
+      ${sel.map(({ car, r, c }) => `<div class="va-row ${!r ? 'none' : c.ok ? 'ok' : 'ko'}">
+        <span><b>${esc(car.name)}</b></span>
         <span class="muted">${r ? `possible de ${s2(r.min)} à ${s2(r.max)} s` : `pas étalonnée sur ce circuit · ${toGarage('étalonner')}`}</span>
         <span>${!r ? `VSC normal (cran ${vscSpeed(app.vscCfg.speedPct)})` : c.ok ? `✅ cran ${c.cran} (≈ ${s2(c.sec)} s)` : `❌ ne peut pas rouler en ${s2(a.targetSec)} s`}</span>
-      </label>`).join('') : '<p class="muted">Aucune voiture au garage.</p>'}
+      </div>`).join('')}
     </div>
     ${!sel.length ? '<p class="warnbox" style="margin-top:10px">Coche au moins une voiture.</p>' : ''}
     ${bad.length ? `<p class="warnbox" style="margin-top:10px;border-color:var(--accent)">❌ Les voitures sélectionnées ne permettent pas de rouler en <b>${s2(a.targetSec)} s</b>.
@@ -275,6 +285,8 @@ function renderAdaptiveVsc() { // utilisé en course depuis la v1.85 (s'il est a
     const v = Math.max(0.5, Math.min(60, parseFloat(e.target.value) || a.targetSec));
     save({ targetSec: Math.round(v * 100) / 100 });
   };
+  const vp = $('#vaPick', root);
+  if (vp) vp.ontoggle = () => { vaPickOpen = vp.open; };
   const sug = $('#vaSuggest', root);
   if (sug) sug.onclick = () => save({ targetSec: Math.round(common.min * 100) / 100 });
   root.querySelectorAll('[data-va-car]').forEach((cb) => (cb.onchange = () => {
