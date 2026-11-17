@@ -1189,7 +1189,7 @@ export const app = {
   },
 
   /** Virtual Safety Car : toutes les voitures bridées à un % de leur vitesse max. */
-  toggleVsc() {
+  toggleVsc(auto = false) {
     const s = this.session;
     if (!s || !['running', 'finishing'].includes(s.state) || s.flag === 'red') return;
     if (s.vscCountdown) return; // décompte déjà lancé
@@ -1199,6 +1199,7 @@ export const app = {
     if (s.flag !== 'vsc') {
       s.setFlag('vsc');
       s.vscSince = performance.now(); // pour la fin de VSC automatique
+      s.vscAuto = auto; // fin automatique seulement pour un VSC déclenché automatiquement
       cu.urgent(); // les voitures sont bridées tout de suite (avant de relire les passages)
       perf.update();
       say('Virtual Safety Car ! Vitesse limitée', { priority: true });
@@ -1601,7 +1602,7 @@ async function init() {
     const hit = checkAutoVsc(app);
     if (hit) {
       hit.comp.autoVscFor = hit.comp.seenAt; // une seule fois tant qu'elle n'est pas repassée
-      app.toggleVsc();
+      app.toggleVsc(true);
       const who = hit.comp.driver?.name || `voiture ${hit.comp.address + 1}`;
       toast(`🟨 VSC automatique : ${who} ne repasse plus (${hit.rule}, ${Math.round(hit.secs)} s)`, 5000);
       app.log(`VSC automatique (${hit.rule}) : ${who} sans passage depuis ${hit.secs.toFixed(1)} s`);

@@ -177,11 +177,11 @@ function renderAutoVsc() {
 
     <div class="auto-rule">
       <div class="row" style="justify-content:space-between"><h3 style="margin:0">Fin automatique</h3>${sw('avEnd', c.endOn)}</div>
-      <p class="muted" style="margin:6px 0 8px;font-size:.85rem">Si le VSC (manuel ou automatique) dure plus de :</p>
+      <p class="muted" style="margin:6px 0 8px;font-size:.85rem">Si le VSC <b>déclenché automatiquement</b> dure plus de :</p>
       <div class="row" style="gap:8px;align-items:center">
         <input type="number" id="avEndSec" min="3" max="60" step="1" value="${c.endSec}" style="width:90px"> <span>secondes → reprise : « Fin de VSC dans… 3, 2, 1, Go »</span>
       </div>
-      <p class="muted" style="margin:8px 0 0;font-size:.8rem">Sauf si un drapeau rouge est sorti ou si tu as déjà lancé la fin du VSC toi-même. Reprise habituelle : voix, bips, éclairage.</p>
+      <p class="muted" style="margin:8px 0 0;font-size:.8rem">Un VSC lancé à la main (écran ou vue pilote) se termine à la main. Sauf aussi si un drapeau rouge est sorti ou si tu as déjà lancé la fin du VSC toi-même. Reprise habituelle : voix, bips, éclairage.</p>
     </div>
 
     <p class="muted" style="margin:14px 0 0;font-size:.8rem"><b>Jamais de VSC automatique pour :</b> une voiture au stand (le compte repart à sa sortie), en panne sèche, déjà arrivée ou pas encore partie ; ni pendant un VSC, un drapeau rouge ou la fin de course. Après chaque reprise, le compte repart de zéro. Une voiture qui a déclenché le VSC ne le redéclenche pas tant qu'elle n'est pas repassée.</p>

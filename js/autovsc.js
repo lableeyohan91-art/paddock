@@ -37,13 +37,14 @@ export function checkAutoVsc(app, now = performance.now()) {
 }
 
 /**
- * Fin de VSC automatique : un VSC (manuel ou automatique) qui dure plus de X secondes
+ * Fin de VSC automatique : un VSC déclenché AUTOMATIQUEMENT qui dure plus de X secondes
  * sans drapeau rouge ni fin manuelle se termine tout seul, par le décompte habituel.
+ * Un VSC lancé à la main (écran ou vue pilote) se termine à la main.
  */
 export function shouldEndVsc(app, now = performance.now()) {
   const s = app.session;
   const cfg = autoCfg(app);
   if (!s || !autoAllowed(s) || !cfg.endOn || s.state !== 'running') return false;
-  if (s.flag !== 'vsc' || s.vscCountdown || !s.vscSince) return false;
+  if (s.flag !== 'vsc' || s.vscCountdown || !s.vscSince || !s.vscAuto) return false;
   return (now - s.vscSince) / 1000 >= cfg.endSec;
 }
