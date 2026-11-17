@@ -1156,6 +1156,9 @@ export const app = {
     const s = this.session;
     if (!s || !['running', 'finishing'].includes(s.state) || s.flag === 'red') return;
     if (s.vscCountdown) return; // décompte déjà lancé
+    // double appui : le 2e est ignoré, sinon il lancerait aussitôt la fin du VSC
+    if (performance.now() - (s._vscToggledAt || 0) < 2000) return;
+    s._vscToggledAt = performance.now();
     if (s.flag !== 'vsc') {
       s.setFlag('vsc');
       s.vscSince = performance.now(); // pour la fin de VSC automatique
