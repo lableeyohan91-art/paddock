@@ -223,10 +223,11 @@ function garage(c) {
   return `
     <h2 style="margin-bottom:6px">🔧 Ma voiture</h2>
     <p class="muted" style="margin:0 0 10px;font-size:.85rem">Réglage de <b>${esc(c.name)}</b> sur <b>${esc(c.car)}</b>, appliqué tout de suite au circuit.</p>
+    ${data.parcFerme ? '<p class="warnbox" style="margin:0 0 10px">🔒 <b>Parc fermé</b> : la vitesse ne peut plus être modifiée jusqu’à l’arrivée.</p>' : ''}
     ${[['speed', 'Accélération', 'var(--green)'], ['brake', 'Freinage', 'var(--accent-2)']].map(([k, l, col]) => `
     <div class="bar" style="--c:${col};--p:${pct(c[k])}%">
       <span class="bar-l">${l}</span>
-      <input type="range" min="0" max="15" step="1" value="${c[k]}" data-k="${k}" aria-label="${l}">
+      <input type="range" min="0" max="15" step="1" value="${c[k]}" data-k="${k}" aria-label="${l}" ${k === 'speed' && data.parcFerme ? 'disabled' : ''}>
       <span class="bar-v num">${pct(c[k])} %</span>
     </div>`).join('')}`;
 }

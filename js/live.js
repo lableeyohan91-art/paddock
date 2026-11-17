@@ -101,6 +101,7 @@ function snapshot() {
     vscCountdown: s.vscCountdown || null,
     redResuming: !!s.redResuming,
     relaunch: app.canRelaunch?.() || false, // bouton « Nouvelle relance » (faux départ)
+    parcFerme: app.parcFerme?.() || false,  // vitesse verrouillée (Essence selon le poids)
     startWall,
     // chrono figé : fin de séance ou drapeau rouge (les téléphones affichent le même temps que l'écran)
     endWall: (s.endedAt || s.redSince !== null) && startWall !== null ? startWall + s.elapsedMs : null,
@@ -210,6 +211,7 @@ function handle(cmd) {
     const k = cmd.k;
     const v = Math.round(+cmd.v);
     if (!c?.driver?.id || !c?.car?.id || !['speed', 'brake'].includes(k) || !(v >= 0 && v <= 15)) return;
+    if (k === 'speed' && app.parcFerme?.()) { app.saveTune(c.driver.id, c.car.id, { speed: v }); return; } // refusé (parc fermé), toast affiché
     app.saveTune(c.driver.id, c.car.id, { [k]: v }); // appliqué tout de suite à sa manette
     toast(`🔧 ${c.driver.name} : ${k === 'speed' ? 'accélération' : 'freinage'} ${Math.round((v / 15) * 100)} %`, 1500);
   }

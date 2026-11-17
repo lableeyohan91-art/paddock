@@ -868,3 +868,6 @@ input.need { border: 2px solid var(--red, #e10600) !important; box-shadow: 0 0 0
 .swipe-box.more:not(.seen) .swipe-hint { display: block; }
 @keyframes swipeNudge { 50% { transform: translateX(6px); } }
 .btn.btn-save { border: 2px solid var(--red, #e10600); }
+
+/* parc fermé : curseur de vitesse verrouillé */
+.bar input[type=range]:disabled { opacity: .35; cursor: not-allowed; filter: grayscale(1); }

@@ -124,7 +124,22 @@ export const app = {
     return { speed: DEFAULT_TUNE.speed, brake: DEFAULT_TUNE.brake, fuel: car?.fuelCapacity ?? 15, saved: false };
   },
 
+  /**
+   * Parc fermé : avec « Essence selon le poids », la vitesse des voitures ne peut plus être
+   * modifiée à la main après le Go (ni au garage, ni depuis la vue pilote), jusqu'à l'arrivée.
+   */
+  parcFerme() {
+    const s = this.session;
+    return !!(this.fuelCfg.weight?.on && this.fuelOn() && s && s.cfg.type === 'race' && ['running', 'finishing'].includes(s.state));
+  },
+
   async saveTune(driverId, carId, values) {
+    if (this.parcFerme() && 'speed' in values) {
+      values = { ...values };
+      delete values.speed;
+      toast('🔒 Parc fermé : la vitesse ne peut plus être modifiée pendant la course', 2500);
+      if (!Object.keys(values).length) return false;
+    }
     const id = this.tuneId(driverId, carId);
     const t = { ...this.getTune(driverId, carId), ...values, id, driverId, carId, updated: Date.now() };
     delete t.saved;
@@ -134,6 +149,7 @@ export const app = {
     (this.setup?.slots || [])
       .filter((s) => s.active && s.driverId === driverId && s.carId === carId)
       .forEach((s) => this.applyTune(s.address, Object.keys(values)));
+    return true;
   },
 
   /** Envoie le réglage d'une manette à la Control Unit (et au moteur de performance). */

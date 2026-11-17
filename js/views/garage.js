@@ -46,10 +46,11 @@ function tuneCard(slot) {
         <select data-k="driverId" class="tune-driver">${opt(app.data.drivers, slot.driverId, '— Pilote —')}</select>
         <select data-k="carId">${opt(app.data.cars, slot.carId, '— Voiture —')}</select>
       </div>
+      ${ready && slot.active && app.parcFerme() ? '<p class="warnbox" style="margin:6px 0">🔒 <b>Parc fermé</b> : vitesse verrouillée jusqu’à l’arrivée.</p>' : ''}
       ${ready ? BARS.map((b) => `
       <div class="bar" style="--c:${b.color};--p:${pct(t[b.k])}%">
         <span class="bar-l">${b.label}</span>
-        <input type="range" min="0" max="15" step="1" value="${t[b.k]}" data-bar="${b.k}" aria-label="${b.label}">
+        <input type="range" min="0" max="15" step="1" value="${t[b.k]}" data-bar="${b.k}" aria-label="${b.label}" ${b.k === 'speed' && slot.active && app.parcFerme() ? 'disabled' : ''}>
         <span class="bar-v num">${pct(t[b.k])} %</span>
       </div>`).join('') : '<p class="muted" style="margin:6px 0 0">Choisis le pilote et la voiture pour régler.</p>'}
       ${ready && !t.saved ? '<p class="muted tune-hint">Première fois pour ce pilote sur cette voiture : réglage par défaut.</p>' : ''}
@@ -140,8 +141,8 @@ function bindTunes() {
         bar.querySelector('.bar-v').textContent = pct(v) + ' %';
         // enregistre et envoie au circuit après un court délai (glissement continu)
         clearTimeout(timers.get(card.dataset.slot + k));
-        timers.set(card.dataset.slot + k, setTimeout(() => {
-          app.saveTune(slot.driverId, slot.carId, { [k]: v });
+        timers.set(card.dataset.slot + k, setTimeout(async () => {
+          if ((await app.saveTune(slot.driverId, slot.carId, { [k]: v })) === false) render(); // parc fermé : le curseur revient
         }, 150));
       });
     });

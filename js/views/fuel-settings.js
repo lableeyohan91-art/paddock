@@ -211,6 +211,7 @@ function weightHtml() {
     <summary><h2 style="margin:0">⚖️ Essence selon le poids <small class="muted">· ${w.on ? 'activé' : 'désactivé'}</small></h2></summary>
     <p class="muted" style="margin:10px 0 12px;font-size:.88rem">Plein, la voiture est plus lourde ; presque vide, elle est plus légère.</p>
     <p class="tipbox">💡 Cette option est <b>désactivée en qualification et en essais libres</b> : les voitures y gardent leur vitesse normale.</p>
+    <p class="warnbox">🔒 <b>Parc fermé</b> : si cette option est activée, la course se joue en parc fermé. Après le départ, <b>aucune modification manuelle de la vitesse</b> des voitures n'est possible (ni au garage, ni depuis la vue pilote), jusqu'à l'arrivée.</p>
     <label class="switch"><input type="checkbox" id="fWOn" ${w.on ? 'checked' : ''}><span></span> ${w.on ? 'Activé' : 'Désactivé'}</label>
     <ul class="weight-rows" style="margin:12px 0 0;padding-left:20px;display:grid;gap:4px">
       <li>De 80 à 100 % du réservoir : <b>1 cran de moins</b></li>
