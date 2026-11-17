@@ -525,8 +525,8 @@ export const app = {
     const c = s.comps.get(address);
     if (!c || c.fuelPct === null || c.fuelPct === undefined || c.fuelPct <= 0) return 0;
     const ratio = (c.fuelPct / (c.tankPct || 100)) * 100; // % de SON réservoir
-    if (ratio >= 80) return -w.heavy;
-    if (ratio < 30) return w.light;
+    if (ratio >= 80) return -1; // plein : 1 cran de moins (non réglable)
+    if (ratio < 30) return 1;   // presque vide : 1 cran de plus
     return 0;
   },
 

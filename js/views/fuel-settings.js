@@ -205,7 +205,6 @@ let weightOpen = false;
 /** Essence selon le poids : menu déroulant, désactivé de base. */
 function weightHtml() {
   const w = cfg.weight;
-  const opts = (v) => [1, 2, 3].map((n) => `<option value="${n}" ${v === n ? 'selected' : ''}>${n} cran${n > 1 ? 's' : ''}</option>`).join('');
   return `
   <section class="panel" style="margin-top:14px">
     <details class="calc-box" id="weightBox" ${weightOpen ? 'open' : ''}>
@@ -213,13 +212,11 @@ function weightHtml() {
     <p class="muted" style="margin:10px 0 12px;font-size:.88rem">Plein, la voiture est plus lourde ; presque vide, elle est plus légère.</p>
     <p class="tipbox">💡 Cette option est <b>désactivée en qualification</b> : les voitures y gardent leur vitesse normale.</p>
     <label class="switch"><input type="checkbox" id="fWOn" ${w.on ? 'checked' : ''}><span></span> ${w.on ? 'Activé' : 'Désactivé'}</label>
-    <div class="weight-rows" style="margin-top:12px;display:grid;gap:8px">
-      <label class="field">De 80 à 100 % du réservoir : vitesse réduite de
-        <select id="fWHeavy" style="width:140px" ${w.on ? '' : 'disabled'}>${opts(w.heavy)}</select></label>
-      <p class="muted" style="margin:0;font-size:.88rem">De 30 à 80 % : vitesse normale de la voiture.</p>
-      <label class="field">De 0 à 30 % du réservoir : vitesse augmentée de
-        <select id="fWLight" style="width:140px" ${w.on ? '' : 'disabled'}>${opts(w.light)}</select></label>
-    </div>
+    <ul class="weight-rows" style="margin:12px 0 0;padding-left:20px;display:grid;gap:4px">
+      <li>De 80 à 100 % du réservoir : <b>1 cran de moins</b></li>
+      <li>De 30 à 80 % : vitesse normale de la voiture</li>
+      <li>Sous 30 % : <b>1 cran de plus</b></li>
+    </ul>
     <p class="muted" style="font-size:.85rem;margin:8px 0 0">En crans par rapport à la vitesse réglée au garage (maximum 15). Sous VSC et en panne sèche, la vitesse imposée l'emporte.</p>
     </details>
   </section>`;
@@ -267,8 +264,6 @@ function bindConso() {
   if (wb) {
     wb.ontoggle = () => { weightOpen = wb.open; };
     $('#fWOn', el).onchange = (e) => { cfg.weight = { ...cfg.weight, on: e.target.checked }; save(true); draw(); };
-    $('#fWHeavy', el).onchange = (e) => { cfg.weight = { ...cfg.weight, heavy: +e.target.value }; save(true); };
-    $('#fWLight', el).onchange = (e) => { cfg.weight = { ...cfg.weight, light: +e.target.value }; save(true); };
   }
   const fixIn = $('#fEmptyFix', el);
   if (fixIn) fixIn.oninput = () => {
