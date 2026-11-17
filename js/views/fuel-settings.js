@@ -7,6 +7,7 @@ import { esc, $, $$, toast, confirmBox, promptBox } from '../ui.js';
 import { LIMITS, activeBands } from '../fuel.js';
 import { optimizeFuel, bestOfDrivers, raceMedianOf, median } from '../fuel-calc.js';
 import { curveHtml, bindCurve, loadCurveState, lapsTip, curveIntro, bindRequired, bindSwipe } from './fuel-curve.js';
+import { statLaps } from '../memo.js';
 
 let app;
 let el;
@@ -28,7 +29,7 @@ export async function renderFuel(container, a) {
   el = container;
   cfg = structuredClone(app.fuelCfg);
   await loadSetups();
-  lapsCache = await app.db.all('laps');
+  lapsCache = (await statLaps(app.db)).all; // tours détaillés + tours témoins des fiches mémo (30 derniers de course, meilleurs)
   calc = await app.db.getSetting('fuelCalc', {});
   // pilotes cochés au départ : ceux du dernier calcul (Paliers ou Progressif)
   const lastDrivers = await app.db.getSetting('fuelCalcDrivers', null);

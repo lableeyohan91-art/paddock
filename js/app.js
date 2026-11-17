@@ -33,6 +33,7 @@ import * as ghostView from './views/ghost.js';
 import * as quickView from './views/quick.js';
 import { openImport, importDone } from './views/import-records.js';
 import * as statsView from './views/stats.js';
+import { rotate as rotateMemos } from './memo.js';
 import * as settingsView from './views/settings.js';
 
 /** Réglages de session par défaut (participants, circuit ; météo gardée en sommeil). */
@@ -1046,6 +1047,8 @@ export const app = {
         // simulateur : les voitures virtuelles s'arrêtent à la fin de la session
         if (this.isSim) cu.conn.running = false;
         await this._saveSessionRecord('finished');
+        // seules les 3 dernières séances gardent tous leurs tours : les autres vont dans les fiches mémo
+        setTimeout(() => rotateMemos(this).catch((e) => this.log('Fiches mémo : ' + e.message)), 3000);
         perf.stop();
         perf.restore();
         weather.stop();
@@ -1590,6 +1593,8 @@ async function init() {
   app.extraLights = savedLights.map((x) => new GenericLight(x));
   app.extraLights.forEach((l) => watchExtraLight(l));
   if (app.lightSync.others) autoConnectExtras();
+  // Fiches mémo : verse les séances anciennes (au-delà des 3 dernières) dans les fiches
+  setTimeout(() => rotateMemos(app).catch((e) => app.log('Fiches mémo : ' + e.message)), 4000);
   // Une seule fois : on installe le réglage équilibré (validé par simulation 50 et 100 tours)
   // et on l'enregistre comme setup nommé.
   if (!(await db.getSetting('fuelBalancedApplied', false))) {

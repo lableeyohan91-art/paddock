@@ -2,9 +2,10 @@
 // Tout reste sur l'appareil. Export/import JSON pour sauvegarder ou transférer.
 
 const DB_NAME = 'paddock';
-const DB_VERSION = 3; // v3 : remise à zéro des statistiques (tours de test / simulateur)
+const DB_VERSION = 4; // v3 : remise à zéro des statistiques ; v4 : fiches mémo (memos)
 // tunes = réglages du garage, un par couple pilote + voiture (id "pilote|voiture")
-export const STORES = ['drivers', 'cars', 'tracks', 'sessions', 'laps', 'settings', 'tunes'];
+// memos = fiche mémo par pilote + voiture + circuit (js/memo.js) : statistiques des séances anciennes
+export const STORES = ['drivers', 'cars', 'tracks', 'sessions', 'laps', 'settings', 'tunes', 'memos'];
 
 let dbp = null;
 
@@ -22,7 +23,7 @@ function open() {
           if (db.objectStoreNames.contains(name)) tx.objectStore(name).clear();
         }
       }
-      for (const name of ['drivers', 'cars', 'tracks', 'sessions', 'tunes']) {
+      for (const name of ['drivers', 'cars', 'tracks', 'sessions', 'tunes', 'memos']) {
         if (!db.objectStoreNames.contains(name)) db.createObjectStore(name, { keyPath: 'id' });
       }
       if (!db.objectStoreNames.contains('laps')) {
@@ -105,6 +106,20 @@ export async function byIndex(name, index, value) {
   return wrap((await store(name)).index(index).getAll(value));
 }
 
+/** Efface plusieurs objets d'un coup (une seule transaction), avec synchronisation. */
+export async function removeMany(name, ids) {
+  if (!ids.length) return;
+  const db = await open();
+  const tx = db.transaction(name, 'readwrite');
+  const os = tx.objectStore(name);
+  ids.forEach((id) => os.delete(id));
+  await new Promise((resolve, reject) => {
+    tx.oncomplete = resolve;
+    tx.onerror = () => reject(tx.error);
+  });
+  ids.forEach((id) => notify(name, 'delete', { id, key: id }));
+}
+
 export async function putMany(name, list, { quiet = false } = {}) {
   const db = await open();
   const tx = db.transaction(name, 'readwrite');
@@ -122,13 +137,14 @@ export async function putMany(name, list, { quiet = false } = {}) {
   if (!quiet) list.forEach((o) => notify(name, 'put', o));
 }
 
-/** Efface toutes les statistiques (tours et sessions). Pilotes, voitures, réglages conservés. */
+/** Efface toutes les statistiques (tours, sessions, fiches mémo). Pilotes, voitures, réglages conservés. */
 export async function clearStats() {
-  const victims = { laps: await all('laps'), sessions: await all('sessions') };
+  const victims = { laps: await all('laps'), sessions: await all('sessions'), memos: await all('memos') };
   const db = await open();
-  const tx = db.transaction(['laps', 'sessions'], 'readwrite');
+  const tx = db.transaction(['laps', 'sessions', 'memos'], 'readwrite');
   tx.objectStore('laps').clear();
   tx.objectStore('sessions').clear();
+  tx.objectStore('memos').clear();
   await new Promise((resolve, reject) => {
     tx.oncomplete = resolve;
     tx.onerror = () => reject(tx.error);
@@ -142,7 +158,7 @@ export async function getSetting(key, fallback) {
 }
 // réglages propres à cet appareil : jamais synchronisés
 export const LOCAL_SETTINGS = {
-  has: (key) => key === 'lastConnection' || String(key).startsWith('backupBeforeSync:'),
+  has: (key) => key === 'lastConnection' || key === 'backupBeforeMemo' || String(key).startsWith('backupBeforeSync:'),
 };
 export async function setSetting(key, value, { quiet = false } = {}) {
   return put('settings', { key, value }, { quiet: quiet || LOCAL_SETTINGS.has(key) });
@@ -151,7 +167,7 @@ export async function setSetting(key, value, { quiet = false } = {}) {
 export async function exportAll() {
   const out = { app: 'paddock', version: DB_VERSION, date: new Date().toISOString() };
   for (const s of STORES) out[s] = await all(s);
-  out.settings = out.settings.filter((x) => !String(x.key).startsWith('backupBeforeSync:'));
+  out.settings = out.settings.filter((x) => !String(x.key).startsWith('backupBeforeSync:') && x.key !== 'backupBeforeMemo');
   return out;
 }
 

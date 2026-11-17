@@ -12,7 +12,7 @@ import { FIREBASE_CONFIG } from './firebase-config.js';
 import * as db from './db.js';
 
 const SDK = 'https://www.gstatic.com/firebasejs/10.12.2/';
-const SYNCED = ['drivers', 'cars', 'tracks', 'sessions', 'laps', 'settings', 'tunes'];
+const SYNCED = ['drivers', 'cars', 'tracks', 'sessions', 'laps', 'settings', 'tunes', 'memos'];
 
 let fb = null;        // modules Firebase
 let auth = null;

@@ -5,6 +5,7 @@
 import { esc, $, $$, modal, fmtDate, confirmBox, toast } from '../ui.js';
 import { fmtTime, TYPES } from '../race.js';
 import { avatar, editDriver } from './drivers.js';
+import { statLaps, counts, dayKey } from '../memo.js';
 
 let app;
 let root;
@@ -43,7 +44,11 @@ const wet = (l) => (l.wetness ?? 0) >= 0.05;
 
 async function compute(d) {
   const onTrack = (x) => !sheetTrack || x.trackId === sheetTrack;
-  const laps = (await app.db.byIndex('laps', 'driverId', d.id)).filter(onTrack);
+  // tours détaillés (3 dernières séances, records importés) + tours témoins des fiches mémo
+  const src = await statLaps(app.db, { driverId: d.id });
+  const laps = src.all.filter(onTrack);
+  const detail = src.laps.filter(onTrack);
+  const memos = src.memos.filter(onTrack);
   const sessions = (await app.db.all('sessions')).filter(onTrack);
   const lapSessions = new Set(laps.map((l) => l.sessionId));
   const mine = sessions.filter((s) => s.state === 'finished' &&
@@ -75,17 +80,19 @@ async function compute(d) {
       trackId,
       track: app.track(trackId)?.name || '(circuit supprimé)',
       best,
-      laps: ls.filter((l) => !l.imported).length, // tours roulés dans Paddock (hors records importés)
+      laps: counts(detail, memos, (x) => x.trackId === trackId).laps, // tours roulés dans Paddock (hors records importés)
       sectors,
       ideal: sectors ? sectors.reduce((s, x) => s + x.time, 0) : null,
     };
   }).sort((a, b) => b.laps - a.laps);
 
+  const total = counts(detail, memos);
   return {
     laps,
+    memos,
     // les records importés (SmartRace) ne sont qu'un meilleur tour : hors compteurs
-    totalLaps: laps.filter((l) => !l.imported).length,
-    drivingMs: laps.filter((l) => !l.imported).reduce((s, l) => s + l.time, 0),
+    totalLaps: total.laps,
+    drivingMs: total.drivingMs,
     races: ofType('race').length,
     wins: ofType('race').filter(first).length,
     quals: ofType('qualifying').length,
@@ -200,17 +207,21 @@ function drawProgress(d, st) {
   const trackId = chartTrack(st);
   // meilleur tour de chaque JOUR sur ce circuit (hors drapeau jaune),
   // toutes sessions de la journée confondues
-  const dayKey = (ts) => new Date(ts).toLocaleDateString('fr-FR');
+  // (les tours témoins des fiches mémo ne comptent que pour le meilleur tour du jour ;
+  //  leurs tours et séances viennent des compteurs de la fiche)
   const byDay = new Map();
   for (const l of st.laps) {
     if (l.trackId !== trackId || l.flag === 'yellow') continue;
     const k = dayKey(l.date);
-    const cur = byDay.get(k);
-    if (!cur) byDay.set(k, { best: l, sessions: new Set([l.sessionId]), laps: 1 });
-    else {
-      cur.sessions.add(l.sessionId);
-      cur.laps++;
-      if (l.time < cur.best.time) cur.best = l;
+    let cur = byDay.get(k);
+    if (!cur) { cur = { best: l, sessions: new Set(), laps: 0, extraSessions: 0 }; byDay.set(k, cur); }
+    if (l.time < cur.best.time) cur.best = l;
+    if (!l.kept && !l.imported) { cur.sessions.add(l.sessionId); cur.laps++; }
+  }
+  for (const m of st.memos.filter((x) => x.trackId === trackId)) {
+    for (const [k, v] of Object.entries(m.days || {})) {
+      const cur = byDay.get(k);
+      if (cur) { cur.laps += v.laps; cur.extraSessions += v.sessions; }
     }
   }
   const days = [...byDay.values()].sort((a, b) => a.best.date - b.best.date);
@@ -265,7 +276,7 @@ function drawProgress(d, st) {
       const p = day.best;
       const prev = pts[+c.dataset.i - 1];
       const delta = prev ? p.time - prev.time : null;
-      const ns = day.sessions.size;
+      const ns = day.sessions.size + day.extraSessions;
       tip.innerHTML = `<b>${new Date(p.date).toLocaleDateString('fr-FR', { weekday: 'short', day: '2-digit', month: '2-digit', year: '2-digit' })}</b><br>
         <span class="muted">${p.imported ? '📥 record importé de SmartRace'
           : `${ns} session${ns > 1 ? 's' : ''} · ${day.laps} tours · record du jour en ${(TYPE_LABEL[p.sessionType] || '').toLowerCase()} à ${new Date(p.date).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`}</span><br>

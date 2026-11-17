@@ -2,10 +2,11 @@
 
 import { esc, $, $$, fmtDate } from '../ui.js';
 import { fmtTime, TYPES } from '../race.js';
+import { statLaps, counts, dayKey } from '../memo.js';
 
 let app;
 let root;
-const filter = { trackId: null, cond: 'all', driverId: null };
+const filter = { trackId: null, driverId: null };
 
 export function mount(main, a) {
   app = a;
@@ -38,10 +39,10 @@ function groupBy(list, key) {
 }
 
 async function render() {
-  const allLaps = filter.trackId ? await app.db.byIndex('laps', 'trackId', filter.trackId) : [];
-  let laps = allLaps.filter((l) => l.flag !== 'yellow');
-  if (filter.cond === 'dry') laps = laps.filter((l) => (l.wetness ?? 0) < 0.05);
-  if (filter.cond === 'wet') laps = laps.filter((l) => (l.wetness ?? 0) >= 0.05);
+  // tours détaillés (3 dernières séances, records importés) + tours témoins des fiches mémo
+  const src = filter.trackId ? await statLaps(app.db, { trackId: filter.trackId }) : { laps: [], memos: [], all: [] };
+  const laps = src.all.filter((l) => l.flag !== 'yellow');
+  const total = counts(src.laps, src.memos);
   const sessions = (await app.db.all('sessions'))
     .filter((s) => s.trackId === filter.trackId)
     .sort((a, b) => b.date - a.date);
@@ -52,7 +53,10 @@ async function render() {
 
   const driverRows = [...byDriver.entries()].map(([id, ls]) => {
     const times = ls.map((l) => l.time).sort((a, b) => a - b);
-    const c = clean(ls).map((l) => l.time);
+    // régularité : ses 30 derniers tours
+    const last30 = [...ls].filter((l) => !l.imported).sort((a, b) => b.date - a.date).slice(0, 30);
+    const c = clean(last30).map((l) => l.time);
+    const n = counts(src.laps, src.memos, (x) => x.driverId === id);
     return {
       id,
       name: app.driver(id)?.name || '(supprimé)',
@@ -60,8 +64,8 @@ async function render() {
       best: times[0],
       top5: avg(times.slice(0, 5)),
       consistency: c.length > 2 ? std(c) : null,
-      count: ls.length,
-      sessions: new Set(ls.map((l) => l.sessionId)).size,
+      count: n.laps,
+      sessions: n.sessions,
     };
   }).sort((a, b) => a.best - b.best);
 
@@ -71,7 +75,7 @@ async function render() {
       name: app.car(id)?.name || '(supprimée)',
       best: best.time,
       by: app.driver(best.driverId)?.name || '—',
-      count: ls.length,
+      count: counts(src.laps, src.memos, (x) => x.carId === id).laps,
     };
   }).sort((a, b) => a.best - b.best);
 
@@ -81,20 +85,15 @@ async function render() {
   <div class="row" style="margin-bottom:16px">
     <label class="field">Circuit<select id="fTrack">${app.data.tracks.map((t) =>
       `<option value="${esc(t.id)}" ${t.id === filter.trackId ? 'selected' : ''}>${esc(t.name)}</option>`).join('')}</select></label>
-    <label class="field">Conditions
-      <div class="seg" id="fCond">
-        ${[['all', 'Toutes'], ['dry', '☀️ Sec'], ['wet', '🌧️ Mouillé']].map(([k, l]) =>
-          `<button data-c="${k}" class="${filter.cond === k ? 'on' : ''}">${l}</button>`).join('')}
-      </div></label>
   </div>
 
-  ${!laps.length ? `<div class="panel empty">Aucun tour enregistré sur ce circuit${filter.cond !== 'all' ? ' dans ces conditions' : ''}.<br>Lance une session : chaque tour est sauvegardé automatiquement.</div>` : `
+  ${!laps.length ? `<div class="panel empty">Aucun tour enregistré sur ce circuit.<br>Lance une session : chaque tour est sauvegardé automatiquement.</div>` : `
   <div class="stat-cards" style="margin-bottom:16px">
     <div class="stat"><div class="l">Record du circuit</div><div class="v num t-overall">${fmtTime(record.time)}</div>
       <div class="muted" style="font-size:.85rem">${esc(app.driver(record.driverId)?.name || '—')} · ${esc(app.car(record.carId)?.name || '—')}</div></div>
-    <div class="stat"><div class="l">Tours enregistrés</div><div class="v num">${laps.length}</div></div>
+    <div class="stat"><div class="l">Tours enregistrés</div><div class="v num">${total.laps}</div></div>
     <div class="stat"><div class="l">Sessions</div><div class="v num">${sessions.length}</div></div>
-    <div class="stat"><div class="l">Distance parcourue</div><div class="v num">${app.track(filter.trackId)?.length ? ((laps.length * app.track(filter.trackId).length) / 1000).toFixed(2) + ' km' : '—'}</div>
+    <div class="stat"><div class="l">Distance parcourue</div><div class="v num">${app.track(filter.trackId)?.length ? ((total.laps * app.track(filter.trackId).length) / 1000).toFixed(2) + ' km' : '—'}</div>
       ${app.track(filter.trackId)?.length ? '' : '<div class="muted" style="font-size:.75rem">Indique la longueur du circuit</div>'}</div>
   </div>
 
@@ -115,7 +114,7 @@ async function render() {
       <div class="row" style="margin-bottom:8px">
         <select id="fDriver">${driverRows.map((d) =>
           `<option value="${esc(d.id)}" ${d.id === filter.driverId ? 'selected' : ''}>${esc(d.name)}</option>`).join('')}</select>
-        <span class="muted" style="font-size:.85rem">Meilleur tour par session</span>
+        <span class="muted" style="font-size:.85rem">Meilleur tour par jour</span>
       </div>
       <div id="chart"></div>
     </section>
@@ -143,7 +142,6 @@ async function render() {
   </div>`}`;
 
   $('#fTrack', root).onchange = (e) => { filter.trackId = e.target.value; render(); };
-  $$('#fCond button', root).forEach((b) => (b.onclick = () => { filter.cond = b.dataset.c; render(); }));
   const fd = $('#fDriver', root);
   if (fd) {
     fd.onchange = (e) => { filter.driverId = e.target.value; drawChart(byDriver.get(filter.driverId) || []); };
@@ -153,12 +151,14 @@ async function render() {
 
 function drawChart(laps) {
   const el = $('#chart', root);
-  const bySession = groupBy(laps, 'sessionId');
-  const pts = [...bySession.values()]
+  // meilleur tour de chaque jour (les fiches mémo gardent le meilleur tour de chaque jour)
+  const byDay = new Map();
+  for (const l of laps) { const k = dayKey(l.date); if (!byDay.has(k)) byDay.set(k, []); byDay.get(k).push(l); }
+  const pts = [...byDay.values()]
     .map((ls) => ({ date: Math.min(...ls.map((l) => l.date)), best: Math.min(...ls.map((l) => l.time)) }))
     .sort((a, b) => a.date - b.date);
   if (pts.length < 2) {
-    el.innerHTML = `<p class="muted">Il faut au moins deux sessions pour voir une progression.${pts.length ? ` Meilleur tour actuel : <b class="num">${fmtTime(pts[0].best)}</b>` : ''}</p>`;
+    el.innerHTML = `<p class="muted">Il faut au moins deux jours de roulage pour voir une progression.${pts.length ? ` Meilleur tour actuel : <b class="num">${fmtTime(pts[0].best)}</b>` : ''}</p>`;
     return;
   }
   const W = 600, H = 200, P = 36;
@@ -177,5 +177,5 @@ function drawChart(laps) {
       <path d="${path}" fill="none" stroke="var(--green)" stroke-width="2.5" vector-effect="non-scaling-stroke"/>
       ${pts.map((p, i) => `<circle cx="${x(i)}" cy="${y(p.best)}" r="4" fill="${p.best === min ? 'var(--purple)' : 'var(--green)'}"><title>${fmtDate(p.date)} : ${fmtTime(p.best)}</title></circle>`).join('')}
     </svg>
-    <p class="muted" style="margin:6px 0 0;font-size:.85rem">${gain > 0 ? `▲ ${fmtTime(gain)} gagnées depuis la première session` : gain < 0 ? `▼ ${fmtTime(-gain)} perdues depuis la première session` : 'Stable'}</p>`;
+    <p class="muted" style="margin:6px 0 0;font-size:.85rem">${gain > 0 ? `▲ ${fmtTime(gain)} gagnées depuis le premier jour` : gain < 0 ? `▼ ${fmtTime(-gain)} perdues depuis le premier jour` : 'Stable'}</p>`;
 }

@@ -3,6 +3,7 @@
 
 import { esc, $, $$, modal, confirmBox, toast } from '../ui.js';
 import { raceMedianOf } from '../fuel-calc.js';
+import { statLaps } from '../memo.js';
 
 let app;
 let root;
@@ -229,9 +230,12 @@ export function editDriver(d, onSaved) {
   const cl = $('#pClearLaps', el);
   if (cl) cl.onclick = async () => {
     const mine = (await app.db.all('laps')).filter((l) => l.driverId === d.id && !l.imported);
-    if (!mine.length) { toast('Aucun tour roulé à effacer'); return; }
-    if (!(await confirmBox(`Effacer définitivement les ${mine.length} tours roulés par ${d.name} ? Ses tours effectués, son temps de roulage et ses records faits dans Paddock repartent de zéro. Ses records SmartRace importés sont conservés.`))) return;
-    for (const l of mine) await app.db.remove('laps', l.id);
+    const memos = (await app.db.all('memos')).filter((m) => m.driverId === d.id);
+    const n = mine.length + memos.reduce((s, m) => s + (m.laps || 0), 0);
+    if (!n) { toast('Aucun tour roulé à effacer'); return; }
+    if (!(await confirmBox(`Effacer définitivement les ${n} tours roulés par ${d.name} ? Ses tours effectués, son temps de roulage et ses records faits dans Paddock repartent de zéro. Ses records SmartRace importés sont conservés.`))) return;
+    await app.db.removeMany('laps', mine.map((l) => l.id));
+    await app.db.removeMany('memos', memos.map((m) => m.id)); // fiches mémo de ce pilote
     toast(`Tours de ${d.name} effacés`);
     done();
   };
@@ -246,7 +250,7 @@ export function editDriver(d, onSaved) {
     done();
   };
   // temps médian calculé sur ses tours de course (circuit en cours)
-  if (!isNew) app.db.all('laps').then((laps) => {
+  if (!isNew) statLaps(app.db).then(({ all: laps }) => {
     const r = raceMedianOf(laps, d.id, app.setup?.trackId);
     const box = $('#pMedianAuto', el);
     if (!box) return;
