@@ -21,6 +21,7 @@ let unsubCmds = null;
 let lastJson = '';
 let startWall = null; // heure (Date.now) du départ de la séance en cours
 let wallFor = null;
+let wallPaused = 0; // temps de drapeau rouge déjà pris en compte dans startWall
 
 /** Adresse de la vue pilote (toujours le site en ligne : les téléphones n'ont pas accès au PC). */
 export function pilotUrl(code = live.code) {
@@ -86,7 +87,8 @@ function snapshot() {
   const s = app.session;
   if (!s) return { state: 'none' };
   if (wallFor !== s) { wallFor = s; startWall = null; }
-  if (s.startedAt && startWall === null) startWall = Date.now() - s.elapsedMs;
+  // après un drapeau rouge, le départ « virtuel » est décalé du temps d'arrêt
+  if (s.startedAt && (startWall === null || wallPaused !== s.pausedMs)) { startWall = Date.now() - s.elapsedMs; wallPaused = s.pausedMs; }
   const list = s.order.length ? s.order : [...s.comps.values()];
   return {
     title: s.cfg.title || s.cfg.type,
@@ -100,7 +102,8 @@ function snapshot() {
     redResuming: !!s.redResuming,
     relaunch: app.canRelaunch?.() || false, // bouton « Nouvelle relance » (faux départ)
     startWall,
-    endWall: s.endedAt && startWall !== null ? startWall + s.elapsedMs : null,
+    // chrono figé : fin de séance ou drapeau rouge (les téléphones affichent le même temps que l'écran)
+    endWall: (s.endedAt || s.redSince !== null) && startWall !== null ? startWall + s.elapsedMs : null,
     leaderLaps: s.leaderLaps,
     fuel: app.fuelOn(),
     tyres: app.tyresOn(),

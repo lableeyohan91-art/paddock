@@ -31,6 +31,8 @@ export class RaceSession extends EventTarget {
     this.startedAt = null; // performance.now() au départ
     this.finishingAt = null;
     this.endedAt = null;
+    this.pausedMs = 0;     // temps passé sous drapeau rouge (le chrono est bloqué)
+    this.redSince = null;  // début du drapeau rouge en cours (performance.now)
     this.comps = new Map();
     this.overallBest = null; // {time, address}
     this.bestSectors = [];
@@ -76,7 +78,9 @@ export class RaceSession extends EventTarget {
 
   get elapsedMs() {
     if (!this.startedAt) return 0;
-    return (this.endedAt ?? performance.now()) - this.startedAt;
+    // drapeau rouge : le chrono reste bloqué jusqu'au Go de la reprise
+    const end = this.redSince ?? this.endedAt ?? performance.now();
+    return end - this.startedAt - this.pausedMs;
   }
 
   get durationMs() {
@@ -134,6 +138,7 @@ export class RaceSession extends EventTarget {
 
   /** Drapeau rouge : toutes les voitures arrêtées (bouton START de la CU). */
   redFlag() {
+    if (this.startedAt && this.redSince === null && this.state !== 'finished') this.redSince = performance.now();
     this.flag = 'red';
     this.redResuming = false;
     this._sawRedLights = false;
@@ -155,6 +160,13 @@ export class RaceSession extends EventTarget {
   }
 
   _endRed() {
+    if (this.redSince !== null) {
+      const now = performance.now();
+      this.pausedMs += now - this.redSince;
+      // délai du dernier tour : il reprend là où il s'était arrêté
+      if (this.finishingAt !== null) this.finishingAt += now - Math.max(this.redSince, this.finishingAt);
+      this.redSince = null;
+    }
     this.redResuming = false;
     this.falseStart = false;
     this._goStart = undefined; // nouvelle référence après la reprise
@@ -174,7 +186,7 @@ export class RaceSession extends EventTarget {
       const onTrack = [...this.comps.values()].filter((c) => c.onTrack);
       if (onTrack.length && onTrack.every((c) => c.finished)) { this.completed = true; this.stop(); }
     }
-    if (this.state === 'finishing') {
+    if (this.state === 'finishing' && this.flag !== 'red') { // drapeau rouge : le délai de fin attend la reprise
       const slowest = Math.max(10000, ...[...this.comps.values()].map((c) => (c.bestLap || 0) * 3));
       const all = [...this.comps.values()].filter((c) => c.onTrack).every((c) => c.finished);
       if (all || performance.now() - this.finishingAt > slowest) this.stop();
