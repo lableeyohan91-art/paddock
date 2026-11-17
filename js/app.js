@@ -910,7 +910,8 @@ export const app = {
     session.addEventListener('lap', (e) => this._onLap(e.detail));
     session.addEventListener('finish', (e) => {
       const c = e.detail.comp;
-      if (c.finishPos === 1) {
+      // course au temps : le premier à passer la ligne n'est pas forcément le vainqueur → pas d'annonce
+      if (c.finishPos === 1 && !(session.cfg.type === 'race' && session.cfg.mode === 'time')) {
         say(session.cfg.type === 'race'
           ? `Drapeau à damier ! Victoire de ${c.driver.name}`
           : `Fin de la session. ${c.driver.name} termine premier`, { priority: true });
