@@ -4,6 +4,7 @@
 // Jamais de météo ni de pneus ici : c'est voulu.
 
 import { esc, $, $$, toast, promptBox } from '../ui.js';
+import { vscSpeed } from '../performance.js';
 import { avatar } from './drivers.js';
 
 let app;
@@ -179,8 +180,19 @@ function render() {
 
     ${isRace() ? `
     <section class="panel" style="margin-top:14px">
-      <div class="row" style="justify-content:space-between">
-        <h2 style="margin:0">4. VSC automatique</h2>
+      <h2 style="margin:0">4. VSC</h2>
+      <div class="q-fuel-mode">
+        <span class="muted" style="font-size:.85rem">Vitesse sous VSC</span>
+        <div class="seg" id="qVscMode">
+          <button data-qvm="fixed" class="${app.vscCfg.adaptive?.on ? '' : 'on'}">Fixe</button>
+          <button data-qvm="adaptive" class="${app.vscCfg.adaptive?.on ? 'on' : ''}">Adaptatif</button>
+        </div>
+        <span class="muted" style="font-size:.8rem">${app.vscCfg.adaptive?.on
+          ? `Chaque voiture étalonnée reçoit son propre cran pour tourner en ${String(app.vscCfg.adaptive.targetSec).replace('.', ',')} s ; les autres, le VSC fixe. <a href="#" class="q-link" id="qVscAdapt">Régler le VSC adaptatif</a>`
+          : `Toutes les voitures au même cran : ${app.vscCfg.speedPct} % (cran ${vscSpeed(app.vscCfg.speedPct)}/15).`}</span>
+      </div>
+      <div class="row" style="justify-content:space-between;margin-top:14px;padding-top:12px;border-top:1px solid var(--line)">
+        <h3 style="margin:0">VSC automatique</h3>
         <label class="switch"><input type="checkbox" id="qAutoVsc" ${prefs.autoVsc ? 'checked' : ''}><span></span> ${prefs.autoVsc ? 'Activé' : 'Désactivé'}</label>
       </div>
       <p class="muted" style="margin:8px 0 0;font-size:.85rem">${prefs.autoVsc
@@ -270,6 +282,13 @@ function bind() {
     await app.saveFuelCfg({ ...app.fuelCfg, mode: b.dataset.qfm });
     render();
   }));
+  // VSC fixe ou adaptatif : même réglage que dans Réglages → VSC → VSC adaptatif
+  $$('[data-qvm]', root).forEach((b) => (b.onclick = async () => {
+    await app.saveVscCfg({ adaptive: { ...(app.vscCfg.adaptive || { targetSec: 8 }), on: b.dataset.qvm === 'adaptive' } });
+    render();
+  }));
+  const va = $('#qVscAdapt', root);
+  if (va) va.onclick = (e) => { e.preventDefault(); app.openAdaptiveVscSettings(); };
   const av = $('#qAutoVsc', root);
   if (av) av.onchange = (e) => { prefs.autoVsc = e.target.checked; savePrefs(); render(); };
   const vl = $('#qVscCfg', root);

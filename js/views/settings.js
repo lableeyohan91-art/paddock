@@ -692,6 +692,11 @@ export function openAutoVsc() {
   vscTab = 'auto';
 }
 
+export function openAdaptiveVsc() {
+  openNext = 'vsc';
+  vscTab = 'adaptive';
+}
+
 /** Ouvre directement Réglages → Essence (depuis un autre écran). */
 export function openFuel(tab) {
   openFuelNext = true;

@@ -405,6 +405,11 @@ export const app = {
     this.go('settings');
   },
 
+  openAdaptiveVscSettings() {
+    settingsView.openAdaptiveVsc();
+    this.go('settings');
+  },
+
   openFuelSettings(tab) {
     settingsView.openFuel(tab);
     this.go('settings');
