@@ -521,6 +521,7 @@ export const app = {
     const s = this.session;
     const w = this.fuelCfg.weight;
     if (!w?.on || !this.fuelOn() || !s || !['running', 'finishing'].includes(s.state)) return 0;
+    if (s.cfg.type === 'qualifying') return 0; // désactivé en qualification
     const c = s.comps.get(address);
     if (!c || c.fuelPct === null || c.fuelPct === undefined || c.fuelPct <= 0) return 0;
     const ratio = (c.fuelPct / (c.tankPct || 100)) * 100; // % de SON réservoir

@@ -211,6 +211,7 @@ function weightHtml() {
     <details class="calc-box" id="weightBox" ${weightOpen ? 'open' : ''}>
     <summary><h2 style="margin:0">⚖️ Essence selon le poids <small class="muted">· ${w.on ? 'activé' : 'désactivé'}</small></h2></summary>
     <p class="muted" style="margin:10px 0 12px;font-size:.88rem">Plein, la voiture est plus lourde ; presque vide, elle est plus légère.</p>
+    <p class="tipbox">💡 Cette option est <b>désactivée en qualification</b> : les voitures y gardent leur vitesse normale.</p>
     <label class="switch"><input type="checkbox" id="fWOn" ${w.on ? 'checked' : ''}><span></span> ${w.on ? 'Activé' : 'Désactivé'}</label>
     <div class="weight-rows" style="margin-top:12px;display:grid;gap:8px">
       <label class="field">De 80 à 100 % du réservoir : vitesse réduite de
