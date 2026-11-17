@@ -515,12 +515,14 @@ export const app = {
   /**
    * Essence selon le poids : réservoir de 80 à 100 % → X crans de moins que la vitesse réglée,
    * de 30 à 80 % → vitesse réglée, sous 30 % → X crans de plus (bornée à 15).
+   * Jamais plus lente que la vitesse de panne sèche (sinon une voiture réglée bas resterait à 0).
+   * Appliqué dès la grille (feux), pour que le départ se fasse déjà à la bonne vitesse.
    * Sous VSC et en panne sèche, la vitesse imposée l'emporte.
    */
   fuelWeightStep(address) {
     const s = this.session;
     const w = this.fuelCfg.weight;
-    if (!w?.on || !this.fuelOn() || !s || !['running', 'finishing'].includes(s.state)) return 0;
+    if (!w?.on || !this.fuelOn() || !s || !['armed', 'running', 'finishing'].includes(s.state)) return 0;
     if (s.cfg.type === 'qualifying') return 0; // désactivé en qualification
     const c = s.comps.get(address);
     if (!c || c.fuelPct === null || c.fuelPct === undefined || c.fuelPct <= 0) return 0;
@@ -539,7 +541,10 @@ export const app = {
         if (!step || this.session?.flag === 'vsc' || this.isOutOfFuel(address)) return null;
         const base = perf.bases.get(address)?.speed;
         if (!base) return null;
-        const target = Math.max(0, Math.min(15, base + step));
+        // plancher : la vitesse de panne sèche (ou la vitesse réglée si elle est déjà plus basse)
+        const floor = Math.min(base, this.fuelCfg.emptySpeedFixed);
+        const target = Math.max(floor, Math.min(15, base + step));
+        if (target === base) return null;
         return { speed: target / base, note: step < 0 ? `⛽ Réservoir lourd (${step} cran${step < -1 ? 's' : ''})` : `⛽ Réservoir léger (+${step} cran${step > 1 ? 's' : ''})` };
       },
     };
@@ -1148,6 +1153,7 @@ export const app = {
     if (s.cfg.start === 'lights') {
       await cu.resetTimer();
       s.arm();
+      perf.update(); // poids de l'essence : vitesse « réservoir plein » dès la grille
       await cu.pressStart();
       // Certaines CU demandent un 2e appui pour lancer la séquence des feux
       setTimeout(() => {
@@ -1156,6 +1162,7 @@ export const app = {
     } else {
       cu.conn.go?.();
       s.go();
+      perf.update(); // poids de l'essence appliqué dès le départ
     }
   },
 

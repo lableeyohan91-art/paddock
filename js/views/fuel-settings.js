@@ -217,7 +217,7 @@ function weightHtml() {
       <li>De 30 à 80 % : vitesse normale de la voiture</li>
       <li>Sous 30 % : <b>1 cran de plus</b></li>
     </ul>
-    <p class="muted" style="font-size:.85rem;margin:8px 0 0">En crans par rapport à la vitesse réglée au garage (maximum 15). Sous VSC et en panne sèche, la vitesse imposée l'emporte.</p>
+    <p class="muted" style="font-size:.85rem;margin:8px 0 0">En crans par rapport à la vitesse réglée au garage (maximum 15), jamais sous la vitesse de panne sèche. Sous VSC et en panne sèche, la vitesse imposée l'emporte.</p>
     </details>
   </section>`;
 }
