@@ -306,7 +306,7 @@ function renderVsc() {
       <span class="vsc-pct num" id="vscPctV">${pct} %<small>cran ${vscSpeed(pct)}/15</small></span>
     </div>
     <p class="muted" style="font-size:.85rem;margin:8px 0 0" id="vscEx"></p>
-    <button class="btn small ghost" id="vscReset" style="margin-top:10px">Revenir à 20 % (nominal)</button>
+    <p class="warnbox" style="margin-top:12px">⚠️ Certaines voitures (par exemple Carrera et NSR) roulent à des vitesses <b>très différentes à un même cran moteur</b> : sous VSC, cela peut déséquilibrer la course. Si c'est votre cas, nous vous conseillons le <b>VSC adaptatif</b>. Il est plus long à paramétrer (un étalonnage par voiture et par circuit), mais il corrige ces écarts entre les voitures sous VSC.</p>
   </section>`;
   const r = $('#vscPct', root);
   const show = (v) => {
@@ -316,7 +316,6 @@ function renderVsc() {
   show(pct);
   r.oninput = () => show(+r.value);
   r.onchange = async () => { await app.saveVscCfg({ speedPct: +r.value }); toast('VSC : ' + r.value + ' %', 1200); };
-  $('#vscReset', root).onclick = async () => { await app.saveVscCfg({ speedPct: 20 }); renderVsc(); bindTabs(); };
   bindVscTabs();
 }
 
