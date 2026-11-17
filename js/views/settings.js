@@ -692,6 +692,11 @@ export function openAutoVsc() {
   vscTab = 'auto';
 }
 
+export function openButtonVsc() {
+  openNext = 'vsc';
+  vscTab = 'button';
+}
+
 export function openAdaptiveVsc() {
   openNext = 'vsc';
   vscTab = 'adaptive';

@@ -405,6 +405,11 @@ export const app = {
     this.go('settings');
   },
 
+  openButtonVscSettings() {
+    settingsView.openButtonVsc();
+    this.go('settings');
+  },
+
   openAdaptiveVscSettings() {
     settingsView.openAdaptiveVsc();
     this.go('settings');

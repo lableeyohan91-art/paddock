@@ -192,7 +192,7 @@ function render() {
         </div>
         <span class="muted" style="font-size:.8rem">${app.vscCfg.adaptive?.on
           ? `Chaque voiture étalonnée reçoit son propre cran pour tourner en ${String(app.vscCfg.adaptive.targetSec).replace('.', ',')} s ; les autres, le VSC fixe. <a href="#" class="q-link" id="qVscAdapt">Régler le VSC adaptatif</a>`
-          : `Toutes les voitures au même cran : ${app.vscCfg.speedPct} % (cran ${vscSpeed(app.vscCfg.speedPct)}/15).`}</span>
+          : `Toutes les voitures au même cran : ${app.vscCfg.speedPct} % (cran ${vscSpeed(app.vscCfg.speedPct)}/15) · <a href="#" class="q-link" id="qVscFix">Réglages</a>`}</span>
       </div>
       <div class="row" style="justify-content:space-between;margin-top:14px;padding-top:12px;border-top:1px solid var(--line)">
         <h3 style="margin:0">VSC automatique</h3>
@@ -290,6 +290,8 @@ function bind() {
     await app.saveVscCfg({ adaptive: { ...(app.vscCfg.adaptive || { targetSec: 8 }), on: b.dataset.qvm === 'adaptive' } });
     render();
   }));
+  const vf = $('#qVscFix', root);
+  if (vf) vf.onclick = (e) => { e.preventDefault(); app.openButtonVscSettings(); };
   const va = $('#qVscAdapt', root);
   if (va) va.onclick = (e) => { e.preventDefault(); app.openAdaptiveVscSettings(); };
   const av = $('#qAutoVsc', root);
