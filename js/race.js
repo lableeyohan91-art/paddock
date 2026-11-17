@@ -126,6 +126,10 @@ export class RaceSession extends EventTarget {
   stop() {
     if (this.state === 'finished') return;
     this.endedAt = performance.now();
+    // course finie : plus de VSC ni de drapeau rouge (le chrono reste figé là où il était)
+    this.flag = 'green';
+    this.redResuming = false;
+    this.vscCountdown = null;
     this._rank();
     this.setState('finished');
   }
