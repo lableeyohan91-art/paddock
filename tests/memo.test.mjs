@@ -1,6 +1,6 @@
 // Fiches mémo : après rotation, les statistiques doivent rester identiques.
 // node tests/memo.test.mjs
-import { planRotation, foldInto, counts, dayKey, KEEP_SESSIONS } from '../js/memo.js';
+import { planRotation, foldInto, counts, dayKey, KEEP_SESSIONS, memoLaps, compactMemo, pickKeep, slimSession, upkeep, MEMO_V } from '../js/memo.js';
 import { raceMedianOf, bestOfDrivers, driverStats } from '../js/fuel-calc.js';
 
 let fails = 0;
@@ -44,7 +44,7 @@ const del = new Set(plan.toDelete);
 const left = laps.filter((l) => !del.has(l.id));
 ok(left.some((l) => l.imported), 'record importé conservé');
 ok(left.every((l) => l.imported || plan.recent.has(l.sessionId)), 'seuls restent les tours des 3 dernières séances');
-const after = [...left, ...memos.flatMap((m) => m.keep)];
+const after = [...left, ...memos.flatMap(memoLaps)];
 
 // --- comparaisons ---
 const same = (a, b, m) => ok(JSON.stringify(a) === JSON.stringify(b), m + (JSON.stringify(a) === JSON.stringify(b) ? '' : ` (${JSON.stringify(a)} ≠ ${JSON.stringify(b)})`));
@@ -73,6 +73,65 @@ const again = planRotation(sessions, [...left, laps.find((l) => del.has(l.id))],
 const m2 = [...again.toFold.values()].length;
 ok(m2 === 0 && again.toDelete.length === 1, 'tour déjà versé : effacé sans être recompté');
 ok(foldInto(memos[0], laps.filter((l) => memos[0].folded.includes(l.sessionId) && `${l.driverId}|${l.carId}|${l.trackId}` === memos[0].id)).laps === memos[0].laps, 'séance déjà versée : compteurs inchangés');
+
+// --- v1.99.1 : meilleur tour du jour en compact ---
+ok(memos.every((m) => m.v === MEMO_V && Object.values(m.days).every((d) => d.best && d.best.t > 0)), 'chaque jour a son meilleur tour en compact');
+// ancienne fiche (v1.99) : meilleur tour du jour gardé comme tour témoin complet
+const oldPick = (list) => { const k = new Map(pickKeep(list).map((l) => [l.id, l])); const byDay = new Map();
+  for (const l of list.filter((x) => x.flag !== 'yellow')) { const d = dayKey(l.date); const c = byDay.get(d); if (!c || l.time < c.time) byDay.set(d, l); }
+  byDay.forEach((l) => k.set(l.id, l)); return [...k.values()]; };
+const olds = memos.map((m) => { const o = structuredClone(m); delete o.v; o.days = Object.fromEntries(Object.entries(o.days).map(([k, d]) => [k, { laps: d.laps, sessions: d.sessions }]));
+  const src = laps.filter((l) => `${l.driverId}|${l.carId}|${l.trackId}` === m.id && del.has(l.id)); o.keep = oldPick(src.map((l) => ({ ...l, kept: true }))); return o; });
+const news = olds.map((o) => compactMemo(o));
+ok(news.every((n) => n && n.v === MEMO_V), 'ancienne fiche convertie');
+ok(compactMemo(news[0]) === null, 'fiche déjà convertie : rien à refaire');
+const afterOld = [...left, ...olds.flatMap((m) => m.keep)], afterNew = [...left, ...news.flatMap(memoLaps)];
+let sameAll = true;
+for (const d of drivers) for (const t of tracks) {
+  const A = afterOld.filter((l) => l.driverId === d && l.trackId === t), B = afterNew.filter((l) => l.driverId === d && l.trackId === t);
+  if (JSON.stringify(perDay(A)) !== JSON.stringify(perDay(B)) || best(A) !== best(B) || JSON.stringify(top10(A)) !== JSON.stringify(top10(B))) sameAll = false;
+}
+ok(sameAll, 'conversion : record, 10 meilleurs, meilleur tour par jour identiques');
+const sz = (a) => JSON.stringify(a).length;
+// 300 jours de roulage (1 séance de 20 tours par jour) : c'est là que le gain se voit
+const long = [];
+for (let j = 0; j < 300; j++) for (let n = 0; n < 20; n++) long.push({ id: `L${j}-${n}`, sessionId: 'S' + j, sessionType: 'race', trackId: 't1', driverId: 'd1', carId: 'c1',
+  time: 3300 + Math.round(rnd() * 500), sectors: [], flag: 'green', date: Date.UTC(2026, 0, 1 + j, 14) + n * 4000, wetness: 0 });
+const mNew = foldInto(null, long);
+const mOld = structuredClone(mNew); delete mOld.v;
+mOld.days = Object.fromEntries(Object.entries(mOld.days).map(([k, d]) => [k, { laps: d.laps, sessions: d.sessions }]));
+mOld.keep = oldPick(long.map((l) => ({ ...l, kept: true })));
+console.log(`     fiche de 300 jours : avant ${sz(mOld)} o, après ${sz(mNew)} o`);
+ok(sz(mNew) < sz(mOld) * 0.6, 'fiche de 300 jours nettement plus légère');
+ok(JSON.stringify(perDay(memoLaps(mNew))) === JSON.stringify(perDay(long)), 'fiche de 300 jours : meilleur tour de chaque jour exact');
+
+// --- tours sans pilote : effacés avec leur séance, jamais versés ---
+const orphan = { id: 'o1', sessionId: 's0', sessionType: 'race', trackId: 't1', driverId: null, carId: 'c1', time: 3000, date: sessions[0].date };
+const p3 = planRotation(sessions, [...laps, orphan], []);
+ok(p3.toDelete.includes('o1') && ![...p3.toFold.values()].flat().some((l) => l.id === 'o1'), 'tour sans pilote d’une vieille séance : effacé, pas versé');
+const p4 = planRotation(sessions, [...laps, { ...orphan, id: 'o2', sessionId: [...p3.recent][0] }], []);
+ok(!p4.toDelete.includes('o2'), 'tour sans pilote d’une des 3 dernières séances : gardé');
+
+// --- fiches de séance allégées ---
+const fat = { id: 'sx', state: 'finished', type: 'race', date: 1, trackId: 't1', bestLap: 3000, completed: true,
+  entries: [{ address: 0, driverId: 'd1', carId: 'c1' }],
+  results: [{ position: 1, address: 0, driverId: 'd1', driverName: 'Nom', carId: 'c1', carName: 'Voiture', laps: 20, bestLap: 3000, totalTime: 70000, gap: 0, pitStops: 1 }] };
+const slim = slimSession(fat);
+ok(!slim.entries && JSON.stringify(slim.results) === JSON.stringify([{ position: 1, driverId: 'd1', carId: 'c1', laps: 20, bestLap: 3000 }]), 'fiche de séance allégée');
+ok(slimSession({ ...fat, state: 'running' }).entries, 'séance en cours : inchangée');
+console.log(`     fiche de séance : avant ${sz(fat)} o, après ${sz(slim)} o`);
+
+// --- entretien : sauvegarde vidée après 30 jours ---
+const store = { settings: new Map(), memos: [], sessions: [] };
+const fakeDb = { putMany: async (n, l) => store[n].push(...l), getSetting: async (k, f) => store.settings.get(k) ?? f, setSetting: async (k, v) => store.settings.set(k, v) };
+store.settings.set('backupBeforeMemo', { date: Date.now() - 31 * 864e5, data: { gros: 'x'.repeat(1000) } });
+const ss = [fat], ms = [olds[0]];
+const r = await upkeep(fakeDb, ss, ms);
+ok(r.memos === 1 && r.sessions === 1 && ms[0].v === MEMO_V && !ss[0].entries, 'entretien : fiche mémo et fiche de séance converties');
+ok(store.settings.get('backupBeforeMemo').data === null && store.settings.get('backupBeforeMemo').date, 'sauvegarde de plus de 30 jours vidée (date gardée)');
+store.settings.set('backupBeforeMemo', { date: Date.now() - 5 * 864e5, data: { a: 1 } });
+const r2 = await upkeep(fakeDb, ss, ms);
+ok(store.settings.get('backupBeforeMemo').data && r2.memos === 0 && r2.sessions === 0, 'sauvegarde récente gardée, rien à refaire');
 
 console.log(fails ? `\n${fails} échec(s)` : '\nTout est bon.');
 process.exit(fails ? 1 : 0);

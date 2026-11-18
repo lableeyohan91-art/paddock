@@ -2,11 +2,12 @@
 // que les 3 dernières séances.
 //
 // Une fiche par pilote + voiture + circuit (id "pilote|voiture|circuit") :
-//   - compteurs : tours roulés, temps de roulage, séances, et par jour (tours, séances) ;
-//   - quelques tours « témoins » gardés tels quels (keep) : les 10 meilleurs, le meilleur
-//     de chaque jour, les records de secteurs, les 30 derniers tours (course / tous types).
-//     Ils suffisent pour : records, tour idéal, graphique de progression, médiane et
-//     meilleurs tours du calcul d'essence.
+//   - compteurs : tours roulés, temps de roulage, séances, et par jour (tours, séances,
+//     meilleur tour du jour en compact : best = { id, t, d, st, s, w? }) ;
+//   - quelques tours « témoins » gardés tels quels (keep) : les 10 meilleurs, les records
+//     de secteurs, les 30 derniers tours (course / tous types).
+//     Avec le meilleur tour du jour, ils suffisent pour : records, tour idéal, graphique de
+//     progression, médiane et meilleurs tours du calcul d'essence (memoLaps).
 //   - folded : séances déjà versées dans la fiche (jamais comptées deux fois).
 //
 // Les tours des séances plus anciennes que les 3 dernières sont versés dans leur fiche,
@@ -37,10 +38,7 @@ export function pickKeep(list) {
   const clean = list.filter((l) => l.flag !== 'yellow');
   // 10 meilleurs tours
   [...clean].sort((a, b) => a.time - b.time).slice(0, TOP).forEach(add);
-  // meilleur tour de chaque jour (graphique de progression)
-  const byDay = new Map();
-  for (const l of clean) { const k = dayKey(l.date); const c = byDay.get(k); if (!c || l.time < c.time) byDay.set(k, l); }
-  byDay.forEach(add);
+  // (le meilleur tour de chaque jour est rangé en compact dans days : voir dayBests)
   // records de secteurs (pour chaque nombre de secteurs, chaque secteur)
   const bySec = new Map();
   for (const l of clean) {
@@ -60,13 +58,62 @@ export function pickKeep(list) {
   return [...keep.values()].sort((a, b) => a.date - b.date);
 }
 
+/** Meilleur tour du jour en compact (~60 octets au lieu de ~210). */
+const compactBest = (l) => {
+  const b = { id: l.id, t: l.time, d: l.date, st: l.sessionType, s: l.sessionId };
+  if ((l.wetness ?? 0) >= 0.05) b.w = l.wetness;
+  return b;
+};
+
+/** Range dans days[jour].best le meilleur tour (hors drapeau jaune) de chaque jour. */
+function mergeDayBests(days, laps) {
+  for (const l of laps) {
+    if (l.flag === 'yellow' || !l.time) continue;
+    const k = dayKey(l.date);
+    const d = days[k] || (days[k] = { laps: 0, sessions: 0 });
+    if (!d.best || l.time < d.best.t) d.best = compactBest(l);
+  }
+}
+
+export const MEMO_V = 2;
+
+/**
+ * Ancienne fiche (v1.99) : le meilleur tour de chaque jour était un tour témoin complet.
+ * On le range en compact dans days, puis on refait le tri des tours témoins.
+ * Renvoie la fiche (copie) ou null si elle est déjà au bon format.
+ */
+export function compactMemo(memo) {
+  if (!memo || memo.v === MEMO_V) return null;
+  const m = structuredClone(memo);
+  m.days = m.days || {};
+  mergeDayBests(m.days, m.keep || []);
+  m.keep = pickKeep(m.keep || []);
+  m.v = MEMO_V;
+  return m;
+}
+
+/** Tours témoins + meilleurs tours du jour (remis sous forme de tours) d'une fiche. */
+export function memoLaps(m) {
+  const out = new Map((m.keep || []).map((l) => [l.id, l]));
+  for (const d of Object.values(m.days || {})) {
+    const b = d.best;
+    if (!b || out.has(b.id)) continue;
+    out.set(b.id, {
+      id: b.id, driverId: m.driverId, carId: m.carId, trackId: m.trackId,
+      sessionId: b.s, sessionType: b.st, time: b.t, sectors: [], date: b.d,
+      flag: 'green', wetness: b.w ?? 0, speed: null, kept: true,
+    });
+  }
+  return [...out.values()];
+}
+
 /** Verse des tours (d'une ou plusieurs séances) dans une fiche. Renvoie la fiche mise à jour. */
 export function foldInto(memo, laps) {
-  const m = memo ? structuredClone(memo) : null;
+  const m = memo ? (compactMemo(memo) || structuredClone(memo)) : null;
   const first = laps[0];
   const out = m || {
     id: memoId(first), driverId: first.driverId, carId: first.carId, trackId: first.trackId,
-    laps: 0, drivingMs: 0, sessions: 0, days: {}, keep: [], folded: [],
+    laps: 0, drivingMs: 0, sessions: 0, days: {}, keep: [], folded: [], v: MEMO_V,
   };
   const done = new Set(out.folded);
   const fresh = laps.filter((l) => !done.has(l.sessionId));
@@ -84,8 +131,9 @@ export function foldInto(memo, laps) {
   }
   perDay.forEach((d, k) => {
     const cur = out.days[k] || { laps: 0, sessions: 0 };
-    out.days[k] = { laps: cur.laps + d.laps, sessions: cur.sessions + d.sessions.size };
+    out.days[k] = { ...cur, laps: cur.laps + d.laps, sessions: cur.sessions + d.sessions.size };
   });
+  mergeDayBests(out.days, fresh);
   out.keep = pickKeep([...out.keep, ...fresh.map(slim)]);
   out.folded = [...done, ...sessions];
   return out;
@@ -102,7 +150,8 @@ export function planRotation(sessions, laps, memos) {
   const toDelete = [];
   for (const l of laps) {
     if (l.imported || !l.sessionId || recent.has(l.sessionId)) continue; // records importés, tours sans séance, 3 dernières séances
-    if (!l.driverId || !l.trackId) continue;
+    if (!l.driverId) { toDelete.push(l.id); continue; } // tour sans pilote (manette sans pilote choisi) : effacé avec sa séance, rien à verser
+    if (!l.trackId) continue;
     toDelete.push(l.id);
     const id = memoId(l);
     if (foldedBy.get(id)?.has(l.sessionId)) continue; // déjà dans la fiche (tour revenu d'un autre appareil)
@@ -110,6 +159,43 @@ export function planRotation(sessions, laps, memos) {
     toFold.get(id).push(l);
   }
   return { recent, toFold, toDelete };
+}
+
+export const BACKUP_DAYS = 30;
+
+/** Fiche de séance terminée réduite à ce qui sert : identifiants, positions, tours, meilleur tour. */
+export function slimSession(s) {
+  if (!s || s.state !== 'finished' || !Array.isArray(s.results)) return s;
+  const out = { ...s };
+  out.results = s.results.map((r) => ({
+    position: r.position, driverId: r.driverId, carId: r.carId, laps: r.laps, bestLap: r.bestLap ?? null,
+  }));
+  delete out.entries; // les résultats listent déjà tous les pilotes et voitures
+  return out;
+}
+const isSlim = (s) => s.state !== 'finished' || !Array.isArray(s.results)
+  || (!('entries' in s) && s.results.every((r) => !('driverName' in r) && !('gap' in r) && !('address' in r)));
+
+/**
+ * Entretien, à chaque rotation (en local, idempotent) :
+ *  - anciennes fiches mémo rangées au format compact ;
+ *  - anciennes fiches de séance allégées ;
+ *  - sauvegarde « avant fiches mémo » vidée après BACKUP_DAYS jours (on garde la date,
+ *    pour ne jamais en refaire une).
+ * Les tableaux sessions et memos sont mis à jour sur place.
+ */
+export async function upkeep(db, sessions, memos) {
+  const memoFix = [];
+  memos.forEach((m, i) => { const c = compactMemo(m); if (c) { memos[i] = c; memoFix.push(c); } });
+  if (memoFix.length) await db.putMany('memos', memoFix);
+  const sesFix = [];
+  sessions.forEach((s, i) => { if (!isSlim(s)) { sessions[i] = slimSession(s); sesFix.push(sessions[i]); } });
+  if (sesFix.length) await db.putMany('sessions', sesFix);
+  const bk = await db.getSetting('backupBeforeMemo', null);
+  if (bk?.data && Date.now() - (bk.date || 0) > BACKUP_DAYS * 864e5) {
+    await db.setSetting('backupBeforeMemo', { date: bk.date, data: null, purged: Date.now() });
+  }
+  return { memos: memoFix.length, sessions: sesFix.length };
 }
 
 let running = false;
@@ -124,6 +210,7 @@ export async function rotate(app) {
   try {
     const db = app.db;
     const [sessions, laps, memos] = await Promise.all([db.all('sessions'), db.all('laps'), db.all('memos')]);
+    await upkeep(db, sessions, memos);
     const plan = planRotation(sessions, laps, memos);
     if (!plan.toDelete.length) return { folded: 0, deleted: 0 };
     // filet de sécurité : une copie complète avant le tout premier effacement
@@ -152,7 +239,7 @@ export async function statLaps(db, { driverId = null, trackId = null } = {}) {
   let memos = await db.all('memos');
   if (driverId) { laps = laps.filter((l) => l.driverId === driverId); memos = memos.filter((m) => m.driverId === driverId); }
   if (trackId) { laps = laps.filter((l) => l.trackId === trackId); memos = memos.filter((m) => m.trackId === trackId); }
-  return { laps, memos, all: [...laps, ...memos.flatMap((m) => m.keep || [])] };
+  return { laps, memos, all: [...laps, ...memos.flatMap(memoLaps)] };
 }
 
 /** Compteurs : tours détaillés non importés + compteurs des fiches. */

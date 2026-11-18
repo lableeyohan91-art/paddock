@@ -52,7 +52,7 @@ async function compute(d) {
   const sessions = (await app.db.all('sessions')).filter(onTrack);
   const lapSessions = new Set(laps.map((l) => l.sessionId));
   const mine = sessions.filter((s) => s.state === 'finished' &&
-    (lapSessions.has(s.id) || (s.entries || []).some((e) => e.driverId === d.id)));
+    (lapSessions.has(s.id) || (s.results || s.entries || []).some((e) => e.driverId === d.id))); // fiche allégée : seulement results
   // courses / qualifs : seulement celles allées à leur terme (une séance interrompue ne compte pas)
   const ofType = (t) => mine.filter((s) => s.type === t && (t === 'practice' || s.completed !== false)
     && (!d.resultsResetAt || (s.date || 0) > d.resultsResetAt)); // remise à zéro propre à ce pilote

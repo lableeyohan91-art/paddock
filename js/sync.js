@@ -12,7 +12,12 @@ import { FIREBASE_CONFIG } from './firebase-config.js';
 import * as db from './db.js';
 
 const SDK = 'https://www.gstatic.com/firebasejs/10.12.2/';
-const SYNCED = ['drivers', 'cars', 'tracks', 'sessions', 'laps', 'settings', 'tunes', 'memos'];
+// Les tours détaillés ne sont plus synchronisés (v1.99.1) : ils ne servent qu'aux 3 dernières
+// séances, sur l'appareil qui les a roulées. Records, compteurs et progression passent par les
+// fiches mémo (memos), elles synchronisées. Avant, chaque tour était une écriture Firebase et
+// chaque ouverture relisait tous les tours (quotas gratuits dépassés).
+const SYNCED = ['drivers', 'cars', 'tracks', 'sessions', 'settings', 'tunes', 'memos'];
+const PURGE_PER_DAY = 5000; // anciens tours en ligne supprimés par jour (quota gratuit : 20 000 suppressions)
 
 let fb = null;        // modules Firebase
 let auth = null;
@@ -156,6 +161,7 @@ async function startSync() {
     set({ status: 'synced', lastSync: Date.now() });
     if (changedLocal) await reloadApp();
     listen();
+    purgeRemoteLaps(); // en arrière-plan
   } catch (e) {
     set({ status: 'error', error: friendly(e) });
   }
@@ -187,6 +193,33 @@ export function planMerge(store, local, remote) {
     if (!remote.has(id) && !skip(id)) toRemote.push(l); // inconnu en ligne : on l'envoie
   }
   return { toLocal, deleteLocal, toRemote };
+}
+
+/**
+ * Ménage des anciens tours restés en ligne (synchronisés avant la v1.99.1) : au plus
+ * PURGE_PER_DAY par jour et par appareil, par paquets de 500. Vraie suppression
+ * (pas de marqueur « effacé »), donc plus rien ne reste ensuite.
+ */
+async function purgeRemoteLaps() {
+  try {
+    const key = 'remoteLapsPurge';
+    const today = new Date().toLocaleDateString('fr-FR');
+    if ((await db.getSetting(key, null)) === today) return;
+    await db.setSetting(key, today);
+    let n = 0;
+    while (n < PURGE_PER_DAY && user) {
+      const snap = await fb.getDocs(fb.query(col('laps'), fb.limit(500)));
+      if (snap.empty) break;
+      const batch = fb.writeBatch(fs);
+      snap.forEach((d) => batch.delete(d.ref));
+      await batch.commit();
+      n += snap.size;
+      if (snap.size < 500) break;
+    }
+    if (n) app?.log?.(`Synchro : ${n} anciens tours supprimés en ligne`);
+  } catch (e) {
+    console.warn('Ménage des tours en ligne', e);
+  }
 }
 
 /** Changements faits sur un autre appareil, en direct. */

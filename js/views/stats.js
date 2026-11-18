@@ -134,7 +134,7 @@ async function render() {
         ${sessions.slice(0, 15).map((s) => {
           const w = s.results?.[0];
           return `<tr><td>${fmtDate(s.date)}</td><td>${esc(TYPES[s.type] || s.type)}</td>
-            <td>${s.completed === false || s.state !== 'finished' ? '<span class="muted">interrompue</span>' : esc(w?.driverName || '—')}</td>
+            <td>${s.completed === false || s.state !== 'finished' ? '<span class="muted">interrompue</span>' : esc((w && (app.driver(w.driverId)?.name || w.driverName)) || '—')}</td>
             <td class="num">${fmtTime(s.bestLap)}</td></tr>`;
         }).join('')}
       </table>

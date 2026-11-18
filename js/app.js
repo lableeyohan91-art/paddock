@@ -33,7 +33,7 @@ import * as ghostView from './views/ghost.js';
 import * as quickView from './views/quick.js';
 import { openImport, importDone } from './views/import-records.js';
 import * as statsView from './views/stats.js';
-import { rotate as rotateMemos } from './memo.js';
+import { rotate as rotateMemos, slimSession } from './memo.js';
 import * as settingsView from './views/settings.js';
 
 /** Réglages de session par défaut (participants, circuit ; météo gardée en sommeil). */
@@ -1098,6 +1098,7 @@ export const app = {
       // séance allée à son terme (sinon : quittée / arrêtée avant la fin) — seules les séances
       // terminées comptent pour les victoires et les poles ; les tours comptent toujours
       this.sessionRecord.completed = !!s.completed;
+      this.sessionRecord = slimSession(this.sessionRecord); // fiche allégée : identifiants, positions, tours, meilleur tour
     }
     await db.put('sessions', this.sessionRecord);
   },

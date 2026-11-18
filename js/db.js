@@ -158,7 +158,7 @@ export async function getSetting(key, fallback) {
 }
 // réglages propres à cet appareil : jamais synchronisés
 export const LOCAL_SETTINGS = {
-  has: (key) => key === 'lastConnection' || key === 'backupBeforeMemo' || String(key).startsWith('backupBeforeSync:'),
+  has: (key) => key === 'lastConnection' || key === 'backupBeforeMemo' || key === 'remoteLapsPurge' || String(key).startsWith('backupBeforeSync:'),
 };
 export async function setSetting(key, value, { quiet = false } = {}) {
   return put('settings', { key, value }, { quiet: quiet || LOCAL_SETTINGS.has(key) });
