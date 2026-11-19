@@ -5,11 +5,12 @@
 import { esc, $, $$, modal, fmtDate, confirmBox, toast } from '../ui.js';
 import { fmtTime, TYPES } from '../race.js';
 import { avatar, editDriver } from './drivers.js';
-import { statLaps, counts, dayKey } from '../memo.js';
+import { statLaps, counts, dayKey, voidLap } from '../memo.js';
 
 let app;
 let root;
 let sheetTrack;  // circuit affiché sur la fiche ('' = tous les circuits)
+let lastSt = null; // derniers chiffres affichés (pour rouvrir la liste des meilleurs tours)
 
 export function mount(main, a) {
   app = a;
@@ -80,6 +81,7 @@ async function compute(d) {
       trackId,
       track: app.track(trackId)?.name || '(circuit supprimé)',
       best,
+      top: [...new Map(ls.map((l) => [l.id, l])).values()].sort((a, b) => a.time - b.time).slice(0, 10), // 10 meilleurs tours (toutes voitures)
       laps: counts(detail, memos, (x) => x.trackId === trackId).laps, // tours roulés dans Paddock (hors records importés)
       sectors,
       ideal: sectors ? sectors.reduce((s, x) => s + x.time, 0) : null,
@@ -105,6 +107,7 @@ async function compute(d) {
 async function render(d) {
   root.innerHTML = '<p class="muted">Chargement…</p>';
   const st = await compute(d);
+  lastSt = st;
   if (!root) return;
   const pct = (a, b) => (b ? Math.round((a / b) * 100) + ' %' : '—');
 
@@ -152,6 +155,7 @@ async function render(d) {
           <div class="rec-meta">${esc(app.car(r.best.carId)?.name || '—')} · ${r.best.imported ? new Date(r.best.date).toLocaleDateString('fr-FR') + ' · 📥 SmartRace' : fmtDate(r.best.date)}</div>
           <div class="rec-more">${r.best.sectors?.length ? `${r.best.sectors.length} secteurs ›` : 'détails ›'}</div>
         </button>
+        <button class="btn small ghost rec-top" data-top="${i}">🏁 ${r.top.length > 1 ? `${r.top.length} meilleurs tours` : 'Meilleur tour'} · annuler un tour</button>
         ${r.sectors ? `
         <div class="rec-sectors">
           <span class="muted">Records de secteurs :</span>
@@ -185,6 +189,7 @@ async function render(d) {
     app.go('drivers');
   };
   $$('[data-rec]', root).forEach((b) => (b.onclick = () => showLap(d, st.records[+b.dataset.rec])));
+  $$('[data-top]', root).forEach((b) => (b.onclick = () => showTop(d, st.records[+b.dataset.top])));
   const sel = $('#progTrack', root);
   if (sel) sel.onchange = () => { progTrack = sel.value; drawProgress(d, st); };
   if (st.records.length) drawProgress(d, st);
@@ -303,6 +308,36 @@ function niceStep(raw) {
 }
 
 /** Détail du meilleur tour : secteurs comparés aux records de secteurs du pilote. */
+/** 10 meilleurs tours du pilote sur un circuit, avec annulation d'un tour non homologué. */
+function showTop(d, r) {
+  const m = modal(`
+    <h2>${esc(d.name)} — ${esc(r.track)}</h2>
+    <p class="muted" style="margin-top:0;font-size:.85rem">${r.top.length > 1 ? `Ses ${r.top.length} meilleurs tours` : 'Son meilleur tour'}, toutes voitures confondues (hors drapeau jaune).
+      🗑 annule un tour non homologué (sortie en fin de tour…) : il sort des records mais reste compté dans les tours effectués.</p>
+    <table class="simple top-laps">
+      <tr><th>#</th><th>Temps</th><th>Voiture · date</th><th></th></tr>
+      ${r.top.map((l, i) => `<tr>
+        <td class="num">${i + 1}</td>
+        <td class="num ${i === 0 ? 't-overall' : ''}">${fmtTime(l.time)}${wet(l) ? ' 🌧️' : ''}</td>
+        <td>${esc(app.car(l.carId)?.name || '—')}<br><small class="muted">${l.imported ? new Date(l.date).toLocaleDateString('fr-FR') + ' · 📥 SmartRace' : fmtDate(l.date) + (TYPES[l.sessionType] ? ' · ' + esc(TYPES[l.sessionType]) : '')}</small></td>
+        <td><button class="btn small ghost danger" data-void="${i}" title="Annuler ce tour (non homologué)">🗑</button></td>
+      </tr>`).join('')}
+    </table>
+    <div class="row" style="justify-content:flex-end;margin-top:12px"><button class="btn primary" data-close>Fermer</button></div>`);
+  m.el.querySelectorAll('[data-void]').forEach((b) => (b.onclick = async () => {
+    const l = r.top[+b.dataset.void];
+    if (!(await confirmBox(`Annuler le tour de ${fmtTime(l.time)} (${fmtDate(l.date)}) comme non homologué ? Il ne comptera plus dans les records de ${d.name}. Impossible de revenir en arrière.`))) {
+      showTop(d, r);
+      return;
+    }
+    await voidLap(app.db, l);
+    toast(`Tour de ${fmtTime(l.time)} annulé`);
+    await render(d);
+    const again = lastSt?.records.find((x) => x.trackId === r.trackId);
+    if (again?.top.length) showTop(d, again);
+  }));
+}
+
 function showLap(d, r) {
   const l = r.best;
   const secs = l.sectors || [];

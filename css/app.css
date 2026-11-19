@@ -890,3 +890,10 @@ input.need { border: 2px solid var(--red, #e10600) !important; box-shadow: 0 0 0
 .rs-drv-g { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 6px 12px; }
 .rs-drv-g span { display: flex; flex-direction: column; font-size: .78rem; color: var(--muted); }
 .rs-drv-g b { font-size: 1rem; color: var(--text); }
+
+/* Fiche pilote : 10 meilleurs tours */
+.rec-top { justify-self: start; margin-top: -4px; }
+.top-laps { width: 100%; }
+.top-laps td, .top-laps th { padding: 6px 6px; vertical-align: middle; }
+.top-laps small { font-size: .75rem; }
+.top-laps td:last-child { text-align: right; width: 1%; }

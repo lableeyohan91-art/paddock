@@ -20,6 +20,8 @@ const RECENT = 30;
 export const dayKey = (ts) => new Date(ts).toLocaleDateString('fr-FR');
 const green = (l) => !l.flag || l.flag === 'green';
 const memoId = (l) => `${l.driverId}|${l.carId}|${l.trackId}`;
+/** Tour valable pour les records (pas annulé comme « non homologué »). */
+export const valid = (l) => !l.voided;
 
 /** Tour réduit à ce qui sert aux statistiques. */
 function slim(l) {
@@ -133,8 +135,10 @@ export function foldInto(memo, laps) {
     const cur = out.days[k] || { laps: 0, sessions: 0 };
     out.days[k] = { ...cur, laps: cur.laps + d.laps, sessions: cur.sessions + d.sessions.size };
   });
-  mergeDayBests(out.days, fresh);
-  out.keep = pickKeep([...out.keep, ...fresh.map(slim)]);
+  // tours annulés (non homologués) : comptés comme roulés, mais jamais gardés comme témoins
+  const ok = fresh.filter(valid);
+  mergeDayBests(out.days, ok);
+  out.keep = pickKeep([...out.keep, ...ok.map(slim)]);
   out.folded = [...done, ...sessions];
   return out;
 }
@@ -239,7 +243,7 @@ export async function statLaps(db, { driverId = null, trackId = null } = {}) {
   let memos = await db.all('memos');
   if (driverId) { laps = laps.filter((l) => l.driverId === driverId); memos = memos.filter((m) => m.driverId === driverId); }
   if (trackId) { laps = laps.filter((l) => l.trackId === trackId); memos = memos.filter((m) => m.trackId === trackId); }
-  return { laps, memos, all: [...laps, ...memos.flatMap(memoLaps)] };
+  return { laps, memos, all: [...laps.filter(valid), ...memos.flatMap(memoLaps)] };
 }
 
 /** Compteurs : tours détaillés non importés + compteurs des fiches. */
@@ -251,4 +255,33 @@ export function counts(laps, memos, pick = () => true) {
     drivingMs: ls.reduce((s, l) => s + (l.time || 0), 0) + ms.reduce((s, m) => s + (m.drivingMs || 0), 0),
     sessions: new Set(ls.map((l) => l.sessionId)).size + ms.reduce((s, m) => s + (m.sessions || 0), 0),
   };
+}
+
+/**
+ * Retire un tour d'une fiche mémo (fonction pure) : tour témoin et/ou meilleur tour du jour.
+ * Renvoie la fiche modifiée (copie) ou null si le tour n'y est pas.
+ */
+export function voidInMemo(memo, lapId) {
+  const inKeep = (memo.keep || []).some((l) => l.id === lapId);
+  const days = Object.entries(memo.days || {}).filter(([, d]) => d.best?.id === lapId).map(([k]) => k);
+  if (!inKeep && !days.length) return null;
+  const m = structuredClone(memo);
+  m.keep = (m.keep || []).filter((l) => l.id !== lapId);
+  for (const k of days) delete m.days[k].best; // le 2e meilleur du jour n'est plus connu
+  return m;
+}
+
+/**
+ * Annule un tour « non homologué » (sortie en fin de tour…) : il ne compte plus pour les
+ * records, les 10 meilleurs tours, la progression ni le calcul d'essence, mais reste compté
+ * dans les tours effectués et le temps de roulage.
+ */
+export async function voidLap(db, lap) {
+  let done = false;
+  const detail = await db.get('laps', lap.id);
+  if (detail && !detail.voided) { detail.voided = Date.now(); await db.put('laps', detail); done = true; }
+  const memo = await db.get('memos', memoId(lap));
+  const m = memo && voidInMemo(memo, lap.id);
+  if (m) { await db.put('memos', m); done = true; }
+  return done;
 }

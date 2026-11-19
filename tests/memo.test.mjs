@@ -1,6 +1,6 @@
 // Fiches mémo : après rotation, les statistiques doivent rester identiques.
 // node tests/memo.test.mjs
-import { planRotation, foldInto, counts, dayKey, KEEP_SESSIONS, memoLaps, compactMemo, pickKeep, slimSession, upkeep, MEMO_V } from '../js/memo.js';
+import { planRotation, foldInto, counts, dayKey, KEEP_SESSIONS, memoLaps, compactMemo, pickKeep, slimSession, upkeep, MEMO_V, voidInMemo, statLaps } from '../js/memo.js';
 import { raceMedianOf, bestOfDrivers, driverStats } from '../js/fuel-calc.js';
 
 let fails = 0;
@@ -132,6 +132,25 @@ ok(store.settings.get('backupBeforeMemo').data === null && store.settings.get('b
 store.settings.set('backupBeforeMemo', { date: Date.now() - 5 * 864e5, data: { a: 1 } });
 const r2 = await upkeep(fakeDb, ss, ms);
 ok(store.settings.get('backupBeforeMemo').data && r2.memos === 0 && r2.sessions === 0, 'sauvegarde récente gardée, rien à refaire');
+
+// --- tours annulés (non homologués) ---
+{
+  const m0 = memos[0];
+  const top = [...memoLaps(m0)].sort((a, b) => a.time - b.time)[0];
+  const v = voidInMemo(m0, top.id);
+  ok(v && !memoLaps(v).some((l) => l.id === top.id), 'tour annulé : retiré des tours témoins et du meilleur tour du jour');
+  ok(v.laps === m0.laps && v.drivingMs === m0.drivingMs, 'tour annulé : toujours compté dans les tours et le temps de roulage');
+  ok(voidInMemo(m0, 'inconnu') === null, 'tour absent de la fiche : rien à faire');
+  // tour annulé avant d'être versé : compté, jamais gardé comme témoin
+  const src = laps.filter((l) => [l.driverId, l.carId, l.trackId].join('|') === m0.id && del.has(l.id));
+  const best1 = [...src].filter((l) => l.flag !== 'yellow').sort((a, b) => a.time - b.time)[0];
+  const f2 = foldInto(null, src.map((l) => (l.id === best1.id ? { ...l, voided: 1 } : l)));
+  ok(f2.laps === m0.laps && !memoLaps(f2).some((l) => l.id === best1.id), 'tour annulé puis versé : compté, mais pas dans les records');
+  // statLaps : les tours annulés sortent des records, pas des compteurs
+  const fake = { all: async (n) => (n === 'laps' ? [{ ...left[0], voided: 1 }, left[1]] : []), byIndex: async () => [] };
+  const sl = await statLaps(fake);
+  ok(sl.all.length === 1 && sl.laps.length === 2, 'statLaps : tour annulé hors records, gardé pour les compteurs');
+}
 
 console.log(fails ? `\n${fails} échec(s)` : '\nTout est bon.');
 process.exit(fails ? 1 : 0);
