@@ -603,8 +603,10 @@ export const app = {
       if (!c.inPit || c.fuelPct === null || c.fuelPct >= c.tankPct) continue;
       if (c.penalty) continue; // pénalité en cours : personne ne touche la voiture
       if (c.pitInAt != null && performance.now() - c.pitInAt < REFUEL_DELAY_MS) continue; // le plein commence 1 s après l'entrée au stand
+      if (c.refuelLock) continue; // ligne franchie après le plein : c'est fini jusqu'au tour suivant
       const wasEmpty = c.fuelPct <= 0;
       c.fuelPct = Math.min(c.tankPct, c.fuelPct + (this.fuelCfg.refuelPerSec * dtMs) / 1000);
+      c.pitFilled = true; // du carburant a été mis pendant cet arrêt
       if (wasEmpty && c.fuelPct > 0) perf.update(); // la voiture retrouve sa vitesse
       // simulateur : la voiture repart toute seule une fois le plein fait
       if (c.fuelPct >= c.tankPct && this.isSim) cu.conn.pit?.(c.address, false);
@@ -1096,7 +1098,19 @@ export const app = {
   async _onLap({ comp, lap, isBest, isOverallBest }) {
     const s = this.session;
     const p = perf.current.get(comp.address);
-    const fuelUsed = this.burnFuel(comp, lap.time);
+    // Fin du plein : la voiture passe la ligne en sortant du stand après avoir été remplie.
+    // Le plein est verrouillé jusqu'au passage suivant hors du stand (le signal « stand » de la CU
+    // reste ~1 s après la ligne, et peut se rallumer), et ce tour ne retire pas d'essence : le
+    // niveau reste celui du plein, sans recul.
+    let fuelUsed;
+    if (comp.inPit && comp.pitFilled) {
+      comp.refuelLock = true;
+      comp.pitFilled = false;
+      fuelUsed = 0;
+    } else {
+      if (!comp.inPit) comp.refuelLock = false;
+      fuelUsed = this.burnFuel(comp, lap.time);
+    }
     if (!(s.simulated ?? this.isSim)) db.put('laps', {
       fuelUsed,
       fuelLeft: comp.fuelPct,
