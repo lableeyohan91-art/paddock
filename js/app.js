@@ -67,6 +67,9 @@ const DEFAULT_TUNE = { speed: 8, brake: 6 }; // réglage d'un couple pilote + vo
  */
 export const IN_GAME = { vscAdaptive: true }; // VSC adaptatif remis en course (v1.85)
 
+// Pénalité : à l'arrêt au stand, la voiture reste immobile `sec` secondes avant qu'on la touche (essence)
+export const DEFAULT_PENALTY = { sec: 5 };
+const penaltyOf = (v) => ({ sec: Math.max(1, Math.min(60, Math.round(+v?.sec || DEFAULT_PENALTY.sec))) });
 const DEFAULT_VSC = { speedPct: 20, adaptive: { on: false, targetSec: 8 } }; // vitesse fixe imposée à toutes les voitures sous VSC, en % de la vitesse max
 export const GHOST = 6; // adresse de la voiture autonome (fantôme) ; 7 = pace car
 const perf = new PerformanceEngine(cu);
@@ -94,6 +97,7 @@ export const app = {
     this.setup = await db.getSetting('setup', null) || defaultSetup(this);
     this.fuelCfg = sanitize(await db.getSetting('fuel', defaultFuelConfig()));
     this.vscCfg = { ...DEFAULT_VSC, ...(await db.getSetting('vsc', {})) };
+    this.penaltyCfg = penaltyOf(await db.getSetting('penalty', {}));
     this.lightSync = { enabled: true, ...(await db.getSetting('lightSync', {})) };
     audio.voice = await db.getSetting('voice', true);
     audio.sounds = await db.getSetting('sounds', true);
@@ -285,6 +289,76 @@ export const app = {
     const car = c?.car?.id && this.car(c.car.id);
     const r = car && cranFor(car, s.trackId, a.targetSec);
     return r ? r.cran : null;
+  },
+
+  penaltyCfg: { ...DEFAULT_PENALTY },
+
+  async savePenaltyCfg(values) {
+    this.penaltyCfg = penaltyOf({ ...this.penaltyCfg, ...values });
+    await db.setSetting('penalty', this.penaltyCfg);
+  },
+
+  /**
+   * Pénalité (comme en F1) : à son prochain arrêt au stand, la voiture reste immobile la durée
+   * de la pénalité avant qu'on y touche (pas d'essence pendant ce temps). Plusieurs pénalités
+   * s'additionnent. Repartir avant la fin : la pénalité reste entière pour l'arrêt suivant.
+   */
+  givePenalty(address) {
+    const s = this.session;
+    const c = s?.comps.get(address);
+    if (!c || !['running', 'finishing'].includes(s.state)) return;
+    const sec = this.penaltyCfg.sec;
+    c.penalty = (c.penalty || 0) + sec;
+    c.penalties = (c.penalties || 0) + 1;
+    c._penSince = null;
+    const name = c.driver?.name || `Voiture ${c.address + 1}`;
+    say(`${name}, pénalité de ${c.penalty} secondes`, { priority: true });
+    toast(`⚠️ ${name} : pénalité de ${c.penalty} s`, 2500);
+    this.log(`Pénalité : ${name} (${c.penalty} s à faire au stand)`);
+    s.emit('update');
+  },
+
+  /** Retire la pénalité en attente (erreur de la direction de course). */
+  clearPenalty(address) {
+    const s = this.session;
+    const c = s?.comps.get(address);
+    if (!c?.penalty) return;
+    c.penalty = 0;
+    c._penSince = null;
+    this.log(`Pénalité retirée : ${c.driver?.name}`);
+    toast(`Pénalité retirée : ${c.driver?.name || ''}`, 1500);
+    s.emit('update');
+  },
+
+  /** Pénalité en attente : { sec, left (s), serving (en train d'être purgée au stand) } ou null. */
+  penaltyState(c) {
+    if (!c?.penalty) return null;
+    const serving = c.inPit && c._penSince != null;
+    const left = serving ? Math.max(0, c.penalty - (performance.now() - c._penSince) / 1000) : c.penalty;
+    return { sec: c.penalty, left, serving };
+  },
+
+  /** Purge des pénalités : voiture immobile dans la voie des stands assez longtemps. */
+  penaltyTick() {
+    const s = this.session;
+    if (!s || !['running', 'finishing'].includes(s.state)) return;
+    const now = performance.now();
+    for (const c of s.comps.values()) {
+      if (!c.penalty) continue;
+      if (!c.inPit) {
+        if (c._penSince != null) { c._penSince = null; s.emit('update'); } // reparti trop tôt : tout est à refaire
+        continue;
+      }
+      if (c._penSince == null) { c._penSince = now; s.emit('update'); continue; }
+      if (now - c._penSince >= c.penalty * 1000) {
+        const name = c.driver?.name || `Voiture ${c.address + 1}`;
+        c.penalty = 0;
+        c._penSince = null;
+        say(`${name}, pénalité purgée`);
+        this.log(`Pénalité purgée : ${name}`);
+        s.emit('update');
+      }
+    }
   },
 
   async saveVscCfg(values) {
@@ -514,6 +588,7 @@ export const app = {
     if (!s || !this.fuelOn() || !['running', 'finishing'].includes(s.state)) return;
     for (const c of s.comps.values()) {
       if (!c.inPit || c.fuelPct === null || c.fuelPct >= c.tankPct) continue;
+      if (c.penalty) continue; // pénalité en cours : personne ne touche la voiture
       const wasEmpty = c.fuelPct <= 0;
       c.fuelPct = Math.min(c.tankPct, c.fuelPct + (this.fuelCfg.refuelPerSec * dtMs) / 1000);
       if (wasEmpty && c.fuelPct > 0) perf.update(); // la voiture retrouve sa vitesse
@@ -1470,6 +1545,7 @@ async function init() {
   audio.sounds = await db.getSetting('sounds', true);
   app.fuelCfg = sanitize(await db.getSetting('fuel', defaultFuelConfig()));
   app.vscCfg = { ...DEFAULT_VSC, ...(await db.getSetting('vsc', {})) };
+  app.penaltyCfg = penaltyOf(await db.getSetting('penalty', {}));
   app.lightSync = { enabled: true, ...(await db.getSetting('lightSync', {})) };
   // rampe qui (re)vient : elle reprend tout de suite la couleur de la séance
   let lightWasOn = false;
@@ -1549,6 +1625,7 @@ async function init() {
   }, 200);
   setInterval(() => {
     app.session?.tick();
+    app.penaltyTick();
     app.refuelTick(200);
     VIEWS[app.view]?.tick?.();
     updateLiveBar();

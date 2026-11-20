@@ -157,6 +157,7 @@ function renderPilot() {
         <div><span>Meilleur</span><b class="num ${best ? 't-overall' : ''}">${fmtTime(c.best)}</b></div>
         <div><span>Écart</span><b class="num">${esc(c.gap || '—')}</b></div>
       </div>
+      ${c.pen ? penBox(c.pen) : ''}
       ${d.fuel && c.fuelPct !== null ? `<div class="pv-fuel"><span>Essence</span><div class="fuelg-bar"><i style="width:${Math.max(0, Math.min(100, c.fuelPct))}%"></i></div><b class="num">${c.fuelPct <= 0 ? 'À SEC' : c.fuelPct + ' %'}</b></div>` : ''}
       ${c.recent?.length ? `<div class="pv-recent muted">Derniers tours : ${c.recent.slice().reverse().map((t) => `<span class="num">${fmtTime(t)}</span>`).join(' · ')}</div>` : ''}
     </section>
@@ -186,6 +187,15 @@ function renderPilot() {
   </div>`;
   if (oldGarage) $('#pvGarage', view).replaceWith(oldGarage);
   bind(c, !oldGarage);
+}
+
+/** Secondes restantes d'un compte à rebours (heure murale du circuit). */
+const secLeft = (until) => (until ? Math.max(0, Math.ceil((until - Date.now()) / 1000)) : 0);
+
+/** Pénalité : à faire au prochain arrêt, ou en train d'être purgée (compte à rebours). */
+function penBox(p) {
+  if (p.until) return `<div class="pv-pen serving">⏳ Pénalité : reste immobile encore <b class="num" id="pvPenLeft" data-until="${p.until}">${secLeft(p.until)}</b> s</div>`;
+  return `<div class="pv-pen">⚠️ Pénalité de <b>${p.sec} s</b> : arrête-toi au stand, personne ne touche la voiture pendant ${p.sec} s (pas d'essence)</div>`;
 }
 
 function garage(c) {
@@ -244,6 +254,8 @@ setInterval(() => {
   if (!data || me === null) return;
   const el = $('#pvClock', view);
   if (el) el.textContent = clockText();
+  const pl = $('#pvPenLeft', view); // compte à rebours de la pénalité au stand
+  if (pl && pl.dataset.until) pl.textContent = secLeft(+pl.dataset.until);
   // le circuit envoie un signal toutes les 5 s : sans nouvelles depuis 8 s, on relit l'état
   if (lastUpdate && Date.now() - lastUpdate > 8000) {
     status.textContent = '⚠️ Mise à jour…';

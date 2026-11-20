@@ -82,6 +82,13 @@ function friendly(e) {
 const ref = (...path) => api.fb.doc(api.fs, 'live', live.code, ...path);
 
 /** Instantané de la séance pour les téléphones des pilotes. */
+/** Pénalité en attente : durée, et fin du compte à rebours (heure murale) si elle est en train d'être purgée. */
+function penInfo(c) {
+  const p = app.penaltyState?.(c);
+  if (!p) return null;
+  return { sec: p.sec, until: p.serving ? Date.now() + Math.round(p.left * 1000) : null };
+}
+
 function snapshot() {
   const s = app.session;
   if (!s) return { state: 'none' };
@@ -124,6 +131,7 @@ function snapshot() {
         recent: c.lapTimes.slice(-5),
         fuelPct: c.fuelPct === null ? null : Math.round(c.fuelPct),
         inPit: c.inPit,
+        pen: penInfo(c),
         pitStops: c.pitStops,
         finished: c.finished,
         speed: real ? real.speed : t.speed,

@@ -294,7 +294,9 @@ function renderBoard() {
     const flash = now - (flashes.get(c.address) || 0) < 1200;
     const lastCls = c.lastLap && c.lastLap === s.overallBest?.time ? 't-overall' : c.lastLap && c.lastLap === c.bestLap ? 't-best' : '';
     const bestCls = c.bestLap && c.bestLap === s.overallBest?.time ? 't-overall' : '';
-    const badge = c.finished ? '<span class="badge fin">🏁</span>' : c.inPit ? '<span class="badge pit">STAND</span>' : '';
+    const pen = app.penaltyState(c);
+    const penBadge = pen ? (pen.serving ? `<span class="badge pen serving" title="Pénalité en cours au stand">⏳ ${Math.ceil(pen.left)} s</span>` : `<span class="badge pen" title="Pénalité à faire au prochain arrêt">⚠️ ${pen.sec} s</span>`) : '';
+    const badge = (c.finished ? '<span class="badge fin">🏁</span>' : c.inPit ? '<span class="badge pit">STAND</span>' : '') + penBadge;
     return `<tr class="${flash ? 'flash' : ''}">
       <td class="pos num">${c.lastTs === null && !c.bestLap ? '–' : c.position}</td>
       <td><div class="driver swappable" data-swap="${c.address}" title="Toucher pour changer de pilote ou de voiture" role="button" tabindex="0">
@@ -430,8 +432,14 @@ function swapDialog(address) {
     ? 'En course, le nouveau pilote reprend les tours et la position de la manette (relais).'
     : 'Le nouveau pilote repart avec son propre chrono. Les tours du pilote précédent restent dans ses statistiques.';
 
+  const racing = ['running', 'finishing'].includes(s.state) && comp;
+  const pen = comp?.penalty || 0;
   const m = modal(`
     <h2>Manette ${address + 1}</h2>
+    ${racing ? `<div class="pen-box">
+      <button class="btn" id="penGive">⚠️ Pénalité de ${app.penaltyCfg.sec} s</button>
+      ${pen ? `<span class="muted">En attente : <b>${pen} s</b></span><button class="btn small ghost" id="penClear">Retirer</button>` : '<span class="muted">À faire au prochain arrêt au stand</span>'}
+    </div>` : ''}
     <h3 style="margin-top:4px">Pilote</h3>
     <div class="pick-grid" id="pickDrivers">
       ${app.data.drivers.map((d) => `
@@ -463,6 +471,10 @@ function swapDialog(address) {
   };
   $$('[data-d]', el).forEach((b) => (b.onclick = () => { driverId = b.dataset.d; sync(); }));
   $$('[data-c]', el).forEach((b) => (b.onclick = () => { carId = b.dataset.c; sync(); }));
+  const pg = $('#penGive', el);
+  if (pg) pg.onclick = () => { app.givePenalty(address); m.close(); lastSig = ''; tick(); };
+  const pc = $('#penClear', el);
+  if (pc) pc.onclick = () => { app.clearPenalty(address); m.close(); lastSig = ''; tick(); };
   $('#swapOk', el).onclick = async () => {
     m.close();
     await app.swapEntry(address, driverId, carId);

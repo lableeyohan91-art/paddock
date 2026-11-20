@@ -23,6 +23,8 @@
 .pv-name { font-size: 1.25rem; font-weight: 800; text-transform: uppercase; }
 .pv-change { margin-left: 6px; font-size: .75rem; padding: 2px 8px; border-radius: 8px; border: 1px solid var(--line); background: transparent; color: var(--muted); cursor: pointer; text-transform: none; font-weight: 600; }
 .pv-pit { color: var(--yellow); }
+.pv-pen { margin-top: 10px; padding: 10px 12px; border-radius: 10px; background: rgba(250, 204, 21, .15); border: 1px solid var(--yellow); color: var(--yellow); font-weight: 600; font-size: .9rem; }
+.pv-pen.serving { background: rgba(225, 6, 0, .18); border-color: var(--accent); color: #fff; font-size: 1.05rem; }
 .pv-stats { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
 .pv-stats div { background: var(--panel-2); border-radius: 10px; padding: 8px 6px; text-align: center; display: grid; gap: 2px; }
 .pv-stats span { font-size: .7rem; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }

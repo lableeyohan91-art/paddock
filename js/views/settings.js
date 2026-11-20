@@ -19,6 +19,7 @@ const SECTIONS = [
   { k: 'general', ico: '⚙️', name: 'Général' },
   { k: 'fuel', ico: '⛽', name: 'Essence' },
   { k: 'vsc', ico: '<span class="vsc-ico">VSC</span>', name: 'VSC' }, // même icône que le bouton en course
+  { k: 'penalty', ico: '⚠️', name: 'Pénalités' },
   { k: 'devices', ico: '💡', name: 'Éclairage connecté' },
 ];
 let tab = 'menu';
@@ -54,6 +55,16 @@ const HELP = {
       <li><b>VSC automatique</b> (2e onglet) : le VSC se déclenche tout seul quand une voiture ne repasse plus — <b>par tour</b> (pas de passage sur la ligne depuis X s) ou <b>par secteur</b> avec les Check Lane (Y s). Les voitures au stand, en panne sèche ou arrivées sont exclues.</li>
     </ul>`,
 };
+
+HELP.penalty = `
+    <p>Comme en F1 : une <b>pénalité</b> oblige le pilote à rester immobile au stand avant qu'on touche sa voiture.</p>
+    <ul>
+      <li><b>Durée</b> : de 1 à 60 secondes, la même pour toutes les pénalités.</li>
+      <li><b>Donner une pénalité</b> : sur l'écran de course, toucher le pilote, puis « ⚠️ Pénalité ». Plusieurs pénalités s'additionnent ; « Retirer » annule celle en attente.</li>
+      <li><b>Au stand</b> : la voiture reste immobile la durée de la pénalité, <b>sans essence</b>. Ensuite seulement, le plein se fait normalement.</li>
+      <li>Repartir avant la fin : la pénalité reste entière, à refaire au prochain arrêt.</li>
+      <li>Le pilote la voit sur sa <b>vue pilote</b>, avec le compte à rebours au stand.</li>
+    </ul>`;
 
 HELP.devices = `
     <p>Les lampes que Paddock peut piloter en plus du circuit : elles prennent la couleur de la course.</p>
@@ -117,6 +128,7 @@ function render() {
     bindTabs();
     return;
   }
+  if (tab === 'penalty') { renderPenalty(); bindTabs(); return; }
   if (tab === 'devices') {
     renderDevices();
     bindTabs();
@@ -531,6 +543,33 @@ function renderOtherLights() {
     // l'écran se met à jour quand la lampe change d'état (connexion, perte…)
     if (!l._uiBound) { l._uiBound = true; l.addEventListener('change', () => { if (root && tab === 'devices' && devTab === 'others') { renderDevices(); bindTabs(); } }); }
   });
+}
+
+/** Réglages → Pénalités : durée d'une pénalité (1 à 60 s). */
+function renderPenalty() {
+  const sec = app.penaltyCfg.sec;
+  root.innerHTML = sectionHead() + `
+  <section class="panel">
+    <h2>Durée d'une pénalité</h2>
+    <div class="row" style="gap:14px;margin-top:10px">
+      <input type="range" id="penSec" min="1" max="60" step="1" value="${sec}" style="flex:1">
+      <span class="vsc-pct num" id="penSecV">${sec} s</span>
+    </div>
+    <p class="muted" style="margin:10px 0 0;font-size:.9rem">Comme en F1 : au prochain arrêt au stand, le pilote pénalisé reste immobile <b id="penSecT">${sec} s</b> avant qu'on touche sa voiture. Pendant ce temps, <b>pas d'essence</b> ; le plein se fait ensuite, normalement.</p>
+  </section>
+  <section class="panel" style="margin-top:14px">
+    <h2>Comment ça marche</h2>
+    <ul class="muted" style="margin:6px 0 0;padding-left:18px;font-size:.9rem;line-height:1.5">
+      <li><b>Donner une pénalité</b> : sur l'écran de course, toucher le pilote, puis « ⚠️ Pénalité ».</li>
+      <li>Deux pénalités s'additionnent. « Retirer » annule celle en attente.</li>
+      <li>Repartir avant la fin : la pénalité reste entière pour l'arrêt suivant.</li>
+      <li>Le pilote la voit sur sa vue pilote, avec le compte à rebours au stand.</li>
+    </ul>
+  </section>`;
+  const r = $('#penSec', root);
+  const show = () => { $('#penSecV', root).textContent = r.value + ' s'; $('#penSecT', root).textContent = r.value + ' s'; };
+  r.oninput = show;
+  r.onchange = async () => { await app.savePenaltyCfg({ sec: +r.value }); toast(`Pénalité : ${r.value} s`, 1200); };
 }
 
 function renderDevices() {
