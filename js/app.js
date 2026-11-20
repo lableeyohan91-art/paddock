@@ -1,6 +1,7 @@
 // Point d'entrée : état global, connexion, cycle de vie des sessions, navigation.
 
 import { ControlUnit } from './cu/controlunit.js';
+import { MODE } from './cu/protocol.js';
 import { APP_VERSION } from './version.js';
 import { cranFor } from './vsc-cal.js';
 
@@ -593,15 +594,54 @@ export const app = {
     return pct;
   },
 
-  /** Ravitaillement : appelé en continu ; remplit les voitures qui sont au stand. */
+  /** La Control Unit gère-t-elle l'essence ? (mode carburant activé : c'est elle qui remplit au stand) */
+  cuFuelMode() {
+    return !!(cu.connected && (cu.status?.mode & MODE.FUEL));
+  },
+
+  /**
+   * Entrée au stand : la Control Unit repart du niveau d'essence de l'appli (0-15, arrondi en
+   * dessous pour qu'elle puisse remplir), et on attend qu'elle remplisse.
+   */
+  syncCuFuel(c) {
+    if (!this.fuelOn() || !this.cuFuelMode() || c.fuelPct === null) return;
+    const lvl = Math.max(0, Math.min(15, Math.floor((c.fuelPct / 100) * 15)));
+    cu.setFuel(c.address, lvl);
+    c.cuSyncLevel = lvl;
+    c.cuFuelBase = lvl;
+    c.cuFuelRiseAt = null;
+  },
+
+  /**
+   * Ravitaillement, appelé en continu. Comme SmartRace : on ne remplit que pendant que la Control
+   * Unit remplit (voiture arrêtée au stand, bouton de changement de voie appuyé), donc pendant que
+   * son essence monte. Bouton relâché ou voiture repartie : le remplissage s'arrête.
+   * Sans le mode carburant de la Control Unit : ancien fonctionnement (remplissage dès le stand).
+   */
   refuelTick(dtMs) {
     const s = this.session;
     if (!s || !this.fuelOn() || !['running', 'finishing'].includes(s.state)) return;
+    const cuMode = this.cuFuelMode();
     for (const c of s.comps.values()) {
       if (!c.inPit || c.fuelPct === null || c.fuelPct >= c.tankPct) continue;
-      if (c.penalty) continue; // pénalité en cours : personne ne touche la voiture
+      if (cuMode && c.cuFuelBase == null) this.syncCuFuel(c); // entrée au stand vue avant la connexion du mode carburant
+      if (c.penalty) {
+        // pénalité en cours : personne ne touche la voiture ; si la Control Unit a rempli, on la remet au niveau
+        if (cuMode && c.cuSyncLevel != null && c.cuFuel > c.cuSyncLevel) { cu.setFuel(c.address, c.cuSyncLevel); c.cuFuelBase = c.cuSyncLevel; }
+        continue;
+      }
       const wasEmpty = c.fuelPct <= 0;
-      c.fuelPct = Math.min(c.tankPct, c.fuelPct + (this.fuelCfg.refuelPerSec * dtMs) / 1000);
+      if (cuMode) {
+        // l'appli suit le niveau de la Control Unit (0-15), sans jamais le dépasser : dès que la CU
+        // arrête de remplir (bouton relâché, voiture repartie), l'appli s'arrête aussi
+        if (c.cuFuel == null || c.cuFuelRiseAt == null) continue; // la CU n'a pas encore rempli
+        const target = Math.min(c.tankPct, (c.cuFuel / 15) * 100);
+        if (c.fuelPct >= target) continue;
+        c.fuelPct = Math.min(target, c.fuelPct + Math.max((this.fuelCfg.refuelPerSec * dtMs) / 1000, (target - c.fuelPct) * 0.25));
+        if (c.cuFuel >= 15) c.fuelPct = c.tankPct; // la CU a fait le plein
+      } else {
+        c.fuelPct = Math.min(c.tankPct, c.fuelPct + (this.fuelCfg.refuelPerSec * dtMs) / 1000);
+      }
       if (wasEmpty && c.fuelPct > 0) perf.update(); // la voiture retrouve sa vitesse
       // simulateur : la voiture repart toute seule une fois le plein fait
       if (c.fuelPct >= c.tankPct && this.isSim) cu.conn.pit?.(c.address, false);
@@ -1013,7 +1053,10 @@ export const app = {
       this.log('La Control Unit a arrêté la course (faux départ ?) : drapeau rouge');
     });
     session.addEventListener('pit', (e) => {
-      if (e.detail.in) this.log(`${e.detail.comp.driver.name} entre au stand`);
+      if (e.detail.in) {
+        this.log(`${e.detail.comp.driver.name} entre au stand`);
+        if (['running', 'finishing'].includes(session.state)) this.syncCuFuel(e.detail.comp);
+      }
     });
     session.addEventListener('state', async (e) => {
       const st = e.detail.state;

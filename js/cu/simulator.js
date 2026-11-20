@@ -84,6 +84,9 @@ export class SimulatorConnection {
       if (car.inPit) {
         car.nextAt += dt;
         if (car.midAt !== null && car.midAt !== undefined) car.midAt += dt;
+        // comme la vraie Control Unit : arrêtée au stand, bouton appuyé, l'essence monte d'un cran toutes les 0,4 s
+        car.fillMs = (car.fillMs || 0) + dt;
+        while (car.fillMs >= 400 && car.fuel < 15) { car.fillMs -= 400; car.fuel++; car.lapsOnTank = (15 - car.fuel) * 2; }
         return;
       }
       // Check Lane simulée à mi-parcours : capteur "secteur 2"
@@ -191,7 +194,7 @@ export class SimulatorConnection {
     this._tick(); // fige le temps écoulé avant de changer d'état
     car.inPit = on;
     if (on) {
-      car.fuel = 15; car.lapsOnTank = 0;
+      car.fillMs = 0; // le plein se fait peu à peu pendant l'arrêt (voir _tick)
     } else if (car.nextAt !== null) {
       // traverser la voie des stands (freiner, ressortir) coûte un peu de temps
       car.nextAt += this.pitLaneLoss;
