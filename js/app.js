@@ -418,6 +418,11 @@ export const app = {
     this.go('settings');
   },
 
+  openTyreSettings() {
+    settingsView.openTyres();
+    this.go('settings');
+  },
+
   openButtonVscSettings() {
     settingsView.openButtonVsc();
     this.go('settings');

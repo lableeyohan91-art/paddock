@@ -22,6 +22,9 @@ export const COMPOUND_INFO = {
 
 // Réglages d'origine
 export const DEFAULT_TYRES = {
+  mode: 'auto',        // 'auto' : l'appli calcule l'usure selon le nombre de tours ; 'manual' : réglages ci-dessous
+  f1Cran: 4,           // automatique : ce que coûte un cran, en % du temps au tour (à mesurer sur le circuit)
+  f1Lane: 4.4,         // automatique : temps perdu dans la voie des stands, en s (à mesurer)
   changeSec: 3,        // temps d'arrêt au stand pour changer les pneus
   start: 'medium',     // gomme de départ par défaut
   cliffFrom: 25,       // chute de grip au hasard entre 25 %…
@@ -43,6 +46,9 @@ const num = (v, min, max, d) => { const n = +v; return Number.isFinite(n) ? Math
 export function tyreCfg(saved = {}) {
   const D = DEFAULT_TYRES;
   const c = {
+    mode: saved.mode === 'manual' ? 'manual' : 'auto',
+    f1Cran: num(saved.f1Cran, 1, 10, D.f1Cran),
+    f1Lane: num(saved.f1Lane, 0, 15, D.f1Lane),
     changeSec: num(saved.changeSec, 0, 30, D.changeSec),
     start: COMPOUNDS.includes(saved.start) ? saved.start : D.start,
     cliffKeep: num(saved.cliffKeep, 0, 100, D.cliffKeep),
@@ -133,25 +139,33 @@ export function wearLap(cfg, t, rnd = Math.random) {
 //   arrêt total = 2 × coût d'un cran × V ; changement = arrêt total − voie des stands (au moins 1 s).
 // Vitesses du réglage « A » : Tendre normal, Medium −1 cran, Dur −1 cran et −1 de freinage.
 export const F1_MIN_LAPS = 50;
-export const F1_CRAN = 0.04;      // un cran coûte ~4 % du temps au tour (à mesurer sur le circuit)
-export const F1_LANE_SEC = 4.4;   // temps perdu dans la voie des stands (à mesurer)
+export const F1_LIFE_K = 1.8;     // vie du Tendre = 1,8 × √tours
 
-/** Valeurs F1 pour une course de `laps` tours, tour de référence `lapSec` (s). */
-export function f1Plan(laps, lapSec = 3.4) {
+/**
+ * Valeurs automatiques pour une course de `laps` tours, tour de référence `lapSec` (s),
+ * cran = coût d'un cran en % du tour, lane = temps perdu dans la voie des stands (s).
+ */
+export function f1Plan(laps, lapSec = 3.4, cranPct = DEFAULT_TYRES.f1Cran, lane = DEFAULT_TYRES.f1Lane) {
   const L = Math.max(F1_MIN_LAPS, laps || 0);
-  const life = Math.max(8, Math.round(1.8 * Math.sqrt(L)));
+  const life = Math.max(8, Math.round(F1_LIFE_K * Math.sqrt(L)));
   const wear = 75 / life;
-  const cran = F1_CRAN * (lapSec > 0 ? lapSec : 3.4);
-  const changeSec = Math.max(1, Math.min(30, Math.round(2 * cran * life - F1_LANE_SEC))); // au moins 1 s : il faut vraiment s'arrêter
+  const cran = (cranPct / 100) * (lapSec > 0 ? lapSec : 3.4);
+  const stopSec = 2 * cran * life; // arrêt total qui équilibre les 3 gommes
+  const changeSec = Math.max(1, Math.min(30, Math.round(stopSec - lane))); // au moins 1 s : il faut vraiment s'arrêter
   const r = (x) => Math.round(x * 100) / 100;
-  return { laps: L, life, changeSec, wear: { soft: r(wear), medium: r(wear / 2), hard: r(wear * 0.375) } };
+  return { laps: L, life, changeSec, stopSec: r(stopSec), cranSec: r(cran), wear: { soft: r(wear), medium: r(wear / 2), hard: r(wear * 0.375) } };
 }
 
-/** Réglages de pneus complets pour une course F1 (chute de grip et crevaisons : réglages du joueur). */
+/**
+ * Réglages de pneus complets calculés pour une course : chute de grip et crevaisons aux valeurs
+ * d'origine (celles de l'étude) ; gomme de départ et vitesse en crevaison : celles du joueur.
+ */
 export function f1TyreCfg(laps, lapSec, base = DEFAULT_TYRES) {
-  const p = f1Plan(laps, lapSec);
+  const p = f1Plan(laps, lapSec, base.f1Cran, base.f1Lane);
   return tyreCfg({
-    ...base,
+    ...DEFAULT_TYRES,
+    mode: 'auto', f1Cran: base.f1Cran, f1Lane: base.f1Lane,
+    punctSpeedPct: base.punctSpeedPct ?? DEFAULT_TYRES.punctSpeedPct,
     changeSec: p.changeSec,
     start: base.start || 'medium',
     soft: { speedOff: 0, brakeOff: 0, wearPerLap: p.wear.soft, warmLaps: 1, coldOff: 1 },
@@ -159,3 +173,11 @@ export function f1TyreCfg(laps, lapSec, base = DEFAULT_TYRES) {
     hard: { speedOff: 1, brakeOff: 1, wearPerLap: p.wear.hard, warmLaps: 1, coldOff: 1 },
   });
 }
+
+/** Réglages de la course F1 : calculés (Automatique) ou ceux du joueur (Manuel). */
+export function raceTyreCfg(laps, lapSec, base = DEFAULT_TYRES) {
+  return base.mode === 'manual' ? tyreCfg(base) : f1TyreCfg(laps, lapSec, base);
+}
+
+/** Tour (depuis le changement) où la santé descend à h %, ou Infinity si la gomme ne s'use pas. */
+export const lapAtHealth = (g, h) => (g.wearPerLap > 0 ? (100 - h) / g.wearPerLap : Infinity);

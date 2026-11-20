@@ -905,3 +905,39 @@ input.need { border: 2px solid var(--red, #e10600) !important; box-shadow: 0 0 0
 .top-laps td, .top-laps th { padding: 6px 6px; vertical-align: middle; }
 .top-laps small { font-size: .75rem; }
 .top-laps td:last-child { text-align: right; width: 1%; }
+
+/* ---------- Réglages → Pneus (Automatique / Manuel) ---------- */
+.dev-banner.small { font-size: .85rem; padding: 8px 10px; }
+.ty-use { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.ty-rngs { display: grid; gap: 10px; }
+.ty-rng { display: grid; grid-template-columns: minmax(130px, 1.1fr) 2fr minmax(92px, auto); align-items: center; gap: 10px; }
+.ty-rng-l { font-size: .88rem; font-weight: 600; }
+.ty-rng-l small { display: block; font-weight: 400; color: var(--muted); font-size: .75rem; }
+.ty-rng input[type=range] { width: 100%; min-width: 0; margin: 0; box-sizing: border-box; }
+.ty-rng b { font-size: .88rem; text-align: right; white-space: nowrap; }
+@media (max-width: 560px) {
+  .ty-rng { grid-template-columns: 1fr auto; }
+  .ty-rng input[type=range] { grid-column: 1 / -1; grid-row: 2; }
+}
+.ty-sum { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; margin-top: 12px; }
+.ty-sum > div { display: grid; gap: 2px; padding: 8px 10px; border-radius: 10px; background: var(--panel-2); border: 1px solid var(--line); font-size: .8rem; }
+.ty-sum b { font-size: 1.05rem; }
+.ty-card { border-top: 3px solid var(--tc); padding: 12px 0 4px; margin-top: 12px; }
+.ty-card-h { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+.ty-card-h .muted { font-size: .82rem; }
+.ty-card .ty-rngs { margin-top: 10px; }
+.ty-lane { position: relative; height: 18px; border-radius: 6px; overflow: hidden; background: var(--panel-2); border: 1px solid var(--line); }
+.tz { position: absolute; top: 0; bottom: 0; display: block; }
+.ty-legend .tz { position: static; display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -2px; margin-right: 4px; }
+.tz.cold { background: #60a5fa; }
+.tz.ok { background: #22c55e; }
+.tz.cliff { background: #f59e0b; }
+.tz.worn { background: #ea580c; }
+.tz.punct { background: #ef4444; }
+.tz.punct2 { background: #b91c1c; }
+.tz.dead { background: #3f0a0a; }
+.ty-ticks { position: relative; height: 14px; font-size: .65rem; color: var(--muted); }
+.ty-ticks span { position: absolute; transform: translateX(-50%); top: 1px; }
+.ty-legend { display: flex; flex-wrap: wrap; gap: 6px 12px; font-size: .75rem; color: var(--muted); margin-top: 6px; }
+.ty-what { margin: 4px 0 0; font-size: .82rem; color: var(--muted); }
+.ty-what b { color: var(--text); }

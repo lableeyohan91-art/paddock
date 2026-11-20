@@ -7,7 +7,7 @@ import { renderFuel, openFuelTab } from './fuel-settings.js';
 import { vscSpeed } from '../performance.js';
 import { reach, cranFor } from '../vsc-cal.js';
 import { autoCfg } from '../autovsc.js';
-import { COMPOUNDS, COMPOUND_INFO, DEFAULT_TYRES } from '../tyres.js';
+import { renderTyreSettings } from './tyre-settings.js';
 import { LIGHT_SCENES, COLOR_SLOTS, paletteColor, sceneCss, cssOf } from '../devices/lightsync.js';
 import { GenericLight, PROTOCOLS } from '../devices/generic-light.js';
 import { openImport, importDone, removeImport } from './import-records.js';
@@ -58,14 +58,13 @@ const HELP = {
 };
 
 HELP.tyres = `
-    <p>Trois gommes aux comportements bien marqués (mode arcade).</p>
+    <p>Trois gommes aux comportements bien marqués, pour le mode <b>F1</b> (en développement).</p>
     <ul>
-      <li>Chaque gomme retire des <b>crans</b> à la programmation du pilote sur <b>sa</b> voiture : <b>Tendre</b> = sa programmation, <b>Medium</b> = 1 cran en dessous, <b>Dur</b> = 2 crans en dessous et un freinage moins fort. Le Tendre s'use vite, le Dur dure longtemps.</li>
-      <li><b>Chute de grip</b> : elle arrive au hasard quand il reste entre 25 % et 15 % de santé. La voiture ne garde alors que 50 % de sa programmation (réglée à 8 → roule à 4).</li>
-      <li><b>Crevaison</b> : sous 15 % de santé, risque à chaque passage sur la ligne (20 %, puis 50 % sous 7 %). À 0 %, c'est la crevaison. Une voiture crevée roule à la vitesse choisie (comme le VSC) jusqu'au stand.</li>
-      <li><b>Chauffe</b> : après un changement, la voiture perd un cran pendant les tours de chauffe.</li>
-      <li><b>Changement</b> : rester immobile quelques secondes dans la voie des stands. Chaque pilote choisit sa gomme sur sa <b>vue pilote</b> (ou on la choisit sur l'écran de course).</li>
-      <li>Les pneus s'activent course par course sur l'écran de préparation. Pas d'effet pendant un VSC ou une panne sèche.</li>
+      <li><b>Tendre</b> : rapide mais s'use vite. <b>Medium</b> : 1 cran en moins, dure deux fois plus. <b>Dur</b> : 1 cran en moins et un freinage moins fort, dure le plus longtemps.</li>
+      <li><b>Automatique</b> : l'appli calcule seule l'usure et le temps d'arrêt selon le nombre de tours, pour que les 3 stratégies se valent. Tu y vois la vie de chaque gomme sur une frise.</li>
+      <li><b>Manuel</b> : des curseurs pour tout régler toi-même (vitesse, freinage, usure, chauffe, chute de grip, crevaison, temps d'arrêt), avec la frise mise à jour en direct.</li>
+      <li><b>Chute de grip</b> : au hasard en fin de vie, la voiture ne garde qu'une partie de sa programmation. <b>Crevaison</b> : risque quand le pneu est presque usé ; la voiture roule alors au ralenti jusqu'au stand.</li>
+      <li><b>Changement</b> : choisir la gomme sur la vue pilote, puis rester immobile le temps indiqué dans la voie des stands.</li>
     </ul>`;
 
 HELP.devices = `
@@ -130,7 +129,7 @@ function render() {
     bindTabs();
     return;
   }
-  if (tab === 'tyres') { renderTyres(); bindTabs(); return; }
+  if (tab === 'tyres') { renderTyreSettings(root, app, sectionHead(), bindTabs); return; }
   if (tab === 'devices') {
     renderDevices();
     bindTabs();
@@ -329,88 +328,6 @@ function renderVsc() {
   r.oninput = () => show(+r.value);
   r.onchange = async () => { await app.saveVscCfg({ speedPct: +r.value }); toast('VSC : ' + r.value + ' %', 1200); };
   bindVscTabs();
-}
-
-/** Réglages → Pneus : par gomme, des crans retirés à la programmation du pilote. */
-const TYRE_FIELDS = [
-  ['speedOff', 'Vitesse', 'crans en moins', 0, 15, 1],
-  ['brakeOff', 'Freinage', 'crans en moins', 0, 15, 1],
-  ['wearPerLap', 'Usure par tour', '%', 0, 100, 0.5],
-  ['warmLaps', 'Tours de chauffe', 'tours', 0, 10, 1],
-  ['coldOff', 'À froid', 'crans en moins', 0, 15, 1],
-];
-const TYRE_WEAR_FIELDS = [
-  ['cliffFrom', 'Chute de grip : de', '% de santé', 0, 100, 1],
-  ['cliffTo', 'à', '% de santé', 0, 100, 1],
-  ['cliffKeep', 'Après la chute, la voiture garde', '% de sa programmation', 0, 100, 5],
-  ['punctA', 'Risque de crevaison sous', '% de santé', 0, 100, 1],
-  ['punctAChance', 'Risque à chaque passage', '%', 0, 100, 5],
-  ['punctB', 'Gros risque sous', '% de santé', 0, 100, 1],
-  ['punctBChance', 'Risque à chaque passage', '%', 0, 100, 5],
-];
-function renderTyres() {
-  const t = app.tyres;
-  const lapsTo = (h, g) => (g.wearPerLap ? Math.floor((100 - h) / g.wearPerLap) : '∞');
-  const ex = (b) => Math.round((b * t.cliffKeep) / 100);
-  root.innerHTML = sectionHead() + `
-  <div class="dev-banner">🚧 En cours de développement · pas encore utilisé en course</div>
-  <section class="panel">
-    <h2>Arrêt au stand</h2>
-    <div class="row" style="gap:14px;flex-wrap:wrap">
-      <label class="field">Temps de changement (s)<input type="number" id="tyChange" min="0" max="30" step="0.5" value="${t.changeSec}" style="width:90px"></label>
-      <label class="field">Gomme de départ
-        <select id="tyStart">${COMPOUNDS.map((k) => `<option value="${k}" ${t.start === k ? 'selected' : ''}>${COMPOUND_INFO[k].label}</option>`).join('')}</select></label>
-    </div>
-    <p class="muted" style="margin:8px 0 0;font-size:.85rem">La voiture doit rester immobile ce temps-là dans la voie des stands pour repartir avec la gomme choisie. La gomme de départ peut être changée par chaque pilote sur sa vue pilote avant le GO.</p>
-  </section>
-  <section class="panel" style="margin-top:14px">
-    <h2>Usure et crevaison</h2>
-    <div class="tyre-grid">
-      ${TYRE_WEAR_FIELDS.map(([f, l, u, mn, mx, st]) => `<label class="field">${l} (${u})<input type="number" data-tyg="${f}" min="${mn}" max="${mx}" step="${st}" value="${t[f]}"></label>`).join('')}
-    </div>
-    <p class="muted" style="margin:8px 0 0;font-size:.85rem">Exemple : une voiture programmée à 8 roule à ${ex(8)} après la chute de grip, à 12 elle roule à ${ex(12)}. À 0 % de santé, la crevaison est sûre.</p>
-    <div class="row" style="gap:14px;margin-top:14px">
-      <label class="field" style="flex:1">Vitesse en crevaison
-        <input type="range" id="tyPunct" min="0" max="100" step="5" value="${t.punctSpeedPct}"></label>
-      <span class="vsc-pct num" id="tyPunctV">${t.punctSpeedPct} %<small>cran ${vscSpeed(t.punctSpeedPct)}/15</small></span>
-    </div>
-    <p class="muted" style="font-size:.85rem;margin:4px 0 0">Comme le VSC : % de la vitesse max du circuit, la même pour toutes les voitures crevées (0 % = voiture arrêtée).</p>
-  </section>
-  ${COMPOUNDS.map((k) => {
-    const g = t[k];
-    return `
-  <section class="panel tyre-card" style="margin-top:14px;--tc:${COMPOUND_INFO[k].color}">
-    <h2><span class="tyre-dot">${COMPOUND_INFO[k].short}</span> ${COMPOUND_INFO[k].label}</h2>
-    <div class="tyre-grid">
-      ${TYRE_FIELDS.map(([f, l, u, mn, mx, st]) => `<label class="field">${l} (${u})<input type="number" data-ty="${k}.${f}" min="${mn}" max="${mx}" step="${st}" value="${g[f]}"></label>`).join('')}
-    </div>
-    <p class="muted" style="margin:8px 0 0;font-size:.8rem">Chute de grip entre le ${lapsTo(t.cliffFrom, g)}e et le ${lapsTo(t.cliffTo, g)}e tour ; risque de crevaison à partir du ${lapsTo(t.punctA, g)}e tour.</p>
-  </section>`;
-  }).join('')}
-  <button class="btn small ghost" id="tyReset" style="margin-top:14px">↺ Revenir aux réglages d'origine</button>`;
-
-  const save = async (patch) => { await app.saveTyres({ ...app.tyres, ...patch }); };
-  $('#tyChange', root).onchange = async (e) => { await save({ changeSec: +e.target.value }); toast('Enregistré', 1000); };
-  $('#tyStart', root).onchange = async (e) => { await save({ start: e.target.value }); toast('Enregistré', 1000); };
-  root.querySelectorAll('[data-tyg]').forEach((inp) => (inp.onchange = async () => {
-    await save({ [inp.dataset.tyg]: +inp.value });
-    renderTyres(); bindTabs();
-    toast('Enregistré', 1000);
-  }));
-  const pr = $('#tyPunct', root);
-  pr.oninput = () => { $('#tyPunctV', root).innerHTML = `${pr.value} %<small>cran ${vscSpeed(+pr.value)}/15</small>`; };
-  pr.onchange = async () => { await save({ punctSpeedPct: +pr.value }); toast('Crevaison : ' + pr.value + ' %', 1200); };
-  root.querySelectorAll('[data-ty]').forEach((inp) => (inp.onchange = async () => {
-    const [k, f] = inp.dataset.ty.split('.');
-    await save({ [k]: { ...app.tyres[k], [f]: +inp.value } });
-    renderTyres(); bindTabs();
-    toast('Enregistré', 1000);
-  }));
-  $('#tyReset', root).onclick = async () => {
-    if (!(await confirmBox('Revenir aux réglages d\'origine des pneus ?'))) return;
-    await app.saveTyres(DEFAULT_TYRES);
-    renderTyres(); bindTabs();
-  };
 }
 
 /** Réglages → Éclairage connecté : onglets « Chihiros » (rampe) et « Autres lampes ». */
@@ -700,6 +617,11 @@ export function openButtonVsc() {
 export function openAdaptiveVsc() {
   openNext = 'vsc';
   vscTab = 'adaptive';
+}
+
+/** Ouvre directement Réglages → Pneus (depuis un autre écran). */
+export function openTyres() {
+  openNext = 'tyres';
 }
 
 /** Ouvre directement Réglages → Essence (depuis un autre écran). */

@@ -6,7 +6,7 @@
 import { esc, $, $$, toast, promptBox } from '../ui.js';
 import { vscSpeed } from '../performance.js';
 import { avatar } from './drivers.js';
-import { f1Plan, f1TyreCfg, F1_MIN_LAPS, COMPOUND_INFO } from '../tyres.js';
+import { raceTyreCfg, lapAtHealth, F1_MIN_LAPS, COMPOUND_INFO } from '../tyres.js';
 
 let app;
 let root;
@@ -234,18 +234,24 @@ function render() {
   tick();
 }
 
-/** Mode F1 : pneus calculés selon le nombre de tours (rapport 6, partie 8). */
+/** Mode F1 : pneus calculés selon le nombre de tours (Automatique) ou ceux de Réglages → Pneus (Manuel). */
 function f1Panel() {
-  const p = f1Plan(f1Laps(), refSec());
-  const cards = [['soft', 'vitesse normale'], ['medium', '−1 cran'], ['hard', '−1 cran, −1 freinage']];
+  const cfg = raceTyreCfg(f1Laps(), refSec(), app.tyres);
+  const auto = app.tyres.mode !== 'manual';
+  const fx = (x) => String(Math.round(x * 100) / 100).replace('.', ',');
+  const txt = (g) => [g.speedOff ? `−${g.speedOff} cran${g.speedOff > 1 ? 's' : ''}` : 'vitesse normale', g.brakeOff ? `−${g.brakeOff} freinage` : ''].filter(Boolean).join(', ');
+  const life = Math.round(lapAtHealth(cfg.soft, cfg.cliffFrom));
   return `
     <section class="panel" style="margin-top:14px">
-      <h2 style="margin:0">3. Pneus <span class="muted" style="font-weight:500">· sans essence</span></h2>
-      <p class="muted" style="margin:6px 0 0;font-size:.85rem">Usure calculée pour ${p.laps} tours. <b>2 gommes obligatoires</b> pendant la course. Changement : arrête-toi au moins <b>${p.changeSec} s</b> dans la voie des stands, le même temps pour toutes les gommes.</p>
-      <div class="f1-tyres">
-        ${cards.map(([k, txt]) => `<div class="f1-tyre"><span class="tyre-dot" style="--tc:${COMPOUND_INFO[k].color}">${COMPOUND_INFO[k].short}</span><b>${COMPOUND_INFO[k].label}</b><span class="num">${String(p.wear[k]).replace('.', ',')} %/tour</span><span class="muted">${txt}</span></div>`).join('')}
+      <div class="row" style="justify-content:space-between">
+        <h2 style="margin:0">3. Pneus <span class="muted" style="font-weight:500">· sans essence</span></h2>
+        <a href="#" class="q-link" id="qTyCfg">${auto ? '🤖 Automatique' : '🎚️ Manuel'} · Réglages</a>
       </div>
-      <p class="muted" style="margin:8px 0 0;font-size:.8rem">Le Tendre tient environ ${p.life} tours avant la chute de grip. Chaque pilote choisit ses pneus de départ, puis la gomme du prochain arrêt, sur sa vue pilote.</p>
+      <p class="muted" style="margin:6px 0 0;font-size:.85rem">${auto ? `Usure calculée pour ${f1Laps()} tours.` : 'Réglage manuel de Réglages → Pneus.'} <b>2 gommes obligatoires</b> pendant la course. Changement : arrête-toi au moins <b>${fx(cfg.changeSec)} s</b> dans la voie des stands, le même temps pour toutes les gommes.</p>
+      <div class="f1-tyres">
+        ${['soft', 'medium', 'hard'].map((k) => `<div class="f1-tyre"><span class="tyre-dot" style="--tc:${COMPOUND_INFO[k].color}">${COMPOUND_INFO[k].short}</span><b>${COMPOUND_INFO[k].label}</b><span class="num">${fx(cfg[k].wearPerLap)} %/tour</span><span class="muted">${txt(cfg[k])}</span></div>`).join('')}
+      </div>
+      <p class="muted" style="margin:8px 0 0;font-size:.8rem">Le Tendre tient environ ${Number.isFinite(life) ? life : '—'} tours avant la chute de grip. Chaque pilote choisit ses pneus de départ, puis la gomme du prochain arrêt, sur sa vue pilote.</p>
     </section>`;
 }
 
@@ -295,6 +301,8 @@ function bind() {
   const nomLink = $('#qFuelNom', root);
   if (nomLink) nomLink.onclick = (e) => { e.preventDefault(); app.openFuelSettings('conso'); };
 
+  const tyc = $('#qTyCfg', root);
+  if (tyc) tyc.onclick = (e) => { e.preventDefault(); app.openTyreSettings(); };
   $$('[data-f1laps]', root).forEach((b) => (b.onclick = () => { prefs.f1Laps = +b.dataset.f1laps; savePrefs(); render(); }));
   const qf = $('#qF1Laps', root);
   if (qf) qf.onchange = (e) => { prefs.f1Laps = Math.max(F1_MIN_LAPS, Math.min(999, parseInt(e.target.value, 10) || F1_MIN_LAPS)); savePrefs(); render(); };
@@ -357,7 +365,7 @@ function bind() {
     // Départ : on prépare la séance et on passe à l'écran de course ; le lancement se fait avec GO
     if (isF1()) {
       const laps = f1Laps();
-      await app.prepareQuickRace({ laps, fuelOn: false, tank15: 15, title: title(), type: 'race', kind: 'f1', autoVsc: prefs.autoVsc, tyresOn: true, tyreCfg: f1TyreCfg(laps, refSec(), app.tyres), minutes: 0 });
+      await app.prepareQuickRace({ laps, fuelOn: false, tank15: 15, title: title(), type: 'race', kind: 'f1', autoVsc: prefs.autoVsc, tyresOn: true, tyreCfg: raceTyreCfg(laps, refSec(), app.tyres), minutes: 0 });
       return;
     }
     const pqLaps = !isRace() && prefs.pqByLaps;
