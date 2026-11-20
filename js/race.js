@@ -255,12 +255,11 @@ export class RaceSession extends EventTarget {
     }
     for (const c of this.comps.values()) {
       c.cuFuel = st.fuel[c.address];
-      // au stand : l'essence de la Control Unit monte = elle remplit (voiture arrêtée, bouton appuyé)
-      if (c.cuFuelBase != null && c.cuFuel > c.cuFuelBase) { c.cuFuelBase = c.cuFuel; c.cuFuelRiseAt = performance.now(); }
       const pit = !!st.pit[c.address];
       if (pit !== c.inPit) {
         c.inPit = pit;
-        if (!pit) { c.pitOutAt = performance.now(); c.cuFuelBase = null; c.cuFuelRiseAt = null; } // sortie du stand : le compte repart de là
+        if (!pit) { c.pitOutAt = performance.now(); c.pitInAt = null; } // sortie du stand : le compte repart de là
+        else c.pitInAt = performance.now(); // entrée au stand : le plein attend que la voiture soit arrêtée
         if (pit) c.pitStops++;
         this.emit('pit', { comp: c, in: pit });
       }

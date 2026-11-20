@@ -39,7 +39,7 @@ const HELP = {
     <p>L'appli <b>simule l'essence</b> de chaque voiture pendant la course : plus on roule vite, plus on consomme.</p>
     <ul>
       <li><b>Consommation</b> : chaque tour retire un pourcentage selon le temps au tour (9 fourchettes, de très rapide à très lent).</li>
-      <li><b>Stand</b> : une voiture arrêtée dans la voie des stands fait le plein (15 % par seconde par défaut).</li>
+      <li><b>Stand</b> : une voiture <b>arrêtée</b> dans la voie des stands fait le plein (15 % par seconde par défaut), à partir de 2 s d'arrêt. Traverser la voie des stands sans s'arrêter ne remplit rien.</li>
       <li><b>Panne sèche</b> : à 0 %, la voiture est bridée (en % de sa vitesse ou à une vitesse fixe) jusqu'à ce qu'elle ravitaille.</li>
       <li><b>Setups</b> : enregistre tes réglages (ex. « Équilibré 50/100 tours », « Sprint 30 tours ») et recharge-les d'un clic.</li>
     </ul>
