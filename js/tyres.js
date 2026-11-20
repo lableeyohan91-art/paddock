@@ -135,15 +135,19 @@ export function wearLap(cfg, t, rnd = Math.random) {
 
 // ---------------------------------------------------------------------------------------------
 // Mode F1 (en développement) : course sans essence, à partir de 50 tours, 2 gommes obligatoires.
-// L'arrêt au stand dure toujours le même temps : attente (3 s) + choix du pilote (~1 s) + montage (3 s).
-// L'équilibre (étude tools/banc/pneus-arret-fixe*.mjs) demande alors :
-//   vie du Tendre × écart de vitesse entre gommes ≈ (voie des stands + arrêt) ÷ (2 × coût d'un cran).
-// Donc : écart de 2 crans (Medium −2, Dur −2 et −1 de freinage) tant que la course ne permet pas
-// 5 relais de Tendre avec 1 cran d'écart ; au-delà, 1 cran d'écart et des pneus qui durent 2 fois plus.
-//   usure Tendre = 75 / vie %/tour, Medium = moitié, Dur = 3/8 ; chauffe : 2 tours à −1 cran.
+// Réglage automatique (étude tools/banc/pneus-arret-tours*.mjs, pneus-final-check.mjs) :
+//   - Tendre : ta programmation, tient 1/5 de la course (75 % d'usure en tours = tours ÷ 5) ;
+//   - Medium : −1 cran, tient 1,85 fois le Tendre ; Dur : −2 crans, tient 3,5 fois le Tendre ;
+//   - chauffe : 2 tours à −1 cran ;
+//   - arrêt complet (voie des stands + attente + choix + montage) = 0,61 × coût d'un cran × tours,
+//     le même pour toutes les gommes : il s'allonge avec la course.
+// Résultat : Tendre 3 arrêts, Medium 2, Dur 1, et chaque gomme gagne environ 1 course sur 3
+// (de 75-100 à 500 tours, pour un cran qui coûte de 2,5 à 5,5 % du tour).
 export const F1_MIN_LAPS = 50;
 export const F1_REACT_SEC = 1;    // temps moyen pour choisir sa gomme sur la vue pilote
 export const F1_WARM_LAPS = 2;
+export const F1_STOP_K = 0.61;    // arrêt complet = 0,61 × coût d'un cran × tours
+const F1_MEDIUM_X = 1.85, F1_HARD_X = 3.5, F1_SOFT_STINTS = 5;
 
 /**
  * Valeurs automatiques pour une course de `laps` tours, tour de référence `lapSec` (s),
@@ -152,16 +156,18 @@ export const F1_WARM_LAPS = 2;
 export function f1Plan(laps, lapSec = 3.4, cranPct = DEFAULT_TYRES.f1Cran, lane = DEFAULT_TYRES.f1Lane) {
   const L = Math.max(F1_MIN_LAPS, laps || 0);
   const cran = (cranPct / 100) * (lapSec > 0 ? lapSec : 3.4);
-  const stopSec = lane + DEFAULT_TYRES.pickWaitSec + F1_REACT_SEC + DEFAULT_TYRES.changeSec;
-  const lifeFor = (gap) => Math.max(8, Math.round(stopSec / (2 * gap * cran)));
-  const gap = L >= 5 * lifeFor(1) ? 1 : 2; // écart de vitesse entre le Tendre et les autres gommes
-  const life = lifeFor(gap);
+  const life = Math.max(8, L / F1_SOFT_STINTS);
   const wear = 75 / life;
+  const stopSec = F1_STOP_K * cran * L;
+  // temps immobile (au moins 2 s), partagé entre l'attente (3 s au plus) et le montage
+  const still = Math.max(2, stopSec - lane);
+  const pickWaitSec = Math.min(3, Math.max(1, Math.round((still - F1_REACT_SEC) / 2)));
+  const changeSec = Math.max(1, Math.round(still - F1_REACT_SEC - pickWaitSec));
   const r = (x) => Math.round(x * 100) / 100;
   return {
-    laps: L, life, gap, stopSec: r(stopSec), cranSec: r(cran),
-    pickWaitSec: DEFAULT_TYRES.pickWaitSec, changeSec: DEFAULT_TYRES.changeSec,
-    wear: { soft: r(wear), medium: r(wear / 2), hard: r(wear * 0.375) },
+    laps: L, life: Math.round(life), stopSec: r(stopSec), cranSec: r(cran), pickWaitSec, changeSec,
+    lives: { soft: Math.round(life), medium: Math.round(life * F1_MEDIUM_X), hard: Math.round(life * F1_HARD_X) },
+    wear: { soft: r(wear), medium: r(wear / F1_MEDIUM_X), hard: r(wear / F1_HARD_X) },
   };
 }
 
@@ -180,8 +186,8 @@ export function f1TyreCfg(laps, lapSec, base = DEFAULT_TYRES) {
     changeSec: p.changeSec,
     start: base.start || 'medium',
     soft: { speedOff: 0, brakeOff: 0, wearPerLap: p.wear.soft, warmLaps: w, coldOff: 1 },
-    medium: { speedOff: p.gap, brakeOff: 0, wearPerLap: p.wear.medium, warmLaps: w, coldOff: 1 },
-    hard: { speedOff: p.gap, brakeOff: 1, wearPerLap: p.wear.hard, warmLaps: w, coldOff: 1 },
+    medium: { speedOff: 1, brakeOff: 0, wearPerLap: p.wear.medium, warmLaps: w, coldOff: 1 },
+    hard: { speedOff: 2, brakeOff: 0, wearPerLap: p.wear.hard, warmLaps: w, coldOff: 1 },
   });
 }
 

@@ -251,7 +251,7 @@ function f1Panel() {
       <div class="f1-tyres">
         ${['soft', 'medium', 'hard'].map((k) => `<div class="f1-tyre"><span class="tyre-dot" style="--tc:${COMPOUND_INFO[k].color}">${COMPOUND_INFO[k].short}</span><b>${COMPOUND_INFO[k].label}</b><span class="num">${fx(cfg[k].wearPerLap)} %/tour</span><span class="muted">${txt(cfg[k])}</span></div>`).join('')}
       </div>
-      <p class="muted" style="margin:8px 0 0;font-size:.8rem">Le Tendre tient environ ${Number.isFinite(life) ? life : '—'} tours avant la chute de grip. Chaque pilote choisit ses pneus de départ, puis la gomme du prochain arrêt, sur sa vue pilote.</p>
+      <p class="muted" style="margin:8px 0 0;font-size:.8rem">Le Tendre tient environ ${Number.isFinite(life) ? life : '—'} tours avant la chute de grip. Chaque pilote choisit ses pneus de départ sur sa vue pilote, puis sa gomme à chaque arrêt au stand.</p>
     </section>`;
 }
 

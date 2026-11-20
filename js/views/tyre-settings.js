@@ -157,7 +157,7 @@ function autoHtml() {
   return `
   <section class="panel" style="margin-top:14px">
     <h2>🤖 L'appli règle les pneus toute seule</h2>
-    <p class="muted" style="margin:6px 0 0;font-size:.9rem">Au départ d'une course F1, l'appli calcule l'usure des 3 gommes et l'écart de vitesse entre elles <b>selon le nombre de tours</b>, pour que les 3 stratégies (Tendre, Medium, Dur) se valent. L'arrêt au stand dure toujours pareil : ${DEFAULT_TYRES.pickWaitSec} s d'attente, le choix de la gomme, puis ${DEFAULT_TYRES.changeSec} s de montage.</p>
+    <p class="muted" style="margin:6px 0 0;font-size:.9rem">Au départ d'une course F1, l'appli calcule l'usure des 3 gommes et la durée de l'arrêt au stand <b>selon le nombre de tours</b>, pour que les 3 stratégies se valent : <b>Tendre 3 arrêts, Medium 2, Dur 1</b>. L'arrêt est le même pour toutes les gommes, et il s'allonge avec la course : plus elle est longue, plus chaque arrêt compte.</p>
     <div class="ty-rngs" style="margin-top:12px">
       <label class="ty-rng"><span class="ty-rng-l">Aperçu pour une course de</span>
         <input type="range" id="tyLaps" min="${F1_MIN_LAPS}" max="500" step="5" value="${previewLaps}">
@@ -181,9 +181,9 @@ function autoHtml() {
   <section class="panel" style="margin-top:14px">
     <h2>Toujours pareil, quelle que soit la course</h2>
     <ul class="muted" style="margin:6px 0 0;padding-left:18px;font-size:.88rem;line-height:1.5">
-      <li><b>Tendre</b> : ta programmation. <b>Medium</b> : 2 crans en moins (1 sur les longues courses). <b>Dur</b> : pareil que le Medium, et un freinage moins fort.</li>
+      <li><b>Tendre</b> : ta programmation, tient 1/5 de la course. <b>Medium</b> : 1 cran en moins, tient 1,85 fois plus. <b>Dur</b> : 2 crans en moins, tient 3,5 fois plus.</li>
       <li>Pneus neufs : 1 cran en moins pendant ${F1_WARM_LAPS} tours (chauffe).</li>
-      <li>Arrêt au stand : ${DEFAULT_TYRES.pickWaitSec} s d'attente, puis le pilote choisit sa gomme sur sa vue pilote, puis ${DEFAULT_TYRES.changeSec} s de montage (le pneu tourne sur la vue pilote).</li>
+      <li>Arrêt au stand : une attente, puis le pilote choisit sa gomme sur sa vue pilote, puis le montage (le pneu tourne sur la vue pilote). Les deux temps dépendent du nombre de tours.</li>
       <li>Chute de grip au hasard entre ${DEFAULT_TYRES.cliffFrom} et ${DEFAULT_TYRES.cliffTo} % de santé : la voiture ne garde que ${DEFAULT_TYRES.cliffKeep} % de sa programmation.</li>
       <li>Sous ${DEFAULT_TYRES.punctA} % de santé, risque de crevaison à chaque passage sur la ligne (${DEFAULT_TYRES.punctAChance} %, puis ${DEFAULT_TYRES.punctBChance} % sous ${DEFAULT_TYRES.punctB} %).</li>
       <li><b>2 gommes obligatoires</b> pendant la course.</li>
@@ -257,13 +257,13 @@ function refreshLive() {
   const sum = $('#tySum', root);
   if (sum) {
     const p = f1Plan(previewLaps, REF_LAP, draft.f1Cran, draft.f1Lane);
-    const stints = (k) => Math.max(1, Math.ceil(previewLaps / Math.max(1, lapAtHealth(cfg[k], cfg.cliffFrom))));
     sum.innerHTML = `
       <div><span class="muted">Le Tendre tient</span><b>${p.life} tours</b></div>
-      <div><span class="muted">Medium et Dur</span><b>−${p.gap} cran${p.gap > 1 ? 's' : ''}</b></div>
+      <div><span class="muted">Arrêt au stand</span><b>${p.pickWaitSec} s + choix + ${p.changeSec} s</b></div>
       <div><span class="muted">Usure T / M / D</span><b>${COMPOUNDS.map((k) => fr(cfg[k].wearPerLap, 1)).join(' / ')} %</b></div>
-      <div><span class="muted">Relais si on ne roule qu'avec</span><b>T ${stints('soft')} · M ${stints('medium')} · D ${stints('hard')}</b></div>
-      <p class="muted" style="grid-column:1/-1;margin:2px 0 0;font-size:.8rem">Un arrêt complet (voie des stands + attente + choix + montage) coûte environ ${fr(p.stopSec)} s. Pour que les gommes se valent, il doit coûter autant que l'écart de vitesse perdu pendant 2 relais de Tendre : d'où la durée du Tendre et l'écart de ${p.gap} cran${p.gap > 1 ? 's' : ''}${p.gap === 1 ? ' (course assez longue pour 5 relais de Tendre)' : ''}. En course, le calcul prend le meilleur tour du circuit au lieu de ${fr(REF_LAP)} s.</p>`;
+      <div><span class="muted">Durée de vie T / M / D</span><b>${p.lives.soft} / ${p.lives.medium} / ${p.lives.hard} tours</b></div>
+      <div><span class="muted">Arrêts prévus</span><b>Tendre 3 · Medium 2 · Dur 1</b></div>
+      <p class="muted" style="grid-column:1/-1;margin:2px 0 0;font-size:.8rem">Un arrêt complet (voie des stands + attente + choix + montage) doit coûter environ <b>${fr(p.stopSec)} s</b>, soit 0,61 × ce que coûte un cran (${fr(p.cranSec, 2)} s par tour) × ${p.laps} tours. C'est ce qui équilibre : le Tendre gagne un cran sur le Medium et deux sur le Dur, et le reperd en s'arrêtant plus souvent. En course, le calcul prend le meilleur tour du circuit au lieu de ${fr(REF_LAP)} s.</p>`;
   }
   const ex = $('#tyEx', root);
   if (ex) ex.textContent = `Exemple : une voiture programmée à 8 roule à ${Math.round((8 * cfg.cliffKeep) / 100)} après la chute de grip, à 12 elle roule à ${Math.round((12 * cfg.cliffKeep) / 100)}.`;
