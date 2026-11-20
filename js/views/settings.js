@@ -795,7 +795,7 @@ export function tick() {
   const info = $('#cuInfo', root);
   if (info) {
     info.innerHTML = st ? [
-      st.mode & MODE.FUEL ? '⛽ Mode carburant activé' : 'Mode carburant désactivé',
+      st.mode & MODE.REAL ? '⛽ Mode carburant activé (réel)' : st.mode & MODE.FUEL ? '⛽ Mode carburant activé' : 'Mode carburant désactivé',
       st.mode & MODE.PIT_LANE ? '🔧 Voie des stands détectée' : 'Voie des stands non détectée',
       st.mode & MODE.LAP_COUNTER ? 'Compte-tours détecté' : '',
     ].filter(Boolean).join('<br>') : '';

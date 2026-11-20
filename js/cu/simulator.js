@@ -148,7 +148,7 @@ export class SimulatorConnection {
       return encodeStatus({
         fuel: this.cars.map((car) => car.fuel),
         start: this.start,
-        mode: MODE.FUEL | MODE.PIT_LANE,
+        mode: MODE.REAL | MODE.PIT_LANE, // comme la CU du circuit : carburant « réel » + voie des stands (mode 6)
         pitMask,
         display: 0,
       }) + '$';

@@ -596,7 +596,8 @@ export const app = {
 
   /** La Control Unit gère-t-elle l'essence ? (mode carburant activé : c'est elle qui remplit au stand) */
   cuFuelMode() {
-    return !!(cu.connected && (cu.status?.mode & MODE.FUEL));
+    // carburant « normal » (bit 1) ou « réel » (bit 2) : dans les deux cas, la CU gère l'essence et remplit au stand
+    return !!(cu.connected && (cu.status?.mode & (MODE.FUEL | MODE.REAL)));
   },
 
   /**
@@ -635,10 +636,11 @@ export const app = {
         // l'appli suit le niveau de la Control Unit (0-15), sans jamais le dépasser : dès que la CU
         // arrête de remplir (bouton relâché, voiture repartie), l'appli s'arrête aussi
         if (c.cuFuel == null || c.cuFuelRiseAt == null) continue; // la CU n'a pas encore rempli
-        const target = Math.min(c.tankPct, (c.cuFuel / 15) * 100);
+        // réservoir de la course en crans de la CU (ex. 14) : la CU à ce niveau = plein fait
+        const tank15 = Math.round((c.tankPct / 100) * 15);
+        const target = c.cuFuel >= tank15 ? c.tankPct : Math.min(c.tankPct, (c.cuFuel / 15) * 100);
         if (c.fuelPct >= target) continue;
         c.fuelPct = Math.min(target, c.fuelPct + Math.max((this.fuelCfg.refuelPerSec * dtMs) / 1000, (target - c.fuelPct) * 0.25));
-        if (c.cuFuel >= 15) c.fuelPct = c.tankPct; // la CU a fait le plein
       } else {
         c.fuelPct = Math.min(c.tankPct, c.fuelPct + (this.fuelCfg.refuelPerSec * dtMs) / 1000);
       }
