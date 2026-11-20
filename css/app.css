@@ -357,6 +357,14 @@ input[type=checkbox] { accent-color: var(--accent); width: 18px; height: 18px; }
 .menu-tile:active { transform: scale(.98); }
 .menu-tile .menu-ico { font-size: 1.8rem; line-height: 1; display: inline-flex; align-items: center; }
 .menu-tile .menu-name { font-size: 1.05rem; }
+.menu-tile.dev { grid-column: 1 / -1; flex-wrap: wrap; row-gap: 2px; }
+.menu-dev { flex-basis: 100%; font-size: .72rem; font-weight: 600; color: var(--yellow); text-transform: uppercase; letter-spacing: .04em; }
+.pv-tyre-rule { margin: 10px 0 0; font-size: .85rem; font-weight: 600; color: var(--yellow); }
+.pv-tyre-rule.ok { color: var(--green); }
+.tyre-rule { margin-left: 4px; font-size: .68rem; font-weight: 700; color: var(--yellow); }
+.f1-tyres { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
+.f1-tyre { display: grid; justify-items: center; gap: 2px; padding: 8px 4px; border-radius: 10px; background: var(--panel-2); border: 1px solid var(--line); font-size: .8rem; }
+.f1-tyre b { font-size: .95rem; }
 .menu-card {
   display: grid; justify-items: center; gap: 6px; padding: 26px 18px; border-radius: 16px; cursor: pointer;
   background: var(--panel); border: 1px solid var(--line); transition: transform .12s, border-color .12s;

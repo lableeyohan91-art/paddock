@@ -124,3 +124,38 @@ export function wearLap(cfg, t, rnd = Math.random) {
   if (chance && rnd() * 100 < chance) { t.punctured = true; return 'puncture'; }
   return !wasPast && pastCliff(t) ? 'cliff' : null;
 }
+
+// ---------------------------------------------------------------------------------------------
+// Mode F1 (en développement) : course sans essence, à partir de 50 tours, 2 gommes obligatoires.
+// L'usure et le temps de changement sont calculés selon le nombre de tours (rapport 6, partie 8) :
+//   vie du Tendre (tours avant la zone de chute de grip) V = 1,8 × √tours ;
+//   usure Tendre = 75 / V %/tour, Medium = moitié, Dur = 3/8 ;
+//   arrêt total = 2 × coût d'un cran × V ; changement = arrêt total − voie des stands (au moins 1 s).
+// Vitesses du réglage « A » : Tendre normal, Medium −1 cran, Dur −1 cran et −1 de freinage.
+export const F1_MIN_LAPS = 50;
+export const F1_CRAN = 0.04;      // un cran coûte ~4 % du temps au tour (à mesurer sur le circuit)
+export const F1_LANE_SEC = 4.4;   // temps perdu dans la voie des stands (à mesurer)
+
+/** Valeurs F1 pour une course de `laps` tours, tour de référence `lapSec` (s). */
+export function f1Plan(laps, lapSec = 3.4) {
+  const L = Math.max(F1_MIN_LAPS, laps || 0);
+  const life = Math.max(8, Math.round(1.8 * Math.sqrt(L)));
+  const wear = 75 / life;
+  const cran = F1_CRAN * (lapSec > 0 ? lapSec : 3.4);
+  const changeSec = Math.max(1, Math.min(30, Math.round(2 * cran * life - F1_LANE_SEC))); // au moins 1 s : il faut vraiment s'arrêter
+  const r = (x) => Math.round(x * 100) / 100;
+  return { laps: L, life, changeSec, wear: { soft: r(wear), medium: r(wear / 2), hard: r(wear * 0.375) } };
+}
+
+/** Réglages de pneus complets pour une course F1 (chute de grip et crevaisons : réglages du joueur). */
+export function f1TyreCfg(laps, lapSec, base = DEFAULT_TYRES) {
+  const p = f1Plan(laps, lapSec);
+  return tyreCfg({
+    ...base,
+    changeSec: p.changeSec,
+    start: base.start || 'medium',
+    soft: { speedOff: 0, brakeOff: 0, wearPerLap: p.wear.soft, warmLaps: 1, coldOff: 1 },
+    medium: { speedOff: 1, brakeOff: 0, wearPerLap: p.wear.medium, warmLaps: 1, coldOff: 1 },
+    hard: { speedOff: 1, brakeOff: 1, wearPerLap: p.wear.hard, warmLaps: 1, coldOff: 1 },
+  });
+}

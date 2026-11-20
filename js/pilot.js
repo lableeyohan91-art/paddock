@@ -4,7 +4,7 @@
 // déposées dans live/{code}/cmds ; le téléphone du circuit les applique.
 
 import { FIREBASE_CONFIG } from './firebase-config.js';
-import { esc, $, $$, toast } from './ui.js';
+import { esc, $, $$, toast, keepScreenOn } from './ui.js';
 import { fmtTime, fmtClock } from './race.js';
 import { APP_VERSION } from './version.js';
 
@@ -212,10 +212,12 @@ function tyresPanel(d, c) {
         <div class="fuelg-bar" style="flex:1"><i style="width:${100 - t.w}%;background:${['worn', 'puncture'].includes(t.st) ? 'var(--accent)' : 'var(--green)'}"></i></div>
         <b class="num">${100 - t.w} %</b>
       </div>
+      ${d.f1 ? `<p class="pv-tyre-rule ${t.u >= 2 ? 'ok' : ''}">${t.u >= 2 ? '✅ Règle des 2 gommes respectée' : '⚠️ Règle des 2 gommes : monte une autre gomme avant l’arrivée'}</p>` : ''}
       <p class="muted" style="margin:10px 0 6px;font-size:.85rem">${before ? 'Pneus de départ :' : 'Gomme pour le prochain arrêt au stand :'}</p>
       <div class="pv-tyre-pick">
         ${Object.entries(TYRES).map(([k, x]) => `<button class="pv-tyre-btn ${want === k ? 'on' : ''}" data-tyre="${k}" style="--tc:${x.color}"><span class="tyre-dot" style="--tc:${x.color}">${x.short}</span>${x.label}</button>`).join('')}
       </div>
+      ${before ? '' : `<p class="muted" style="margin:8px 0 0;font-size:.8rem">Choisis la gomme ici, puis arrête-toi dans la voie des stands${d.tyreChangeSec ? ` au moins ${d.tyreChangeSec} s` : ''} : les pneus sont changés quand l'arrêt est fini.</p>`}
     </section>`;
 }
 
@@ -286,4 +288,5 @@ setInterval(() => {
   }
 }, 250);
 
+keepScreenOn(); // pas de mise en veille du téléphone pendant la course
 start();

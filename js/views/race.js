@@ -108,6 +108,7 @@ function renderMenu() {
       <button class="menu-tile" data-go="qualifying"><span class="menu-ico">⏱️</span><span class="menu-name">Qualification</span></button>
       <button class="menu-tile" data-go="quick"><span class="menu-ico">⚡</span><span class="menu-name">Course rapide</span></button>
       <button class="menu-tile" data-go="race"><span class="menu-ico">🏁</span><span class="menu-name">Course</span></button>
+      <button class="menu-tile dev" data-go="f1"><span class="menu-ico">🏎️</span><span class="menu-name">F1</span><span class="menu-dev">En développement</span></button>
     </div>
     ${last ? '<button class="btn ghost" id="mLast" style="margin-top:16px">↩ Revoir la dernière session</button>' : ''}
   </div>`;
@@ -279,13 +280,14 @@ function fuelCell(c) {
 function tyreCell(c) {
   const t = c.tyre;
   if (!t) return '';
-  const st = tyreState(app.tyres, t);
+  const st = tyreState(app.tyreSet(), t);
   const g = COMPOUND_INFO[t.compound];
   const nx = t.next && t.next !== t.compound ? COMPOUND_INFO[t.next] : null;
   return `<div class="tyre-cell" data-tyre="${c.address}" title="Toucher pour choisir la gomme suivante">
     <span class="tyre-dot" style="--tc:${g.color}">${g.short}</span>
     <span class="num tyre-wear ${st}" title="Santé du pneu">${Math.round(tyreHealth(t))} %</span>${st === 'cold' ? ' ❄️' : st === 'worn' ? ' ⚠️' : st === 'puncture' ? ' 💥' : ''}
-    ${nx ? `<span class="tyre-next" style="--tc:${nx.color}">→ ${nx.short}</span>` : ''}</div>`;
+    ${nx ? `<span class="tyre-next" style="--tc:${nx.color}">→ ${nx.short}</span>` : ''}
+    ${app.session?.cfg.kind === 'f1' && (c.tyreUsed || []).length < 2 ? '<span class="tyre-rule" title="Règle des 2 gommes pas encore respectée">1 gomme</span>' : ''}</div>`;
 }
 
 function sectorsCell(c, s) {

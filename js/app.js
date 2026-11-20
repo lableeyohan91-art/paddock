@@ -23,7 +23,7 @@ import * as db from './db.js';
 import * as sync from './sync.js';
 import { defaultFuelConfig, consumption, sanitize, balancedPreset, sprint30Preset } from './fuel.js';
 import { audio, beep, say, spokenTime, unlockAudio } from './audio.js';
-import { $, $$, esc, toast, modal, confirmBox } from './ui.js';
+import { $, $$, esc, toast, modal, confirmBox, keepScreenOn } from './ui.js';
 
 import * as raceView from './views/race.js';
 import * as garageView from './views/garage.js';
@@ -284,7 +284,18 @@ export const app = {
 
   /** Les pneus sont-ils gérés pour la séance en cours ? */
   tyresOn() {
-    return IN_GAME.tyres && !!this.session?.cfg.tyres?.enabled;
+    return (IN_GAME.tyres || this.session?.cfg.kind === 'f1') && !!this.session?.cfg.tyres?.enabled;
+  },
+
+  /** Réglages de pneus de la séance (mode F1 : calculés selon le nombre de tours), sinon ceux des Réglages. */
+  tyreSet() {
+    return this.session?.cfg.tyres?.cfg || this.tyres;
+  },
+
+  /** Gommes montées pendant la séance (règle des 2 gommes du mode F1). */
+  tyreUsed(c, compound, reset = false) {
+    if (reset || !Array.isArray(c.tyreUsed)) c.tyreUsed = [];
+    if (compound && !c.tyreUsed.includes(compound)) c.tyreUsed.push(compound);
   },
 
   /**
@@ -302,7 +313,7 @@ export const app = {
         const c = s.comps.get(address);
         const base = perf.bases.get(address);
         if (!c?.tyre || !base) return null;
-        const t = tyreTarget(this.tyres, c.tyre, base);
+        const t = tyreTarget(this.tyreSet(), c.tyre, base);
         const brake = base.brake ? t.brake / base.brake : 1;
         const note = `🛞 ${COMPOUND_INFO[c.tyre.compound].label} ${Math.round(tyreHealth(c.tyre))} %${c.tyre.punctured ? ' 💥 crevaison' : ''}`;
         if (this.isOutOfFuel(address)) return { brake, note };
@@ -323,7 +334,7 @@ export const app = {
     const s = this.session;
     const c = s?.comps.get(address);
     if (!c || !COMPOUND_INFO[compound] || s.state === 'finished') return;
-    if (!['running', 'finishing'].includes(s.state)) c.tyre = freshTyres(compound, compound, this.tyres);
+    if (!['running', 'finishing'].includes(s.state)) { c.tyre = freshTyres(compound, compound, this.tyreSet()); this.tyreUsed(c, compound, true); }
     else c.tyre.next = compound;
     perf.update();
     s.emit('update');
@@ -331,7 +342,7 @@ export const app = {
 
   /** Passage sur la ligne : usure, puis annonce de la chute de grip ou de la crevaison. */
   tyreLap(comp) {
-    const ev = wearLap(this.tyres, comp.tyre);
+    const ev = wearLap(this.tyreSet(), comp.tyre);
     perf.update();
     const name = comp.driver?.name || `Voiture ${comp.address + 1}`;
     if (ev === 'puncture') {
@@ -353,9 +364,10 @@ export const app = {
       if (!c.tyre) continue;
       if (!c.inPit) { c._pitSince = null; c._tyreDone = false; continue; }
       if (c._pitSince == null) c._pitSince = now;
-      if (!c._tyreDone && now - c._pitSince >= this.tyres.changeSec * 1000) {
+      if (!c._tyreDone && now - c._pitSince >= this.tyreSet().changeSec * 1000) {
         c._tyreDone = true;
-        c.tyre = freshTyres(c.tyre.next || c.tyre.compound, undefined, this.tyres);
+        c.tyre = freshTyres(c.tyre.next || c.tyre.compound, undefined, this.tyreSet());
+        this.tyreUsed(c, c.tyre.compound);
         perf.update();
         toast(`🛞 ${c.driver?.name || 'Voiture ' + (c.address + 1)} : pneus ${COMPOUND_INFO[c.tyre.compound].label}`, 2000);
         this.log(`Pneus changés : ${c.driver?.name} → ${COMPOUND_INFO[c.tyre.compound].label}`);
@@ -890,7 +902,7 @@ export const app = {
       kind: opts.kind, // quick | race | practice | qualifying (écran choisi au menu)
       autoVsc: opts.autoVsc !== false, // case « VSC automatique » de la préparation
       fuel: { enabled: !!opts.fuelOn, tank15: opts.tank15 },
-      tyres: { enabled: !!opts.tyresOn }, // pneus (Réglages → Pneus)
+      tyres: { enabled: !!opts.tyresOn, cfg: opts.tyreCfg || null }, // pneus (Réglages → Pneus ; mode F1 : calculés)
     });
   },
 
@@ -960,7 +972,7 @@ export const app = {
     const tankOf = (c) => this.tankFor(s.fuel?.tank15 ?? this.getTune(c.driver.id, c.car.id).fuel);
     for (const c of session.comps.values()) this.fillTank(c, tankOf(c));
     // pneus : tout le monde part avec la gomme de départ (modifiable sur la vue pilote avant le GO)
-    for (const c of session.comps.values()) c.tyre = freshTyres(this.tyres.start, undefined, this.tyres);
+    for (const c of session.comps.values()) { c.tyre = freshTyres(this.tyreSet().start, undefined, this.tyreSet()); this.tyreUsed(c, c.tyre.compound, true); }
     perf.start();
     if (cu.connected) for (const c of session.comps.values()) cu.setFuel(c.address, tankOf(c));
 
@@ -1009,7 +1021,8 @@ export const app = {
         this.fillTank(c, tank);
         if (cu.connected) cu.setFuel(c.address, tank); // réservoir de la Control Unit recalé aussi
       }
-      c.tyre = freshTyres(this.tyres.start, undefined, this.tyres);
+      c.tyre = freshTyres(this.tyreSet().start, undefined, this.tyreSet());
+      this.tyreUsed(c, c.tyre.compound, true);
       perf.setBase(c.address, t.speed, t.brake); // bridage VSC, panne sèche… s'appliquent aussi
       this.log(`Manette ${c.address + 1} ajoutée en cours de séance`);
     });
@@ -1687,6 +1700,7 @@ async function init() {
   if (!(await importDone(app))) openImport(app, { onDone: () => app.refresh() });
 }
 
+keepScreenOn(); // pas de mise en veille de l'écran principal
 init();
 
 export { TYPES, fmtTime };

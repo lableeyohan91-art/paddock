@@ -108,6 +108,8 @@ function snapshot() {
     leaderLaps: s.leaderLaps,
     fuel: app.fuelOn(),
     tyres: app.tyresOn(),
+    tyreChangeSec: app.tyresOn() ? app.tyreSet().changeSec : null,
+    f1: app.session?.cfg.kind === 'f1',
     overallBest: s.overallBest ? { time: s.overallBest.time, address: s.overallBest.address } : null,
     comps: list.map((c) => {
       const t = app.getTune(c.driver?.id, c.car?.id);
@@ -128,7 +130,7 @@ function snapshot() {
         inPit: c.inPit,
         pitStops: c.pitStops,
         finished: c.finished,
-        tyre: c.tyre ? { c: c.tyre.compound, w: Math.round(c.tyre.wear), n: c.tyre.next, st: tyreState(app.tyres, c.tyre) } : null,
+        tyre: c.tyre ? { c: c.tyre.compound, w: Math.round(c.tyre.wear), n: c.tyre.next, st: tyreState(app.tyreSet(), c.tyre), u: (c.tyreUsed || []).length } : null,
         speed: real ? real.speed : t.speed,
         brake: real ? real.brake : t.brake,
       };

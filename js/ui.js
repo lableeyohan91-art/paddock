@@ -85,3 +85,23 @@ export function download(filename, text) {
 export const fmtDate = (ts) => new Date(ts).toLocaleString('fr-FR', {
   day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit',
 });
+
+/**
+ * Écran toujours allumé (pas de mise en veille) tant que l'appli est ouverte et affichée.
+ * Le navigateur relâche le verrou quand la page est cachée : on le redemande au retour,
+ * et au premier toucher si le navigateur l'a refusé au chargement.
+ */
+export function keepScreenOn() {
+  if (!('wakeLock' in navigator)) return;
+  let lock = null;
+  const ask = async () => {
+    if (lock || document.visibilityState !== 'visible') return;
+    try {
+      lock = await navigator.wakeLock.request('screen');
+      lock.addEventListener('release', () => { lock = null; });
+    } catch { lock = null; }
+  };
+  document.addEventListener('visibilitychange', ask);
+  ['pointerdown', 'keydown'].forEach((ev) => document.addEventListener(ev, ask, { passive: true }));
+  ask();
+}

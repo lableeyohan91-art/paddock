@@ -6,6 +6,7 @@
 import { esc, $, $$, toast, promptBox } from '../ui.js';
 import { vscSpeed } from '../performance.js';
 import { avatar } from './drivers.js';
+import { f1Plan, f1TyreCfg, F1_MIN_LAPS, COMPOUND_INFO } from '../tyres.js';
 
 let app;
 let root;
@@ -17,6 +18,8 @@ const MIN_CHIPS = [1, 2, 5, 10];                     // essais libres, qualifica
 const PQ_LAP_CHIPS = [3, 5, 10, 20];                 // essais libres, qualification (tours)
 const RACE_MIN_CHIPS = [5, 10, 30, 60];              // course au temps (endurance), minutes
 const RACE_LAP_CHIPS = [20, 30, 50, 75, 100];     // course, course rapide
+const F1_LAP_CHIPS = [50, 75, 100, 150, 200, 300]; // mode F1 (à partir de 50 tours)
+let bestByTrack = {}; // meilleur tour connu par circuit (ms) : sert de tour de référence au mode F1
 export const PLACE_CARS_MSG = '* Toutes les voitures posées sur la piste pour effectuer le réglage';
 
 export async function mount(main, a) {
@@ -30,7 +33,12 @@ export async function mount(main, a) {
     app.saveSetup();
   }
   if (!app.track(app.setup.trackId) && app.data.tracks[0]) { app.setup.trackId = app.data.tracks[0].id; app.saveSetup(); }
-  prefs = { laps: 30, minutes: 5, pqByLaps: false, pqLaps: 5, raceByTime: false, raceMinutes: 10, fuelOn: true, tank15: 15, autoVsc: true, tyresOn: false, ...(await app.db.getSetting('quickRace', {})) };
+  bestByTrack = {};
+  for (const r of await app.db.all('sessions')) {
+    const b = +r.bestLap;
+    if (r.trackId && b > 1000 && b < 60000 && !(bestByTrack[r.trackId] <= b)) bestByTrack[r.trackId] = b;
+  }
+  prefs = { f1Laps: 100, laps: 30, minutes: 5, pqByLaps: false, pqLaps: 5, raceByTime: false, raceMinutes: 10, fuelOn: true, tank15: 15, autoVsc: true, tyresOn: false, ...(await app.db.getSetting('quickRace', {})) };
   setups = await app.fuelSetups();
   activeSetup = { bands: await app.activeFuelSetup('bands'), curve: await app.activeFuelSetup('curve') };
   render();
@@ -49,13 +57,19 @@ const MODES = {
   race: { title: '🏁 Course', type: 'race' },
   practice: { title: '🛞 Essais libres', type: 'practice' },
   qualifying: { title: '⏱️ Qualification', type: 'qualifying' },
+  f1: { title: '🏎️ F1', type: 'race' },
 };
 const mode = () => MODES[app.quickMode || app.setup?.prepMode] || MODES.quick;
 const title = () => mode().title;
 const isRace = () => mode().type === 'race';
 /** Course rapide : toujours aux tours, sans prise de tête (pas de course en durée). */
 const isQuick = () => mode() === MODES.quick;
-const byTime = () => isRace() && !isQuick() && prefs.raceByTime;
+/** Mode F1 (en développement) : aux tours, à partir de 50, sans essence, pneus calculés. */
+const isF1 = () => mode() === MODES.f1;
+const byTime = () => isRace() && !isQuick() && !isF1() && prefs.raceByTime;
+const f1Laps = () => Math.max(F1_MIN_LAPS, prefs.f1Laps || 100);
+/** Tour de référence du circuit (s) : meilleur tour connu, sinon 3,4 s. */
+const refSec = () => (bestByTrack[app.setup.trackId] || 3400) / 1000;
 const savePrefs = () => app.db.setSetting('quickRace', prefs);
 const pct15 = (v) => Math.round((v / 15) * 100);
 /** Setups proposés : seulement ceux du mode choisi (Fourchettes ou Formule). */
@@ -117,9 +131,14 @@ function render() {
       ${isRace() ? `
       <div class="row" style="justify-content:space-between;margin-bottom:10px">
         <h2 style="margin:0">2. ${byTime() ? 'Durée' : 'Nombre de tours'}</h2>
-        ${isQuick() ? '' : `<button class="btn small ghost" id="qUnit" title="Changer entre nombre de tours et durée">⇄ ${byTime() ? 'Passer en tours' : 'Passer en durée'}</button>`}
+        ${isQuick() || isF1() ? '' : `<button class="btn small ghost" id="qUnit" title="Changer entre nombre de tours et durée">⇄ ${byTime() ? 'Passer en tours' : 'Passer en durée'}</button>`}
       </div>
-      ${byTime() ? `
+      ${isF1() ? `
+      <div class="q-laps">
+        ${F1_LAP_CHIPS.map((l) => `<button class="chip ${f1Laps() === l ? 'on' : ''}" data-f1laps="${l}">${l}</button>`).join('')}
+        <input type="number" id="qF1Laps" min="${F1_MIN_LAPS}" max="999" value="${f1Laps()}" aria-label="Nombre de tours">
+      </div>
+      <p class="muted" style="margin:6px 0 0;font-size:.8rem">À partir de ${F1_MIN_LAPS} tours. Les 3 stratégies se valent vraiment à partir de 100 tours.</p>` : byTime() ? `
       <div class="q-laps">
         ${RACE_MIN_CHIPS.map((m) => `<button class="chip ${prefs.raceMinutes === m ? 'on' : ''}" data-rmin="${m}">${m} min</button>`).join('')}
         <input type="number" id="qRMin" min="1" max="600" value="${prefs.raceMinutes}" aria-label="Durée en minutes">
@@ -146,7 +165,7 @@ function render() {
       </div>`}`}
     </section>
 
-    <section class="panel" style="margin-top:14px">
+    ${isF1() ? f1Panel() : `<section class="panel" style="margin-top:14px">
       <div class="row" style="justify-content:space-between">
         <h2 style="margin:0">3. Essence</h2>
         <label class="switch"><input type="checkbox" id="qFuel" ${prefs.fuelOn ? 'checked' : ''}><span></span> ${prefs.fuelOn ? 'Activée' : 'Désactivée'}</label>
@@ -179,7 +198,7 @@ function render() {
         </div>
       </div>` : '<p class="muted" style="margin:8px 0 0">Pas de consommation : les voitures roulent sans jamais s\'arrêter.</p>'}
       ${prefs.fuelOn && !tankLocked() ? `<p class="warn-note">${PLACE_CARS_MSG}</p>` : ''}
-    </section>
+    </section>`}
 
     ${isRace() ? `
     <section class="panel" style="margin-top:14px">
@@ -207,12 +226,27 @@ function render() {
       <button class="depart" id="qStart">
         <span class="depart-lights"><i></i><i></i><i></i><i></i><i></i></span>
         <span class="depart-txt">DÉPART</span>
-        <span class="depart-sub">${isRace() ? (byTime() ? prefs.raceMinutes + ' min' : prefs.laps + ' tours') : prefs.pqByLaps ? prefs.pqLaps + ' tours' : prefs.minutes + ' min'} · ${n} pilote${n > 1 ? 's' : ''} · ${prefs.fuelOn ? `essence ${pct15(tank15())} %` : 'sans essence'}</span>
+        <span class="depart-sub">${isF1() ? `${f1Laps()} tours · ${n} pilote${n > 1 ? 's' : ''} · sans essence · pneus` : `${isRace() ? (byTime() ? prefs.raceMinutes + ' min' : prefs.laps + ' tours') : prefs.pqByLaps ? prefs.pqLaps + ' tours' : prefs.minutes + ' min'} · ${n} pilote${n > 1 ? 's' : ''} · ${prefs.fuelOn ? `essence ${pct15(tank15())} %` : 'sans essence'}`}</span>
       </button>
     </div>
   </div>`;
   bind();
   tick();
+}
+
+/** Mode F1 : pneus calculés selon le nombre de tours (rapport 6, partie 8). */
+function f1Panel() {
+  const p = f1Plan(f1Laps(), refSec());
+  const cards = [['soft', 'vitesse normale'], ['medium', '−1 cran'], ['hard', '−1 cran, −1 freinage']];
+  return `
+    <section class="panel" style="margin-top:14px">
+      <h2 style="margin:0">3. Pneus <span class="muted" style="font-weight:500">· sans essence</span></h2>
+      <p class="muted" style="margin:6px 0 0;font-size:.85rem">Usure calculée pour ${p.laps} tours. <b>2 gommes obligatoires</b> pendant la course. Changement : arrête-toi au moins <b>${p.changeSec} s</b> dans la voie des stands, le même temps pour toutes les gommes.</p>
+      <div class="f1-tyres">
+        ${cards.map(([k, txt]) => `<div class="f1-tyre"><span class="tyre-dot" style="--tc:${COMPOUND_INFO[k].color}">${COMPOUND_INFO[k].short}</span><b>${COMPOUND_INFO[k].label}</b><span class="num">${String(p.wear[k]).replace('.', ',')} %/tour</span><span class="muted">${txt}</span></div>`).join('')}
+      </div>
+      <p class="muted" style="margin:8px 0 0;font-size:.8rem">Le Tendre tient environ ${p.life} tours avant la chute de grip. Chaque pilote choisit ses pneus de départ, puis la gomme du prochain arrêt, sur sa vue pilote.</p>
+    </section>`;
 }
 
 function bind() {
@@ -261,6 +295,9 @@ function bind() {
   const nomLink = $('#qFuelNom', root);
   if (nomLink) nomLink.onclick = (e) => { e.preventDefault(); app.openFuelSettings('conso'); };
 
+  $$('[data-f1laps]', root).forEach((b) => (b.onclick = () => { prefs.f1Laps = +b.dataset.f1laps; savePrefs(); render(); }));
+  const qf = $('#qF1Laps', root);
+  if (qf) qf.onchange = (e) => { prefs.f1Laps = Math.max(F1_MIN_LAPS, Math.min(999, parseInt(e.target.value, 10) || F1_MIN_LAPS)); savePrefs(); render(); };
   $$('[data-laps]', root).forEach((b) => (b.onclick = () => { prefs.laps = +b.dataset.laps; savePrefs(); render(); }));
   const ql = $('#qLaps', root);
   if (ql) ql.onchange = (e) => { prefs.laps = Math.max(1, Math.min(999, parseInt(e.target.value, 10) || 1)); savePrefs(); render(); };
@@ -279,7 +316,8 @@ function bind() {
   const qm = $('#qMin', root);
   if (qm) qm.onchange = (e) => { prefs.minutes = Math.max(1, Math.min(600, parseInt(e.target.value, 10) || 1)); savePrefs(); render(); };
 
-  $('#qFuel', root).onchange = (e) => { prefs.fuelOn = e.target.checked; savePrefs(); render(); };
+  const qfuel = $('#qFuel', root);
+  if (qfuel) qfuel.onchange = (e) => { prefs.fuelOn = e.target.checked; savePrefs(); render(); };
   // calcul de la consommation : même réglage que dans Réglages → Essence
   $$('[data-qfm]', root).forEach((b) => (b.onclick = async () => {
     await app.saveFuelCfg({ ...app.fuelCfg, mode: b.dataset.qfm });
@@ -317,6 +355,11 @@ function bind() {
     if (!parts.length) { toast('Coche au moins un participant'); return; }
     if (parts.some((s) => !s.driverId)) { toast('Choisis un pilote pour chaque participant coché'); return; }
     // Départ : on prépare la séance et on passe à l'écran de course ; le lancement se fait avec GO
+    if (isF1()) {
+      const laps = f1Laps();
+      await app.prepareQuickRace({ laps, fuelOn: false, tank15: 15, title: title(), type: 'race', kind: 'f1', autoVsc: prefs.autoVsc, tyresOn: true, tyreCfg: f1TyreCfg(laps, refSec(), app.tyres), minutes: 0 });
+      return;
+    }
     const pqLaps = !isRace() && prefs.pqByLaps;
     await app.prepareQuickRace({ laps: pqLaps ? prefs.pqLaps : prefs.laps, fuelOn: prefs.fuelOn, tank15: tank15(), title: title(), type: mode().type, kind: app.quickMode || app.setup?.prepMode || 'quick', autoVsc: prefs.autoVsc, tyresOn: false /* pneus : en cours de développement */, minutes: isRace() ? (byTime() ? prefs.raceMinutes : 0) : pqLaps ? 0 : prefs.minutes });
   };
