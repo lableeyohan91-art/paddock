@@ -67,8 +67,6 @@ const DEFAULT_TUNE = { speed: 8, brake: 6 }; // réglage d'un couple pilote + vo
  */
 export const IN_GAME = { vscAdaptive: true }; // VSC adaptatif remis en course (v1.85)
 
-// Plein au stand : seulement après 2 s au stand (voiture arrêtée ; une traversée dure ~1 s)
-export const REFUEL_STOP_MS = 2000;
 // Pénalité : à l'arrêt au stand, la voiture reste immobile `sec` secondes avant qu'on la touche (essence)
 // fromPilots : pénalités possibles aussi depuis les vues pilote, seulement pour les pilotes choisis (pilots)
 export const DEFAULT_PENALTY = { sec: 5, fromPilots: false, pilots: [] };
@@ -595,22 +593,13 @@ export const app = {
     return pct;
   },
 
-  /**
-   * Ravitaillement, appelé en continu. On ne remplit que si la voiture est vraiment ARRÊTÉE au
-   * stand : le signal « au stand » de la Control Unit dure ~1 s quand on traverse la voie des stands
-   * sans s'arrêter, et autant que l'arrêt quand on s'arrête (essai sur le circuit, 20/11/2026).
-   * Donc : remplissage seulement après REFUEL_STOP_MS au stand, et jusqu'au départ de la voiture.
-   * (Le bouton de la manette ne peut pas être suivi : la Control Unit ne le signale que par son
-   * essence, presque toujours pleine.)
-   */
+  /** Ravitaillement : appelé en continu ; remplit les voitures qui sont au stand. */
   refuelTick(dtMs) {
     const s = this.session;
     if (!s || !this.fuelOn() || !['running', 'finishing'].includes(s.state)) return;
-    const now = performance.now();
     for (const c of s.comps.values()) {
       if (!c.inPit || c.fuelPct === null || c.fuelPct >= c.tankPct) continue;
       if (c.penalty) continue; // pénalité en cours : personne ne touche la voiture
-      if (c.pitInAt == null || now - c.pitInAt < REFUEL_STOP_MS) continue; // pas (encore) arrêtée
       const wasEmpty = c.fuelPct <= 0;
       c.fuelPct = Math.min(c.tankPct, c.fuelPct + (this.fuelCfg.refuelPerSec * dtMs) / 1000);
       if (wasEmpty && c.fuelPct > 0) perf.update(); // la voiture retrouve sa vitesse
