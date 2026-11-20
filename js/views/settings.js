@@ -684,6 +684,16 @@ function renderGeneral() {
       <div class="row" style="margin-top:12px">
         <button class="btn primary" id="conn">${cu.conn ? 'Déconnecter' : 'Connecter'}</button>
       </div>
+      <details class="fuel-test" style="margin-top:12px">
+        <summary>🧪 Test : régler l'essence d'une voiture sur la Control Unit</summary>
+        <p class="muted" style="font-size:.85rem;margin:8px 0">Pour savoir si la Control Unit accepte qu'on change l'essence d'une voiture. Envoie une valeur, puis regarde si son essence (ci-dessous, ou les diodes de la Control Unit) passe bien à cette valeur. Ensuite, arrête la voiture au stand et appuie sur le bouton : l'essence doit remonter.</p>
+        <div class="row" style="gap:10px;flex-wrap:wrap">
+          <label class="field">Voiture<select id="ftCar">${[0, 1, 2, 3, 4, 5].map((a) => `<option value="${a}" ${a === 1 ? 'selected' : ''}>${a + 1}</option>`).join('')}</select></label>
+          <label class="field">Essence (0 à 15)<input type="number" id="ftVal" min="0" max="15" step="1" value="5" style="width:80px"></label>
+          <button class="btn" id="ftSend" ${cu.connected ? '' : 'disabled'}>Envoyer</button>
+        </div>
+        <p class="num" id="ftNow" style="margin:8px 0 0;font-weight:700"></p>
+      </details>
       <h3>Seuil anti-rebond</h3>
       <label class="field">Tour minimum valide (secondes) : ignore les doubles détections sur la ligne
         <input type="number" id="minLap" min="0.5" max="30" step="0.1" value="${(app.setup.minLapMs / 1000).toFixed(1)}" style="width:110px"></label>
@@ -785,6 +795,14 @@ function renderGeneral() {
       toast('Import impossible : ' + err.message, 4000);
     }
   };
+  const ft = $('#ftSend', root);
+  if (ft) ft.onclick = () => {
+    const a = +$('#ftCar', root).value;
+    const v = Math.max(0, Math.min(15, Math.round(+$('#ftVal', root).value || 0)));
+    app.cu.setFuel(a, v);
+    app.log(`Test essence : voiture ${a + 1} → ${v} envoyé à la Control Unit (elle affichait ${app.cu.status?.fuel?.[a] ?? '?'})`);
+    toast(`Essence ${v} envoyée à la voiture ${a + 1}`, 1500);
+  };
   tick();
 }
 
@@ -792,6 +810,11 @@ export function tick() {
   if (!root) return;
   const cu = app.cu;
   const st = cu.status;
+  const ftNow = $('#ftNow', root);
+  if (ftNow) {
+    const a = +($('#ftCar', root)?.value ?? 1);
+    ftNow.textContent = st ? `Essence de la voiture ${a + 1} sur la Control Unit : ${st.fuel[a]} / 15${st.pit[a] ? ' · au stand' : ''}` : 'Control Unit non connectée';
+  }
   const info = $('#cuInfo', root);
   if (info) {
     info.innerHTML = st ? [
