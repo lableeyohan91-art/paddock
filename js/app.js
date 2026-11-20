@@ -67,6 +67,8 @@ const DEFAULT_TUNE = { speed: 8, brake: 6 }; // réglage d'un couple pilote + vo
  */
 export const IN_GAME = { vscAdaptive: true }; // VSC adaptatif remis en course (v1.85)
 
+// Plein au stand : il commence 1 s après la détection « stand » de la Control Unit
+export const REFUEL_DELAY_MS = 1000;
 // Pénalité : à l'arrêt au stand, la voiture reste immobile `sec` secondes avant qu'on la touche (essence)
 // fromPilots : pénalités possibles aussi depuis les vues pilote, seulement pour les pilotes choisis (pilots)
 export const DEFAULT_PENALTY = { sec: 5, fromPilots: false, pilots: [] };
@@ -600,6 +602,7 @@ export const app = {
     for (const c of s.comps.values()) {
       if (!c.inPit || c.fuelPct === null || c.fuelPct >= c.tankPct) continue;
       if (c.penalty) continue; // pénalité en cours : personne ne touche la voiture
+      if (c.pitInAt != null && performance.now() - c.pitInAt < REFUEL_DELAY_MS) continue; // le plein commence 1 s après l'entrée au stand
       const wasEmpty = c.fuelPct <= 0;
       c.fuelPct = Math.min(c.tankPct, c.fuelPct + (this.fuelCfg.refuelPerSec * dtMs) / 1000);
       if (wasEmpty && c.fuelPct > 0) perf.update(); // la voiture retrouve sa vitesse

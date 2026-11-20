@@ -258,7 +258,8 @@ export class RaceSession extends EventTarget {
       const pit = !!st.pit[c.address];
       if (pit !== c.inPit) {
         c.inPit = pit;
-        if (!pit) c.pitOutAt = performance.now(); // sortie du stand : le compte repart de là
+        if (!pit) { c.pitOutAt = performance.now(); c.pitInAt = null; } // sortie du stand : le compte repart de là
+        else c.pitInAt = performance.now(); // entrée au stand : le plein commence REFUEL_DELAY_MS plus tard
         if (pit) c.pitStops++;
         this.emit('pit', { comp: c, in: pit });
       }
