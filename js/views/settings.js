@@ -64,7 +64,7 @@ HELP.tyres = `
       <li><b>Automatique</b> : l'appli calcule seule l'usure et le temps d'arrêt selon le nombre de tours, pour que les 3 stratégies se valent. Tu y vois la vie de chaque gomme sur une frise.</li>
       <li><b>Manuel</b> : des curseurs pour tout régler toi-même (vitesse, freinage, usure, chauffe, chute de grip, crevaison, temps d'arrêt), avec la frise mise à jour en direct.</li>
       <li><b>Chute de grip</b> : au hasard en fin de vie, la voiture ne garde qu'une partie de sa programmation. <b>Crevaison</b> : risque quand le pneu est presque usé ; la voiture roule alors au ralenti jusqu'au stand.</li>
-      <li><b>Changement</b> : choisir la gomme sur la vue pilote, puis rester immobile le temps indiqué dans la voie des stands.</li>
+      <li><b>Changement</b> : s'arrêter dans la voie des stands ; après 3 s, le pilote choisit sa gomme sur sa vue pilote ; 3 s de montage plus tard (le pneu tourne), les pneus neufs sont mis.</li>
     </ul>`;
 
 HELP.devices = `

@@ -247,7 +247,7 @@ function f1Panel() {
         <h2 style="margin:0">3. Pneus <span class="muted" style="font-weight:500">· sans essence</span></h2>
         <a href="#" class="q-link" id="qTyCfg">${auto ? '🤖 Automatique' : '🎚️ Manuel'} · Réglages</a>
       </div>
-      <p class="muted" style="margin:6px 0 0;font-size:.85rem">${auto ? `Usure calculée pour ${f1Laps()} tours.` : 'Réglage manuel de Réglages → Pneus.'} <b>2 gommes obligatoires</b> pendant la course. Changement : arrête-toi au moins <b>${fx(cfg.changeSec)} s</b> dans la voie des stands, le même temps pour toutes les gommes.</p>
+      <p class="muted" style="margin:6px 0 0;font-size:.85rem">${auto ? `Usure calculée pour ${f1Laps()} tours.` : 'Réglage manuel de Réglages → Pneus.'} <b>2 gommes obligatoires</b> pendant la course. Changement : arrêt dans la voie des stands, <b>${fx(cfg.pickWaitSec)} s</b> d'attente, choix de la gomme sur la vue pilote, puis <b>${fx(cfg.changeSec)} s</b> de montage.</p>
       <div class="f1-tyres">
         ${['soft', 'medium', 'hard'].map((k) => `<div class="f1-tyre"><span class="tyre-dot" style="--tc:${COMPOUND_INFO[k].color}">${COMPOUND_INFO[k].short}</span><b>${COMPOUND_INFO[k].label}</b><span class="num">${fx(cfg[k].wearPerLap)} %/tour</span><span class="muted">${txt(cfg[k])}</span></div>`).join('')}
       </div>

@@ -25,7 +25,8 @@ export const DEFAULT_TYRES = {
   mode: 'auto',        // 'auto' : l'appli calcule l'usure selon le nombre de tours ; 'manual' : réglages ci-dessous
   f1Cran: 4,           // automatique : ce que coûte un cran, en % du temps au tour (à mesurer sur le circuit)
   f1Lane: 4.4,         // automatique : temps perdu dans la voie des stands, en s (à mesurer)
-  changeSec: 3,        // temps d'arrêt au stand pour changer les pneus
+  pickWaitSec: 3,      // arrêt au stand : attente avant de pouvoir choisir la gomme
+  changeSec: 3,        // puis temps de montage des pneus choisis
   start: 'medium',     // gomme de départ par défaut
   cliffFrom: 25,       // chute de grip au hasard entre 25 %…
   cliffTo: 15,         // …et 15 % de santé restante
@@ -35,8 +36,8 @@ export const DEFAULT_TYRES = {
   punctB: 7,           // sous 7 % de santé…
   punctBChance: 50,    // …50 % de risque
   punctSpeedPct: 20,   // vitesse en crevaison : % de la vitesse max du circuit (comme le VSC)
-  soft: { speedOff: 0, brakeOff: 0, wearPerLap: 4, warmLaps: 1, coldOff: 1 },
-  medium: { speedOff: 1, brakeOff: 0, wearPerLap: 2.5, warmLaps: 1, coldOff: 1 },
+  soft: { speedOff: 0, brakeOff: 0, wearPerLap: 4, warmLaps: 2, coldOff: 1 },
+  medium: { speedOff: 1, brakeOff: 0, wearPerLap: 2.5, warmLaps: 2, coldOff: 1 },
   hard: { speedOff: 2, brakeOff: 2, wearPerLap: 1, warmLaps: 2, coldOff: 1 },
 };
 
@@ -49,6 +50,7 @@ export function tyreCfg(saved = {}) {
     mode: saved.mode === 'manual' ? 'manual' : 'auto',
     f1Cran: num(saved.f1Cran, 1, 10, D.f1Cran),
     f1Lane: num(saved.f1Lane, 0, 15, D.f1Lane),
+    pickWaitSec: num(saved.pickWaitSec, 0, 15, D.pickWaitSec),
     changeSec: num(saved.changeSec, 0, 30, D.changeSec),
     start: COMPOUNDS.includes(saved.start) ? saved.start : D.start,
     cliffKeep: num(saved.cliffKeep, 0, 100, D.cliffKeep),
@@ -133,27 +135,34 @@ export function wearLap(cfg, t, rnd = Math.random) {
 
 // ---------------------------------------------------------------------------------------------
 // Mode F1 (en développement) : course sans essence, à partir de 50 tours, 2 gommes obligatoires.
-// L'usure et le temps de changement sont calculés selon le nombre de tours (rapport 6, partie 8) :
-//   vie du Tendre (tours avant la zone de chute de grip) V = 1,8 × √tours ;
-//   usure Tendre = 75 / V %/tour, Medium = moitié, Dur = 3/8 ;
-//   arrêt total = 2 × coût d'un cran × V ; changement = arrêt total − voie des stands (au moins 1 s).
-// Vitesses du réglage « A » : Tendre normal, Medium −1 cran, Dur −1 cran et −1 de freinage.
+// L'arrêt au stand dure toujours le même temps : attente (3 s) + choix du pilote (~1 s) + montage (3 s).
+// L'équilibre (étude tools/banc/pneus-arret-fixe*.mjs) demande alors :
+//   vie du Tendre × écart de vitesse entre gommes ≈ (voie des stands + arrêt) ÷ (2 × coût d'un cran).
+// Donc : écart de 2 crans (Medium −2, Dur −2 et −1 de freinage) tant que la course ne permet pas
+// 5 relais de Tendre avec 1 cran d'écart ; au-delà, 1 cran d'écart et des pneus qui durent 2 fois plus.
+//   usure Tendre = 75 / vie %/tour, Medium = moitié, Dur = 3/8 ; chauffe : 2 tours à −1 cran.
 export const F1_MIN_LAPS = 50;
-export const F1_LIFE_K = 1.8;     // vie du Tendre = 1,8 × √tours
+export const F1_REACT_SEC = 1;    // temps moyen pour choisir sa gomme sur la vue pilote
+export const F1_WARM_LAPS = 2;
 
 /**
  * Valeurs automatiques pour une course de `laps` tours, tour de référence `lapSec` (s),
- * cran = coût d'un cran en % du tour, lane = temps perdu dans la voie des stands (s).
+ * cranPct = coût d'un cran en % du tour, lane = temps perdu dans la voie des stands (s).
  */
 export function f1Plan(laps, lapSec = 3.4, cranPct = DEFAULT_TYRES.f1Cran, lane = DEFAULT_TYRES.f1Lane) {
   const L = Math.max(F1_MIN_LAPS, laps || 0);
-  const life = Math.max(8, Math.round(F1_LIFE_K * Math.sqrt(L)));
-  const wear = 75 / life;
   const cran = (cranPct / 100) * (lapSec > 0 ? lapSec : 3.4);
-  const stopSec = 2 * cran * life; // arrêt total qui équilibre les 3 gommes
-  const changeSec = Math.max(1, Math.min(30, Math.round(stopSec - lane))); // au moins 1 s : il faut vraiment s'arrêter
+  const stopSec = lane + DEFAULT_TYRES.pickWaitSec + F1_REACT_SEC + DEFAULT_TYRES.changeSec;
+  const lifeFor = (gap) => Math.max(8, Math.round(stopSec / (2 * gap * cran)));
+  const gap = L >= 5 * lifeFor(1) ? 1 : 2; // écart de vitesse entre le Tendre et les autres gommes
+  const life = lifeFor(gap);
+  const wear = 75 / life;
   const r = (x) => Math.round(x * 100) / 100;
-  return { laps: L, life, changeSec, stopSec: r(stopSec), cranSec: r(cran), wear: { soft: r(wear), medium: r(wear / 2), hard: r(wear * 0.375) } };
+  return {
+    laps: L, life, gap, stopSec: r(stopSec), cranSec: r(cran),
+    pickWaitSec: DEFAULT_TYRES.pickWaitSec, changeSec: DEFAULT_TYRES.changeSec,
+    wear: { soft: r(wear), medium: r(wear / 2), hard: r(wear * 0.375) },
+  };
 }
 
 /**
@@ -162,15 +171,17 @@ export function f1Plan(laps, lapSec = 3.4, cranPct = DEFAULT_TYRES.f1Cran, lane 
  */
 export function f1TyreCfg(laps, lapSec, base = DEFAULT_TYRES) {
   const p = f1Plan(laps, lapSec, base.f1Cran, base.f1Lane);
+  const w = F1_WARM_LAPS;
   return tyreCfg({
     ...DEFAULT_TYRES,
     mode: 'auto', f1Cran: base.f1Cran, f1Lane: base.f1Lane,
     punctSpeedPct: base.punctSpeedPct ?? DEFAULT_TYRES.punctSpeedPct,
+    pickWaitSec: p.pickWaitSec,
     changeSec: p.changeSec,
     start: base.start || 'medium',
-    soft: { speedOff: 0, brakeOff: 0, wearPerLap: p.wear.soft, warmLaps: 1, coldOff: 1 },
-    medium: { speedOff: 1, brakeOff: 0, wearPerLap: p.wear.medium, warmLaps: 1, coldOff: 1 },
-    hard: { speedOff: 1, brakeOff: 1, wearPerLap: p.wear.hard, warmLaps: 1, coldOff: 1 },
+    soft: { speedOff: 0, brakeOff: 0, wearPerLap: p.wear.soft, warmLaps: w, coldOff: 1 },
+    medium: { speedOff: p.gap, brakeOff: 0, wearPerLap: p.wear.medium, warmLaps: w, coldOff: 1 },
+    hard: { speedOff: p.gap, brakeOff: 1, wearPerLap: p.wear.hard, warmLaps: w, coldOff: 1 },
   });
 }
 

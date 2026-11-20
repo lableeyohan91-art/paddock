@@ -83,6 +83,13 @@ function friendly(e) {
 const ref = (...path) => api.fb.doc(api.fs, 'live', live.code, ...path);
 
 /** Instantané de la séance pour les téléphones des pilotes. */
+/** Arrêt au stand en cours (pneus) : phase, fin du compte à rebours (heure murale), gomme choisie. */
+function pitInfo(c) {
+  const p = app.tyrePit?.(c);
+  if (!p) return null;
+  return { ph: p.phase, until: p.left ? Date.now() + Math.round(p.left * 1000) : null, pc: p.compound };
+}
+
 function snapshot() {
   const s = app.session;
   if (!s) return { state: 'none' };
@@ -109,6 +116,7 @@ function snapshot() {
     fuel: app.fuelOn(),
     tyres: app.tyresOn(),
     tyreChangeSec: app.tyresOn() ? app.tyreSet().changeSec : null,
+    tyrePickWait: app.tyresOn() ? app.tyreSet().pickWaitSec : null,
     f1: app.session?.cfg.kind === 'f1',
     overallBest: s.overallBest ? { time: s.overallBest.time, address: s.overallBest.address } : null,
     comps: list.map((c) => {
@@ -130,7 +138,7 @@ function snapshot() {
         inPit: c.inPit,
         pitStops: c.pitStops,
         finished: c.finished,
-        tyre: c.tyre ? { c: c.tyre.compound, w: Math.round(c.tyre.wear), n: c.tyre.next, st: tyreState(app.tyreSet(), c.tyre), u: (c.tyreUsed || []).length } : null,
+        tyre: c.tyre ? { c: c.tyre.compound, w: Math.round(c.tyre.wear), n: c.tyre.next, st: tyreState(app.tyreSet(), c.tyre), u: (c.tyreUsed || []).length, pit: pitInfo(c) } : null,
         speed: real ? real.speed : t.speed,
         brake: real ? real.brake : t.brake,
       };

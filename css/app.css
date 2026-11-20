@@ -941,3 +941,14 @@ input.need { border: 2px solid var(--red, #e10600) !important; box-shadow: 0 0 0
 .ty-legend { display: flex; flex-wrap: wrap; gap: 6px 12px; font-size: .75rem; color: var(--muted); margin-top: 6px; }
 .ty-what { margin: 4px 0 0; font-size: .82rem; color: var(--muted); }
 .ty-what b { color: var(--text); }
+
+/* ---------- Arrêt au stand : choix et montage des pneus ---------- */
+@keyframes tyre-spin { to { transform: rotate(360deg); } }
+.pv-spin { animation: tyre-spin 1s linear infinite; }
+.pv-pit-box { display: flex; align-items: center; gap: 8px; margin-top: 10px; padding: 10px 12px; border-radius: 10px; background: var(--panel-2); border: 1px solid var(--line); font-weight: 600; }
+.pv-pit-box.pick { border-color: var(--yellow); color: var(--yellow); font-size: 1.1rem; justify-content: center; animation: pit-blink 1s ease-in-out infinite alternate; }
+.pv-pit-box.change { border-color: var(--blue, #3b82f6); }
+.pv-pit-box.done { border-color: var(--green); color: var(--green); }
+@keyframes pit-blink { from { opacity: 1; } to { opacity: .55; } }
+.tyre-pit { display: inline-flex; align-items: center; gap: 4px; margin-left: 6px; font-size: .78rem; font-weight: 700; }
+.tyre-pickbtn { cursor: pointer; border: 0; font: inherit; }

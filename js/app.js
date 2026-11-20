@@ -327,17 +327,39 @@ export const app = {
   },
 
   /**
-   * Gomme choisie (vue pilote ou écran de course) : avant le départ, ce sont les pneus
-   * de départ ; en course, ceux qui seront montés au prochain arrêt au stand.
+   * Gomme choisie (vue pilote ou écran de course). Avant le départ : les pneus de départ.
+   * En course : seulement à l'arrêt au stand, une fois l'attente passée (phase « choix ») ;
+   * le montage démarre alors (compte à rebours). Pendant le montage, on peut encore changer d'avis.
    */
   setTyreNext(address, compound) {
     const s = this.session;
     const c = s?.comps.get(address);
-    if (!c || !COMPOUND_INFO[compound] || s.state === 'finished') return;
+    if (!c || !COMPOUND_INFO[compound] || s.state === 'finished') return false;
     if (!['running', 'finishing'].includes(s.state)) { c.tyre = freshTyres(compound, compound, this.tyreSet()); this.tyreUsed(c, compound, true); }
-    else c.tyre.next = compound;
+    else {
+      const p = c._tp;
+      if (!c.inPit || !p || !['pick', 'change'].includes(p.phase)) return false;
+      if (p.phase === 'pick') { p.phase = 'change'; p.since = performance.now(); }
+      p.compound = compound;
+      c.tyre.next = compound;
+      this.log(`Pneus demandés : ${c.driver?.name} → ${COMPOUND_INFO[compound].label}`);
+    }
     perf.update();
     s.emit('update');
+    return true;
+  },
+
+  /**
+   * Arrêt au stand en cours : { phase, left (s), compound }. Phases : 'wait' (attente avant de
+   * pouvoir choisir), 'pick' (choix de la gomme), 'change' (montage), 'done' (pneus montés).
+   */
+  tyrePit(c) {
+    const p = c?._tp;
+    if (!p || !c.inPit) return null;
+    const cfg = this.tyreSet();
+    const dur = p.phase === 'wait' ? cfg.pickWaitSec : p.phase === 'change' ? cfg.changeSec : 0;
+    const left = dur ? Math.max(0, dur - (performance.now() - p.since) / 1000) : 0;
+    return { phase: p.phase, left, compound: p.compound || null };
   },
 
   /** Passage sur la ligne : usure, puis annonce de la chute de grip ou de la crevaison. */
@@ -355,22 +377,39 @@ export const app = {
     }
   },
 
-  /** Changement de pneus : voiture immobile assez longtemps dans la voie des stands. */
+  /**
+   * Changement de pneus, à l'arrêt dans la voie des stands :
+   *  1. attente (pickWaitSec, 3 s) ; 2. le pilote choisit sa gomme (vue pilote ou écran de course) ;
+   *  3. montage (changeSec, 3 s) : à la fin, les pneus neufs sont mis.
+   * Repartir avant la fin : rien n'est changé.
+   */
   tyreTick() {
     const s = this.session;
     if (!this.tyresOn() || !s || !['running', 'finishing'].includes(s.state)) return;
     const now = performance.now();
+    const cfg = this.tyreSet();
     for (const c of s.comps.values()) {
       if (!c.tyre) continue;
-      if (!c.inPit) { c._pitSince = null; c._tyreDone = false; continue; }
-      if (c._pitSince == null) c._pitSince = now;
-      if (!c._tyreDone && now - c._pitSince >= this.tyreSet().changeSec * 1000) {
-        c._tyreDone = true;
-        c.tyre = freshTyres(c.tyre.next || c.tyre.compound, undefined, this.tyreSet());
+      if (!c.inPit) {
+        if (c._tp) { c._tp = null; c.tyre.next = undefined; s.emit('update'); }
+        continue;
+      }
+      const name = c.driver?.name || 'Voiture ' + (c.address + 1);
+      if (!c._tp) { c._tp = { phase: 'wait', since: now }; s.emit('update'); }
+      const p = c._tp;
+      if (p.phase === 'wait' && now - p.since >= cfg.pickWaitSec * 1000) {
+        p.phase = 'pick';
+        p.since = now;
+        say(`${name}, choisis tes pneus`);
+        s.emit('update');
+      } else if (p.phase === 'change' && now - p.since >= cfg.changeSec * 1000) {
+        p.phase = 'done';
+        c.tyre = freshTyres(p.compound || c.tyre.compound, undefined, cfg);
         this.tyreUsed(c, c.tyre.compound);
         perf.update();
-        toast(`🛞 ${c.driver?.name || 'Voiture ' + (c.address + 1)} : pneus ${COMPOUND_INFO[c.tyre.compound].label}`, 2000);
-        this.log(`Pneus changés : ${c.driver?.name} → ${COMPOUND_INFO[c.tyre.compound].label}`);
+        say(`${name}, pneus ${COMPOUND_INFO[c.tyre.compound].label} montés`);
+        toast(`🛞 ${name} : pneus ${COMPOUND_INFO[c.tyre.compound].label}`, 2000);
+        this.log(`Pneus changés : ${name} → ${COMPOUND_INFO[c.tyre.compound].label}`);
         s.emit('update');
       }
     }

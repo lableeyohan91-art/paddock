@@ -78,12 +78,19 @@ export function mount(main, a) {
   const board = $('#board', root);
   const openSwap = (e) => {
     if (e.type === 'click' && e.target.closest('[data-gofuel]')) { app.openFuelSettings(); return; }
+    const tp = e.type === 'click' && e.target.closest('[data-tpick]');
+    if (tp) {
+      // arrêt au stand : choix de la gomme à monter (à la place du pilote)
+      const [a, k] = tp.dataset.tpick.split(':');
+      app.setTyreNext(+a, k);
+      return;
+    }
     const ty = e.type === 'click' && e.target.closest('[data-tyre]');
     if (ty) {
-      // gomme suivante : Tendre → Medium → Dur → …
+      // avant le départ : gomme de départ suivante (Tendre → Medium → Dur → …)
       const c = app.session.comps.get(+ty.dataset.tyre);
-      const cur = c.tyre.next || c.tyre.compound;
-      app.setTyreNext(c.address, COMPOUNDS[(COMPOUNDS.indexOf(cur) + 1) % COMPOUNDS.length]);
+      if (['running', 'finishing'].includes(app.session.state)) return;
+      app.setTyreNext(c.address, COMPOUNDS[(COMPOUNDS.indexOf(c.tyre.compound) + 1) % COMPOUNDS.length]);
       return;
     }
     const el = e.target.closest('[data-swap]');
@@ -276,17 +283,26 @@ function fuelCell(c) {
     <span class="num">${pct <= 0 ? 'À SEC' : pct + ' %'}</span></div>`;
 }
 
-/** Pneus : gomme, usure, état ; toucher la pastille choisit la gomme suivante. */
+/** Arrêt au stand en cours : attente, choix (boutons T / M / D), montage, pneus montés. */
+function pitCell(c) {
+  const p = app.tyrePit(c);
+  if (!p) return '';
+  if (p.phase === 'wait') return `<span class="tyre-pit">⏳ ${Math.ceil(p.left)} s</span>`;
+  if (p.phase === 'pick') return `<span class="tyre-pit pick">${COMPOUNDS.map((k) => `<button class="tyre-dot tyre-pickbtn" data-tpick="${c.address}:${k}" style="--tc:${COMPOUND_INFO[k].color}" title="Monter des ${COMPOUND_INFO[k].label}">${COMPOUND_INFO[k].short}</button>`).join('')}</span>`;
+  if (p.phase === 'change') return `<span class="tyre-pit"><span class="tyre-dot pv-spin" style="--tc:${COMPOUND_INFO[p.compound].color};animation-delay:-${Date.now() % 1000}ms">${COMPOUND_INFO[p.compound].short}</span> ${Math.ceil(p.left)} s</span>`;
+  return '<span class="tyre-pit">✅</span>';
+}
+
+/** Pneus : gomme, usure, état ; avant le départ, toucher la pastille change la gomme de départ. */
 function tyreCell(c) {
   const t = c.tyre;
   if (!t) return '';
   const st = tyreState(app.tyreSet(), t);
   const g = COMPOUND_INFO[t.compound];
-  const nx = t.next && t.next !== t.compound ? COMPOUND_INFO[t.next] : null;
-  return `<div class="tyre-cell" data-tyre="${c.address}" title="Toucher pour choisir la gomme suivante">
+  return `<div class="tyre-cell" data-tyre="${c.address}" title="Avant le départ : toucher pour changer la gomme de départ">
     <span class="tyre-dot" style="--tc:${g.color}">${g.short}</span>
     <span class="num tyre-wear ${st}" title="Santé du pneu">${Math.round(tyreHealth(t))} %</span>${st === 'cold' ? ' ❄️' : st === 'worn' ? ' ⚠️' : st === 'puncture' ? ' 💥' : ''}
-    ${nx ? `<span class="tyre-next" style="--tc:${nx.color}">→ ${nx.short}</span>` : ''}
+    ${pitCell(c)}
     ${app.session?.cfg.kind === 'f1' && (c.tyreUsed || []).length < 2 ? '<span class="tyre-rule" title="Règle des 2 gommes pas encore respectée">1 gomme</span>' : ''}</div>`;
 }
 
