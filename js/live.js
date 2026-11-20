@@ -98,6 +98,9 @@ function snapshot() {
   const list = s.order.length ? s.order : [...s.comps.values()];
   return {
     title: s.cfg.title || s.cfg.type,
+    // manettes dont le pilote peut donner des pénalités depuis sa vue pilote (Réglages → Pénalités)
+    penBy: list.filter((c) => app.canPenalize?.(c.driver?.id)).map((c) => c.address),
+    penSec: app.penaltyCfg?.sec ?? null,
     type: s.cfg.type,
     mode: s.cfg.mode,
     laps: s.cfg.laps,
@@ -184,6 +187,13 @@ function handle(cmd) {
   const s = app.session;
   if (!s) return;
   const who = cmd.by ? ` (${cmd.by})` : '';
+  if (cmd.type === 'penalty') {
+    // pénalité donnée depuis une vue pilote : seulement si c'est permis à ce pilote
+    const from = s.comps.get(cmd.from);
+    if (!from || !app.canPenalize(from.driver?.id) || !s.comps.has(cmd.target)) return;
+    app.givePenalty(cmd.target, from.driver?.name || cmd.by || '');
+    return;
+  }
   if (cmd.type === 'vsc') {
     if (s.vscCountdown) return;
     // intention du pilote : « on » = VSC, « off » = fin du VSC (anciennes vues pilote : bascule)

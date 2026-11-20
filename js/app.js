@@ -68,8 +68,13 @@ const DEFAULT_TUNE = { speed: 8, brake: 6 }; // réglage d'un couple pilote + vo
 export const IN_GAME = { vscAdaptive: true }; // VSC adaptatif remis en course (v1.85)
 
 // Pénalité : à l'arrêt au stand, la voiture reste immobile `sec` secondes avant qu'on la touche (essence)
-export const DEFAULT_PENALTY = { sec: 5 };
-const penaltyOf = (v) => ({ sec: Math.max(1, Math.min(60, Math.round(+v?.sec || DEFAULT_PENALTY.sec))) });
+// fromPilots : pénalités possibles aussi depuis les vues pilote, seulement pour les pilotes choisis (pilots)
+export const DEFAULT_PENALTY = { sec: 5, fromPilots: false, pilots: [] };
+const penaltyOf = (v) => ({
+  sec: Math.max(1, Math.min(60, Math.round(+v?.sec || DEFAULT_PENALTY.sec))),
+  fromPilots: !!v?.fromPilots,
+  pilots: Array.isArray(v?.pilots) ? v.pilots.filter((x) => typeof x === 'string') : [],
+});
 const DEFAULT_VSC = { speedPct: 20, adaptive: { on: false, targetSec: 8 } }; // vitesse fixe imposée à toutes les voitures sous VSC, en % de la vitesse max
 export const GHOST = 6; // adresse de la voiture autonome (fantôme) ; 7 = pace car
 const perf = new PerformanceEngine(cu);
@@ -303,7 +308,7 @@ export const app = {
    * de la pénalité avant qu'on y touche (pas d'essence pendant ce temps). Plusieurs pénalités
    * s'additionnent. Repartir avant la fin : la pénalité reste entière pour l'arrêt suivant.
    */
-  givePenalty(address) {
+  givePenalty(address, by = '') {
     const s = this.session;
     const c = s?.comps.get(address);
     if (!c || !['running', 'finishing'].includes(s.state)) return;
@@ -314,8 +319,14 @@ export const app = {
     const name = c.driver?.name || `Voiture ${c.address + 1}`;
     say(`${name}, pénalité de ${c.penalty} secondes`, { priority: true });
     toast(`⚠️ ${name} : pénalité de ${c.penalty} s`, 2500);
-    this.log(`Pénalité : ${name} (${c.penalty} s à faire au stand)`);
+    this.log(`Pénalité : ${name} (${c.penalty} s à faire au stand)${by ? ` · donnée par ${by}` : ''}`);
     s.emit('update');
+  },
+
+  /** Ce pilote peut-il donner des pénalités depuis sa vue pilote ? (Réglages → Pénalités) */
+  canPenalize(driverId) {
+    const p = this.penaltyCfg;
+    return !!(p.fromPilots && driverId && p.pilots.includes(driverId));
   },
 
   /** Retire la pénalité en attente (erreur de la direction de course). */

@@ -60,7 +60,9 @@ HELP.penalty = `
     <p>Comme en F1 : une <b>pénalité</b> oblige le pilote à rester immobile au stand avant qu'on touche sa voiture.</p>
     <ul>
       <li><b>Durée</b> : de 1 à 60 secondes, la même pour toutes les pénalités.</li>
-      <li><b>Donner une pénalité</b> : sur l'écran de course, toucher le pilote, puis « ⚠️ Pénalité ». Plusieurs pénalités s'additionnent ; « Retirer » annule celle en attente.</li>
+      <li><b>Jamais automatique</b> : une pénalité est toujours donnée à la main.</li>
+      <li><b>Donner une pénalité</b> : sur l'écran de course, bouton ⚠️ (à côté du VSC et du drapeau rouge), puis choisir le pilote. Plusieurs pénalités s'additionnent ; « Retirer » (en touchant le pilote dans le classement) annule celle en attente.</li>
+      <li><b>Depuis les vues pilote</b> (option) : seuls les pilotes choisis ont le bouton ⚠️ sur leur vue pilote.</li>
       <li><b>Au stand</b> : la voiture reste immobile la durée de la pénalité, <b>sans essence</b>. Ensuite seulement, le plein se fait normalement.</li>
       <li>Repartir avant la fin : la pénalité reste entière, à refaire au prochain arrêt.</li>
       <li>Le pilote la voit sur sa <b>vue pilote</b>, avec le compte à rebours au stand.</li>
@@ -558,9 +560,23 @@ function renderPenalty() {
     <p class="muted" style="margin:10px 0 0;font-size:.9rem">Comme en F1 : au prochain arrêt au stand, le pilote pénalisé reste immobile <b id="penSecT">${sec} s</b> avant qu'on touche sa voiture. Pendant ce temps, <b>pas d'essence</b> ; le plein se fait ensuite, normalement.</p>
   </section>
   <section class="panel" style="margin-top:14px">
+    <div class="row" style="justify-content:space-between">
+      <h2 style="margin:0">Depuis les vues pilote</h2>
+      <label class="switch"><input type="checkbox" id="penPilots" ${app.penaltyCfg.fromPilots ? 'checked' : ''}><span></span> ${app.penaltyCfg.fromPilots ? 'Activé' : 'Désactivé'}</label>
+    </div>
+    <p class="muted" style="margin:8px 0 0;font-size:.85rem">${app.penaltyCfg.fromPilots
+    ? 'Les pilotes cochés ont un bouton ⚠️ sur leur vue pilote pour donner une pénalité à un autre pilote :'
+    : 'Seul l\'écran principal peut donner des pénalités.'}</p>
+    ${app.penaltyCfg.fromPilots ? `<div class="pick-cars" style="margin-top:10px">
+      ${app.data.drivers.map((d) => `<button class="pick-car ${app.penaltyCfg.pilots.includes(d.id) ? 'on' : ''}" data-penp="${esc(d.id)}">${esc(d.name)}</button>`).join('')}
+    </div>
+    ${app.penaltyCfg.pilots.length ? '' : '<p class="warn-note">Aucun pilote choisi : personne ne peut encore donner de pénalité depuis sa vue pilote.</p>'}` : ''}
+  </section>
+  <section class="panel" style="margin-top:14px">
     <h2>Comment ça marche</h2>
     <ul class="muted" style="margin:6px 0 0;padding-left:18px;font-size:.9rem;line-height:1.5">
-      <li><b>Donner une pénalité</b> : sur l'écran de course, toucher le pilote, puis « ⚠️ Pénalité ».</li>
+      <li><b>Jamais automatique</b> : une pénalité est toujours donnée à la main.</li>
+      <li><b>Donner une pénalité</b> : sur l'écran de course, bouton ⚠️ à côté du VSC et du drapeau rouge, puis choisir le pilote (ou toucher le pilote dans le classement).</li>
       <li>Deux pénalités s'additionnent. « Retirer » annule celle en attente.</li>
       <li>Repartir avant la fin : la pénalité reste entière pour l'arrêt suivant.</li>
       <li>Le pilote la voit sur sa vue pilote, avec le compte à rebours au stand.</li>
@@ -570,6 +586,13 @@ function renderPenalty() {
   const show = () => { $('#penSecV', root).textContent = r.value + ' s'; $('#penSecT', root).textContent = r.value + ' s'; };
   r.oninput = show;
   r.onchange = async () => { await app.savePenaltyCfg({ sec: +r.value }); toast(`Pénalité : ${r.value} s`, 1200); };
+  $('#penPilots', root).onchange = async (e) => { await app.savePenaltyCfg({ fromPilots: e.target.checked }); renderPenalty(); bindTabs(); };
+  root.querySelectorAll('[data-penp]').forEach((b) => (b.onclick = async () => {
+    const id = b.dataset.penp;
+    const list = app.penaltyCfg.pilots.includes(id) ? app.penaltyCfg.pilots.filter((x) => x !== id) : [...app.penaltyCfg.pilots, id];
+    await app.savePenaltyCfg({ pilots: list });
+    renderPenalty(); bindTabs();
+  }));
 }
 
 function renderDevices() {

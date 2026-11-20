@@ -24,6 +24,7 @@ let data = null;          // dernier instantané reçu
 let me = null;            // adresse de la manette choisie
 let lastUpdate = 0;
 let touchingUntil = 0;    // pendant un réglage au doigt, on ne redessine pas le garage
+let penPick = false;      // liste « à qui donner la pénalité ? » ouverte
 const view = $('#pv');
 const status = $('#pvStatus');
 
@@ -169,6 +170,12 @@ function renderPilot() {
       ${d.flag === 'red'
         ? `<button class="btn go" id="pvRed" ${d.redResuming ? 'disabled' : ''}>${d.redResuming ? '🚦 Reprise…' : '🟢 Reprendre la course'}</button>`
         : `<button class="btn red icon-sq" id="pvRed" ${!live ? 'disabled' : ''} title="Drapeau rouge">🚩</button><span class="pv-act-l">Drapeau rouge</span>`}
+      ${(d.penBy || []).includes(c.a) ? `<button class="btn icon-sq pen-btn ${penPick ? 'on' : ''}" id="pvPen" ${!live ? 'disabled' : ''} title="Donner une pénalité">⚠️</button><span class="pv-act-l">Pénalité</span>` : ''}
+      ${(d.penBy || []).includes(c.a) && penPick && live ? `<div class="pv-pen-pick">
+        <span class="muted">Pénalité de ${d.penSec} s à :</span>
+        ${d.comps.filter((x) => x.a !== c.a).map((x) => `<button class="btn small" data-pen="${x.a}" style="border-color:${esc(x.color)}">${esc(x.name)}</button>`).join('')}
+        <button class="btn small ghost" data-pen-cancel>Annuler</button>
+      </div>` : ''}
     </section>
 
     <section class="panel" id="pvGarage">${oldGarage ? '' : garage(c)}</section>
@@ -230,6 +237,16 @@ function bind(c, bindGarage = true) {
     const want = data.flag === 'vsc' ? 'off' : 'on';
     if (await send('vsc', { want })) toast(want === 'off' ? 'Fin du VSC demandée' : 'VSC demandé', 1500);
   };
+  const pen = $('#pvPen', view);
+  if (pen) pen.onclick = () => { penPick = !penPick; renderPilot(); };
+  $$('[data-pen]', view).forEach((b) => (b.onclick = async () => {
+    penPick = false;
+    const target = data.comps.find((x) => x.a === +b.dataset.pen);
+    if (await send('penalty', { from: c.a, target: +b.dataset.pen })) toast(`Pénalité demandée : ${target?.name || ''}`, 1800);
+    renderPilot();
+  }));
+  const pc = $('[data-pen-cancel]', view);
+  if (pc) pc.onclick = () => { penPick = false; renderPilot(); };
   const rl = $('#pvRelaunch', view);
   if (rl) rl.onclick = async () => { rl.disabled = true; if (await send('relaunch')) toast('Nouvelle relance demandée', 1500); };
   const red = $('#pvRed', view);

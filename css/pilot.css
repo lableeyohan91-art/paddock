@@ -34,6 +34,8 @@
 .pv-recent { grid-column: 1 / -1; font-size: .8rem; }
 
 .pv-actions { margin-top: 12px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.pv-pen-pick { flex-basis: 100%; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px; margin-top: 6px; padding-top: 10px; border-top: 1px solid var(--line); }
+.pv-pen-pick .btn { border-width: 2px; }
 .pv-act-l { font-size: .85rem; color: var(--muted); margin-right: 14px; }
 #pvGarage { margin-top: 12px; }
 

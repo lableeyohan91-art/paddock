@@ -210,6 +210,7 @@ function renderControls() {
       ? `<button class="btn go icon-sq vsc-btn" id="bVsc" title="Fin du VSC : décompte de 3 s puis la course reprend" aria-label="Fin du VSC">VSC</button>`
       : `<button class="btn icon-sq vsc-btn" id="bVsc" title="Virtual Safety Car : toutes les voitures à ${app.vscCfg.speedPct} % de la vitesse max" aria-label="Virtual Safety Car" ${s.flag === 'red' ? 'disabled' : ''}>VSC</button>`;
     if (s.flag !== 'red') html += `<button class="btn red icon-sq" id="bRed" title="Drapeau rouge : arrête toutes les voitures" aria-label="Drapeau rouge">🚩</button>`;
+    html += `<button class="btn icon-sq pen-btn" id="bPen" title="Pénalité : choisir le pilote" aria-label="Pénalité">⚠️</button>`;
     html += `<button class="btn icon-sq" id="bStop" title="Terminer la session" aria-label="Terminer la session">🏁</button>`;
     html += `<button class="btn icon-sq" id="bGarage" title="Garage : régler les voitures sans arrêter la session" aria-label="Garage">🔧</button>`;
     html += `</div>`;
@@ -242,6 +243,7 @@ function renderControls() {
   on('bVsc', () => { app.toggleVsc(); renderControls(); });
   once('bRed', async () => { await app.toggleRed(); renderControls(); });
   once('bRelaunch', async () => { await app.relaunchLights(); renderControls(); });
+  on('bPen', () => penaltyDialog());
   on('bStop', async () => { if (await confirmBox('Terminer la session maintenant ?')) s.stop(); });
   on('bAgain', () => app.prepareSession(app.lastPrepare || {}));
   on('bResults', () => showResults(app));
@@ -482,6 +484,31 @@ function swapDialog(address) {
     tick();
   };
   sync();
+}
+
+/** Bouton ⚠️ : choisir le pilote à pénaliser (pénalité de Réglages → Pénalités). */
+function penaltyDialog() {
+  const s = app.session;
+  if (!s || !['running', 'finishing'].includes(s.state)) return;
+  const list = s.order.length ? s.order : [...s.comps.values()];
+  const m = modal(`
+    <h2>⚠️ Pénalité de ${app.penaltyCfg.sec} s</h2>
+    <p class="muted" style="margin:4px 0 12px;font-size:.9rem">À qui ? Au prochain arrêt au stand, la voiture restera immobile ${app.penaltyCfg.sec} s sans essence.</p>
+    <div class="pick-grid">
+      ${list.map((c) => `
+      <button class="pick" data-pen="${c.address}" style="--dc:${esc(c.driver.color)}">
+        <span class="pick-av">${avatar(c.driver)}</span>
+        <span class="pick-name">${esc(c.driver.name)}</span>
+        ${c.penalty ? `<span class="pick-busy">⚠️ ${c.penalty} s</span>` : ''}
+      </button>`).join('')}
+    </div>
+    <div class="row" style="justify-content:flex-end;margin-top:14px"><button class="btn ghost" data-close>Annuler</button></div>`);
+  $$('[data-pen]', m.el).forEach((b) => (b.onclick = () => {
+    app.givePenalty(+b.dataset.pen);
+    m.close();
+    lastSig = '';
+    tick();
+  }));
 }
 
 /** Fin de séance : page de résultats (podium, meilleur tour, graphique, onglet Pilotes). */

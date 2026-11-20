@@ -144,6 +144,8 @@ input[type=checkbox] { accent-color: var(--accent); width: 18px; height: 18px; }
 .badge.pit { background: var(--blue); color: #fff; }
 .badge.pen { background: var(--yellow); color: #111; margin-left: 4px; }
 .badge.pen.serving { background: var(--accent); color: #fff; }
+.pen-btn { background: var(--yellow); color: #111; border-color: var(--yellow); font-size: 1.3rem; }
+.pen-btn.on { box-shadow: 0 0 0 3px rgba(250, 204, 21, .45); }
 /* Fiche pilote de l'écran de course : pénalité */
 .pen-box { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 10px 12px; margin: 6px 0 4px; border-radius: 10px; background: var(--panel-2); border: 1px solid var(--line); }
 .badge.fin { background: #fff; color: #000; }
