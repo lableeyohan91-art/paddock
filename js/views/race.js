@@ -7,7 +7,6 @@ import { SKY } from '../weather.js';
 import { MODE } from '../cu/protocol.js';
 import { avatar } from './drivers.js';
 import { live, startLive, pilotUrl, drawQr } from '../live.js';
-import { COMPOUNDS, COMPOUND_INFO, tyreState, tyreHealth, TYRES_VISIBLE } from '../tyres.js';
 
 let app;
 let root;
@@ -78,21 +77,6 @@ export function mount(main, a) {
   const board = $('#board', root);
   const openSwap = (e) => {
     if (e.type === 'click' && e.target.closest('[data-gofuel]')) { app.openFuelSettings(); return; }
-    const tp = e.type === 'click' && e.target.closest('[data-tpick]');
-    if (tp) {
-      // arrêt au stand : choix de la gomme à monter (à la place du pilote)
-      const [a, k] = tp.dataset.tpick.split(':');
-      app.setTyreNext(+a, k);
-      return;
-    }
-    const ty = e.type === 'click' && e.target.closest('[data-tyre]');
-    if (ty) {
-      // avant le départ : gomme de départ suivante (Tendre → Medium → Dur → …)
-      const c = app.session.comps.get(+ty.dataset.tyre);
-      if (['running', 'finishing'].includes(app.session.state)) return;
-      app.setTyreNext(c.address, COMPOUNDS[(COMPOUNDS.indexOf(c.tyre.compound) + 1) % COMPOUNDS.length]);
-      return;
-    }
     const el = e.target.closest('[data-swap]');
     if (el && (e.type === 'click' || e.key === 'Enter')) swapDialog(+el.dataset.swap);
   };
@@ -115,7 +99,6 @@ function renderMenu() {
       <button class="menu-tile" data-go="qualifying"><span class="menu-ico">⏱️</span><span class="menu-name">Qualification</span></button>
       <button class="menu-tile" data-go="quick"><span class="menu-ico">⚡</span><span class="menu-name">Course rapide</span></button>
       <button class="menu-tile" data-go="race"><span class="menu-ico">🏁</span><span class="menu-name">Course</span></button>
-      ${TYRES_VISIBLE ? '<button class="menu-tile dev" data-go="f1"><span class="menu-ico">🏎️</span><span class="menu-name">F1</span><span class="menu-dev">En développement</span></button>' : ''}
     </div>
     ${last ? '<button class="btn ghost" id="mLast" style="margin-top:16px">↩ Revoir la dernière session</button>' : ''}
   </div>`;
@@ -283,29 +266,6 @@ function fuelCell(c) {
     <span class="num">${pct <= 0 ? 'À SEC' : pct + ' %'}</span></div>`;
 }
 
-/** Arrêt au stand en cours : attente, choix (boutons T / M / D), montage, pneus montés. */
-function pitCell(c) {
-  const p = app.tyrePit(c);
-  if (!p) return '';
-  if (p.phase === 'wait') return `<span class="tyre-pit">⏳ ${Math.ceil(p.left)} s</span>`;
-  if (p.phase === 'pick') return `<span class="tyre-pit pick">${COMPOUNDS.map((k) => `<button class="tyre-dot tyre-pickbtn" data-tpick="${c.address}:${k}" style="--tc:${COMPOUND_INFO[k].color}" title="Monter des ${COMPOUND_INFO[k].label}">${COMPOUND_INFO[k].short}</button>`).join('')}</span>`;
-  if (p.phase === 'change') return `<span class="tyre-pit"><span class="tyre-dot pv-spin" style="--tc:${COMPOUND_INFO[p.compound].color};animation-delay:-${Date.now() % 1000}ms">${COMPOUND_INFO[p.compound].short}</span> ${Math.ceil(p.left)} s</span>`;
-  return '<span class="tyre-pit">✅</span>';
-}
-
-/** Pneus : gomme, usure, état ; avant le départ, toucher la pastille change la gomme de départ. */
-function tyreCell(c) {
-  const t = c.tyre;
-  if (!t) return '';
-  const st = tyreState(app.tyreSet(), t);
-  const g = COMPOUND_INFO[t.compound];
-  return `<div class="tyre-cell" data-tyre="${c.address}" title="Avant le départ : toucher pour changer la gomme de départ">
-    <span class="tyre-dot" style="--tc:${g.color}">${g.short}</span>
-    <span class="num tyre-wear ${st}" title="Santé du pneu">${Math.round(tyreHealth(t))} %</span>${st === 'cold' ? ' ❄️' : st === 'worn' ? ' ⚠️' : st === 'puncture' ? ' 💥' : ''}
-    ${pitCell(c)}
-    ${app.session?.cfg.kind === 'f1' && (c.tyreUsed || []).length < 2 ? '<span class="tyre-rule" title="Règle des 2 gommes pas encore respectée">1 gomme</span>' : ''}</div>`;
-}
-
 function sectorsCell(c, s) {
   const list = c.sectors.length ? c.sectors : c.lastSectors;
   if (!list.length) return '';
@@ -328,7 +288,6 @@ function renderBoard() {
     <th class="hide-sm">${isRace ? 'Écart' : 'Écart'}</th>
     ${hasSectors ? '<th class="hide-sm">Secteurs</th>' : ''}
     ${fuelMode ? '<th><button class="th-link" data-gofuel title="Régler la consommation">Essence ⚙</button></th>' : ''}
-    ${app.tyresOn() ? '<th>Pneus</th>' : ''}
     <th></th></tr>`;
 
   const rows = list.map((c) => {
@@ -347,7 +306,6 @@ function renderBoard() {
       <td class="num hide-sm">${esc(c.gap)}</td>
       ${hasSectors ? `<td class="hide-sm">${sectorsCell(c, s)}</td>` : ''}
       ${fuelMode ? `<td>${fuelCell(c)}</td>` : ''}
-      ${app.tyresOn() ? `<td>${tyreCell(c)}</td>` : ''}
       <td>${badge}</td>
     </tr>`;
   }).join('');

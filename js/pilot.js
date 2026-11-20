@@ -14,12 +14,6 @@ document.querySelectorAll('link[rel="stylesheet"][href^="css/"]').forEach((l) =>
   if (!l.getAttribute('href').endsWith('v=' + APP_VERSION)) l.setAttribute('href', href + '?v=' + APP_VERSION);
 });
 
-const TYRES = {
-  soft: { label: 'Tendre', short: 'T', color: '#e10600' },
-  medium: { label: 'Medium', short: 'M', color: '#facc15' },
-  hard: { label: 'Dur', short: 'D', color: '#f5f5f5' },
-};
-
 const SDK = 'https://www.gstatic.com/firebasejs/10.12.2/';
 const code = (new URLSearchParams(location.search).get('c') || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
 const PICK_KEY = 'paddock.pilot.' + code;
@@ -176,8 +170,6 @@ function renderPilot() {
         : `<button class="btn red icon-sq" id="pvRed" ${!live ? 'disabled' : ''} title="Drapeau rouge">🚩</button><span class="pv-act-l">Drapeau rouge</span>`}
     </section>
 
-    ${d.tyres && c.tyre ? tyresPanel(d, c) : ''}
-
     <section class="panel" id="pvGarage">${oldGarage ? '' : garage(c)}</section>
 
     <section class="panel pv-board">
@@ -194,54 +186,6 @@ function renderPilot() {
   </div>`;
   if (oldGarage) $('#pvGarage', view).replaceWith(oldGarage);
   bind(c, !oldGarage);
-}
-
-/** Secondes restantes d'un compte à rebours (heure murale du circuit). */
-const secLeft = (until) => (until ? Math.max(0, Math.ceil((until - Date.now()) / 1000)) : 0);
-
-/**
- * Arrêt au stand : attente → choix de la gomme → montage (pneu qui tourne) → pneus montés.
- * Le compte à rebours est mis à jour 4 fois par seconde (#pvTyLeft).
- */
-function pitBox(t) {
-  const p = t.pit;
-  if (!p) return '';
-  const g = p.pc ? TYRES[p.pc] : null;
-  // rotation continue malgré les rafraîchissements : on la cale sur l'horloge
-  const spin = `animation-delay:-${Date.now() % 1000}ms`;
-  if (p.ph === 'wait') return `<div class="pv-pit-box">⏳ Au stand · choix des pneus dans <b class="num" id="pvTyLeft" data-until="${p.until || ''}">${secLeft(p.until)}</b> s</div>`;
-  if (p.ph === 'pick') return '<div class="pv-pit-box pick">👇 Choisis tes pneus</div>';
-  if (p.ph === 'change') return `<div class="pv-pit-box change"><span class="tyre-dot pv-spin" style="--tc:${g.color};${spin}">${g.short}</span> Montage des pneus ${g.label}… <b class="num" id="pvTyLeft" data-until="${p.until || ''}">${secLeft(p.until)}</b> s</div>`;
-  if (p.ph === 'done') return `<div class="pv-pit-box done">✅ Pneus ${TYRES[t.c].label} montés · repars !</div>`;
-  return '';
-}
-
-/** Mes pneus : gomme, usure, état ; choix de la gomme (départ, ou à l'arrêt au stand). */
-function tyresPanel(d, c) {
-  const t = c.tyre;
-  const g = TYRES[t.c];
-  const before = !['running', 'finishing'].includes(d.state);
-  const ph = t.pit?.ph;
-  const canPick = before || ph === 'pick' || ph === 'change';
-  const want = before ? t.c : (t.pit?.pc || t.c);
-  const st = t.st === 'puncture' ? '💥 Crevaison ! Passe au stand' : t.st === 'cold' ? '❄️ Froids' : t.st === 'worn' ? '⚠️ Usés' : '✅ OK';
-  return `
-    <section class="panel pv-tyres">
-      <h2 style="margin-bottom:8px">🛞 Mes pneus</h2>
-      <div class="pv-tyre-now">
-        <span class="tyre-dot" style="--tc:${g.color}">${g.short}</span>
-        <b>${g.label}</b><span class="muted">${st}</span>
-        <div class="fuelg-bar" style="flex:1"><i style="width:${100 - t.w}%;background:${['worn', 'puncture'].includes(t.st) ? 'var(--accent)' : 'var(--green)'}"></i></div>
-        <b class="num">${100 - t.w} %</b>
-      </div>
-      ${d.f1 ? `<p class="pv-tyre-rule ${t.u >= 2 ? 'ok' : ''}">${t.u >= 2 ? '✅ Règle des 2 gommes respectée' : '⚠️ Règle des 2 gommes : monte une autre gomme avant l’arrivée'}</p>` : ''}
-      ${before ? '' : pitBox(t)}
-      ${canPick ? `
-      <p class="muted" style="margin:10px 0 6px;font-size:.85rem">${before ? 'Pneus de départ :' : ph === 'change' ? 'Tu peux encore changer d\u2019avis :' : 'Quels pneus montes-tu ?'}</p>
-      <div class="pv-tyre-pick">
-        ${Object.entries(TYRES).map(([k, x]) => `<button class="pv-tyre-btn ${(before || ph === 'change') && want === k ? 'on' : ''}" data-tyre="${k}" style="--tc:${x.color}"><span class="tyre-dot" style="--tc:${x.color}">${x.short}</span>${x.label}</button>`).join('')}
-      </div>` : ph ? '' : `<p class="muted" style="margin:10px 0 0;font-size:.8rem">Pour changer de pneus : arrête-toi dans la voie des stands. Au bout de ${d.tyrePickWait ?? 3} s, tu choisis ta gomme ici, puis le montage prend ${d.tyreChangeSec ?? 3} s.</p>`}
-    </section>`;
 }
 
 function garage(c) {
@@ -284,10 +228,6 @@ function bind(c, bindGarage = true) {
     const want = data.flag === 'red' ? 'off' : 'on';
     if (await send('red', { want })) toast(want === 'off' ? 'Reprise demandée' : 'Drapeau rouge demandé', 1500);
   };
-  $$('[data-tyre]', view).forEach((b) => (b.onclick = async () => {
-    $$('[data-tyre]', view).forEach((x) => x.classList.toggle('on', x === b));
-    if (await send('tyre', { a: c.a, compound: b.dataset.tyre })) toast(`Pneus ${TYRES[b.dataset.tyre].label} demandés`, 1500);
-  }));
   if (bindGarage) $$('#pvGarage [data-k]', view).forEach((r) => {
     const show = () => {
       const bar = r.parentElement;
@@ -304,8 +244,6 @@ setInterval(() => {
   if (!data || me === null) return;
   const el = $('#pvClock', view);
   if (el) el.textContent = clockText();
-  const tl = $('#pvTyLeft', view); // compte à rebours de l'arrêt au stand (pneus)
-  if (tl && tl.dataset.until) tl.textContent = secLeft(+tl.dataset.until);
   // le circuit envoie un signal toutes les 5 s : sans nouvelles depuis 8 s, on relit l'état
   if (lastUpdate && Date.now() - lastUpdate > 8000) {
     status.textContent = '⚠️ Mise à jour…';

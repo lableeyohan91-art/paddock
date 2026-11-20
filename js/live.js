@@ -6,7 +6,6 @@
 
 import * as sync from './sync.js';
 import { toast } from './ui.js';
-import { tyreState } from './tyres.js';
 
 const PUBLIC_URL = 'https://lableeyohan91-art.github.io/paddock/';
 const CODE_KEY = 'paddock.liveCode';
@@ -83,13 +82,6 @@ function friendly(e) {
 const ref = (...path) => api.fb.doc(api.fs, 'live', live.code, ...path);
 
 /** Instantané de la séance pour les téléphones des pilotes. */
-/** Arrêt au stand en cours (pneus) : phase, fin du compte à rebours (heure murale), gomme choisie. */
-function pitInfo(c) {
-  const p = app.tyrePit?.(c);
-  if (!p) return null;
-  return { ph: p.phase, until: p.left ? Date.now() + Math.round(p.left * 1000) : null, pc: p.compound };
-}
-
 function snapshot() {
   const s = app.session;
   if (!s) return { state: 'none' };
@@ -114,10 +106,6 @@ function snapshot() {
     endWall: (s.endedAt || s.redSince !== null) && startWall !== null ? startWall + s.elapsedMs : null,
     leaderLaps: s.leaderLaps,
     fuel: app.fuelOn(),
-    tyres: app.tyresOn(),
-    tyreChangeSec: app.tyresOn() ? app.tyreSet().changeSec : null,
-    tyrePickWait: app.tyresOn() ? app.tyreSet().pickWaitSec : null,
-    f1: app.session?.cfg.kind === 'f1',
     overallBest: s.overallBest ? { time: s.overallBest.time, address: s.overallBest.address } : null,
     comps: list.map((c) => {
       const t = app.getTune(c.driver?.id, c.car?.id);
@@ -138,7 +126,6 @@ function snapshot() {
         inPit: c.inPit,
         pitStops: c.pitStops,
         finished: c.finished,
-        tyre: c.tyre ? { c: c.tyre.compound, w: Math.round(c.tyre.wear), n: c.tyre.next, st: tyreState(app.tyreSet(), c.tyre), u: (c.tyreUsed || []).length, pit: pitInfo(c) } : null,
         speed: real ? real.speed : t.speed,
         brake: real ? real.brake : t.brake,
       };
@@ -212,9 +199,6 @@ function handle(cmd) {
     if (!app.canRelaunch()) return;
     app.relaunchLights();
     toast(`🟢 Nouvelle relance${who}`);
-  } else if (cmd.type === 'tyre') {
-    // gomme choisie par le pilote (pneus de départ avant le GO, sinon pour le prochain arrêt)
-    app.setTyreNext(cmd.a, cmd.compound);
   } else if (cmd.type === 'tune') {
     // un pilote ne règle que SA voiture : celle de la manette indiquée
     const c = s.comps.get(cmd.a);

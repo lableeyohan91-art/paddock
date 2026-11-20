@@ -7,8 +7,6 @@ import { renderFuel, openFuelTab } from './fuel-settings.js';
 import { vscSpeed } from '../performance.js';
 import { reach, cranFor } from '../vsc-cal.js';
 import { autoCfg } from '../autovsc.js';
-import { renderTyreSettings } from './tyre-settings.js';
-import { TYRES_VISIBLE } from '../tyres.js';
 import { LIGHT_SCENES, COLOR_SLOTS, paletteColor, sceneCss, cssOf } from '../devices/lightsync.js';
 import { GenericLight, PROTOCOLS } from '../devices/generic-light.js';
 import { openImport, importDone, removeImport } from './import-records.js';
@@ -21,7 +19,6 @@ const SECTIONS = [
   { k: 'general', ico: '⚙️', name: 'Général' },
   { k: 'fuel', ico: '⛽', name: 'Essence' },
   { k: 'vsc', ico: '<span class="vsc-ico">VSC</span>', name: 'VSC' }, // même icône que le bouton en course
-  ...(TYRES_VISIBLE ? [{ k: 'tyres', ico: '🛞', name: 'Pneus' }] : []), // pneus mis de côté pour l'instant
   { k: 'devices', ico: '💡', name: 'Éclairage connecté' },
 ];
 let tab = 'menu';
@@ -57,16 +54,6 @@ const HELP = {
       <li><b>VSC automatique</b> (2e onglet) : le VSC se déclenche tout seul quand une voiture ne repasse plus — <b>par tour</b> (pas de passage sur la ligne depuis X s) ou <b>par secteur</b> avec les Check Lane (Y s). Les voitures au stand, en panne sèche ou arrivées sont exclues.</li>
     </ul>`,
 };
-
-HELP.tyres = `
-    <p>Trois gommes aux comportements bien marqués, pour le mode <b>F1</b> (en développement).</p>
-    <ul>
-      <li><b>Tendre</b> : rapide mais s'use vite. <b>Medium</b> : 1 cran en moins, dure deux fois plus. <b>Dur</b> : 1 cran en moins et un freinage moins fort, dure le plus longtemps.</li>
-      <li><b>Automatique</b> : l'appli calcule seule l'usure et le temps d'arrêt selon le nombre de tours, pour que les 3 stratégies se valent. Tu y vois la vie de chaque gomme sur une frise.</li>
-      <li><b>Manuel</b> : des curseurs pour tout régler toi-même (vitesse, freinage, usure, chauffe, chute de grip, crevaison, temps d'arrêt), avec la frise mise à jour en direct.</li>
-      <li><b>Chute de grip</b> : au hasard en fin de vie, la voiture ne garde qu'une partie de sa programmation. <b>Crevaison</b> : risque quand le pneu est presque usé ; la voiture roule alors au ralenti jusqu'au stand.</li>
-      <li><b>Changement</b> : s'arrêter dans la voie des stands ; après 3 s, le pilote choisit sa gomme sur sa vue pilote ; 3 s de montage plus tard (le pneu tourne), les pneus neufs sont mis.</li>
-    </ul>`;
 
 HELP.devices = `
     <p>Les lampes que Paddock peut piloter en plus du circuit : elles prennent la couleur de la course.</p>
@@ -130,7 +117,6 @@ function render() {
     bindTabs();
     return;
   }
-  if (tab === 'tyres') { renderTyreSettings(root, app, sectionHead(), bindTabs); return; }
   if (tab === 'devices') {
     renderDevices();
     bindTabs();
@@ -617,11 +603,6 @@ export function openButtonVsc() {
 export function openAdaptiveVsc() {
   openNext = 'vsc';
   vscTab = 'adaptive';
-}
-
-/** Ouvre directement Réglages → Pneus (depuis un autre écran). */
-export function openTyres() {
-  openNext = 'tyres';
 }
 
 /** Ouvre directement Réglages → Essence (depuis un autre écran). */

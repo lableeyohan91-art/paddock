@@ -313,7 +313,6 @@ input[type=checkbox] { accent-color: var(--accent); width: 18px; height: 18px; }
 
 .driver-label { flex: 1; font-size: 1.25rem; font-weight: 800; text-transform: uppercase; letter-spacing: .02em; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 
-
 .driver-edit { display: grid; grid-template-columns: auto 1fr; gap: 18px; }
 @media (max-width: 480px) { .driver-edit { grid-template-columns: 1fr; justify-items: center; } .driver-edit > div:last-child { width: 100%; } }
 .swatches { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
@@ -357,14 +356,7 @@ input[type=checkbox] { accent-color: var(--accent); width: 18px; height: 18px; }
 .menu-tile:active { transform: scale(.98); }
 .menu-tile .menu-ico { font-size: 1.8rem; line-height: 1; display: inline-flex; align-items: center; }
 .menu-tile .menu-name { font-size: 1.05rem; }
-.menu-tile.dev { grid-column: 1 / -1; flex-wrap: wrap; row-gap: 2px; }
-.menu-dev { flex-basis: 100%; font-size: .72rem; font-weight: 600; color: var(--yellow); text-transform: uppercase; letter-spacing: .04em; }
-.pv-tyre-rule { margin: 10px 0 0; font-size: .85rem; font-weight: 600; color: var(--yellow); }
-.pv-tyre-rule.ok { color: var(--green); }
-.tyre-rule { margin-left: 4px; font-size: .68rem; font-weight: 700; color: var(--yellow); }
-.f1-tyres { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
-.f1-tyre { display: grid; justify-items: center; gap: 2px; padding: 8px 4px; border-radius: 10px; background: var(--panel-2); border: 1px solid var(--line); font-size: .8rem; }
-.f1-tyre b { font-size: .95rem; }
+
 .menu-card {
   display: grid; justify-items: center; gap: 6px; padding: 26px 18px; border-radius: 16px; cursor: pointer;
   background: var(--panel); border: 1px solid var(--line); transition: transform .12s, border-color .12s;
@@ -783,8 +775,7 @@ h1 .vsc-ico { width: 40px; height: 40px; font-size: .7rem; }
 .vsc-pct small { display: block; font-size: .7rem; color: var(--muted); font-weight: 700; }
 .auto-rule { padding: 12px; border-radius: 10px; background: var(--panel-2); border: 1px solid var(--line); margin-top: 10px; }
 .driver-stats-tools { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--line); }
-/* Réglages → Pneus */
-.tyre-card { border-top: 3px solid var(--tc); }
+
 /* Essence : calculateur d'équilibrage */
 .calc-box > summary h2 { font-size: .95rem; }
 .calc-box > summary { cursor: pointer; list-style: none; position: relative; padding-right: 32px; }
@@ -844,7 +835,7 @@ h1 .vsc-ico { width: 40px; height: 40px; font-size: .7rem; }
 @media (max-width: 520px) { .cal-row { grid-template-columns: 1fr 1fr; } }
 .calc-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; max-width: 520px; }
 .calc-actions .btn { white-space: normal; line-height: 1.2; font-size: .9rem; padding-left: 8px; padding-right: 8px; }
-.dev-banner { background: var(--accent); color: #fff; font-weight: 900; font-size: 1.15rem; text-align: center; text-transform: uppercase; letter-spacing: .04em; padding: 14px 12px; border-radius: 12px; margin-bottom: 14px; }
+
 .sheet-track { gap: 10px; margin: 12px 0 4px; font-weight: 700; }
 .sheet-track select { flex: 1; max-width: 320px; }
 .cu-log { font-size: .7rem; color: var(--muted); white-space: pre-wrap; word-break: break-word; max-height: 140px; overflow: auto; background: var(--panel-2); border-radius: 8px; padding: 6px 8px; margin: 0 0 12px; }
@@ -854,16 +845,6 @@ h1 .vsc-ico { width: 40px; height: 40px; font-size: .7rem; }
 .calc-table tr.nom td { background: rgba(34,197,94,.12); }
 .calc-table td.good { color: var(--green); }
 .calc-table td.bad { color: var(--accent); }
-.tyre-dot { display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; border: 3px solid var(--tc); font-size: .8rem; font-weight: 900; color: var(--text); background: #111; vertical-align: middle; margin-right: 4px; }
-.tyre-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
-.tyre-grid input { width: 100%; }
-/* Écran de course : pneus */
-.tyre-cell { display: flex; align-items: center; gap: 6px; white-space: nowrap; cursor: pointer; }
-.tyre-cell .tyre-dot { width: 22px; height: 22px; font-size: .7rem; border-width: 3px; margin: 0; }
-.tyre-wear.worn { color: var(--accent); font-weight: 800; }
-.tyre-wear.cold { color: #60a5fa; }
-.tyre-wear.puncture { color: var(--accent); font-weight: 900; animation: blink 1s infinite; }
-.tyre-next { font-size: .75rem; font-weight: 800; color: var(--tc); }
 
 /* cases obligatoires des calculs automatiques */
 input.need { border: 2px solid var(--red, #e10600) !important; box-shadow: 0 0 0 3px rgba(225,6,0,.18); }
@@ -906,49 +887,3 @@ input.need { border: 2px solid var(--red, #e10600) !important; box-shadow: 0 0 0
 .top-laps small { font-size: .75rem; }
 .top-laps td:last-child { text-align: right; width: 1%; }
 
-/* ---------- Réglages → Pneus (Automatique / Manuel) ---------- */
-.dev-banner.small { font-size: .85rem; padding: 8px 10px; }
-.ty-use { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
-.ty-rngs { display: grid; gap: 10px; }
-.ty-rng { display: grid; grid-template-columns: minmax(130px, 1.1fr) 2fr minmax(92px, auto); align-items: center; gap: 10px; }
-.ty-rng-l { font-size: .88rem; font-weight: 600; }
-.ty-rng-l small { display: block; font-weight: 400; color: var(--muted); font-size: .75rem; }
-.ty-rng input[type=range] { width: 100%; min-width: 0; margin: 0; box-sizing: border-box; }
-.ty-rng b { font-size: .88rem; text-align: right; white-space: nowrap; }
-@media (max-width: 560px) {
-  .ty-rng { grid-template-columns: 1fr auto; }
-  .ty-rng input[type=range] { grid-column: 1 / -1; grid-row: 2; }
-}
-.ty-sum { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; margin-top: 12px; }
-.ty-sum > div { display: grid; gap: 2px; padding: 8px 10px; border-radius: 10px; background: var(--panel-2); border: 1px solid var(--line); font-size: .8rem; }
-.ty-sum b { font-size: 1.05rem; }
-.ty-card { border-top: 3px solid var(--tc); padding: 12px 0 4px; margin-top: 12px; }
-.ty-card-h { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
-.ty-card-h .muted { font-size: .82rem; }
-.ty-card .ty-rngs { margin-top: 10px; }
-.ty-lane { position: relative; height: 18px; border-radius: 6px; overflow: hidden; background: var(--panel-2); border: 1px solid var(--line); }
-.tz { position: absolute; top: 0; bottom: 0; display: block; }
-.ty-legend .tz { position: static; display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -2px; margin-right: 4px; }
-.tz.cold { background: #60a5fa; }
-.tz.ok { background: #22c55e; }
-.tz.cliff { background: #f59e0b; }
-.tz.worn { background: #ea580c; }
-.tz.punct { background: #ef4444; }
-.tz.punct2 { background: #b91c1c; }
-.tz.dead { background: #3f0a0a; }
-.ty-ticks { position: relative; height: 14px; font-size: .65rem; color: var(--muted); }
-.ty-ticks span { position: absolute; transform: translateX(-50%); top: 1px; }
-.ty-legend { display: flex; flex-wrap: wrap; gap: 6px 12px; font-size: .75rem; color: var(--muted); margin-top: 6px; }
-.ty-what { margin: 4px 0 0; font-size: .82rem; color: var(--muted); }
-.ty-what b { color: var(--text); }
-
-/* ---------- Arrêt au stand : choix et montage des pneus ---------- */
-@keyframes tyre-spin { to { transform: rotate(360deg); } }
-.pv-spin { animation: tyre-spin 1s linear infinite; }
-.pv-pit-box { display: flex; align-items: center; gap: 8px; margin-top: 10px; padding: 10px 12px; border-radius: 10px; background: var(--panel-2); border: 1px solid var(--line); font-weight: 600; }
-.pv-pit-box.pick { border-color: var(--yellow); color: var(--yellow); font-size: 1.1rem; justify-content: center; animation: pit-blink 1s ease-in-out infinite alternate; }
-.pv-pit-box.change { border-color: var(--blue, #3b82f6); }
-.pv-pit-box.done { border-color: var(--green); color: var(--green); }
-@keyframes pit-blink { from { opacity: 1; } to { opacity: .55; } }
-.tyre-pit { display: inline-flex; align-items: center; gap: 4px; margin-left: 6px; font-size: .78rem; font-weight: 700; }
-.tyre-pickbtn { cursor: pointer; border: 0; font: inherit; }
