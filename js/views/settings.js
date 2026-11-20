@@ -8,6 +8,7 @@ import { vscSpeed } from '../performance.js';
 import { reach, cranFor } from '../vsc-cal.js';
 import { autoCfg } from '../autovsc.js';
 import { renderTyreSettings } from './tyre-settings.js';
+import { TYRES_VISIBLE } from '../tyres.js';
 import { LIGHT_SCENES, COLOR_SLOTS, paletteColor, sceneCss, cssOf } from '../devices/lightsync.js';
 import { GenericLight, PROTOCOLS } from '../devices/generic-light.js';
 import { openImport, importDone, removeImport } from './import-records.js';
@@ -20,7 +21,7 @@ const SECTIONS = [
   { k: 'general', ico: '⚙️', name: 'Général' },
   { k: 'fuel', ico: '⛽', name: 'Essence' },
   { k: 'vsc', ico: '<span class="vsc-ico">VSC</span>', name: 'VSC' }, // même icône que le bouton en course
-  { k: 'tyres', ico: '🛞', name: 'Pneus' },
+  ...(TYRES_VISIBLE ? [{ k: 'tyres', ico: '🛞', name: 'Pneus' }] : []), // pneus mis de côté pour l'instant
   { k: 'devices', ico: '💡', name: 'Éclairage connecté' },
 ];
 let tab = 'menu';
@@ -242,7 +243,6 @@ function renderAdaptiveVsc() { // utilisé en course depuis la v1.85 (s'il est a
   const common = ranges.length ? { min: Math.max(...ranges.map((r) => r.min)), max: Math.min(...ranges.map((r) => r.max)) } : null;
   const toGarage = (txt) => `<a href="#" class="q-link" data-go-garage>${txt}</a>`;
   root.innerHTML = sectionHead() + vscTabs() + `
-  <div class="dev-banner">🚧 En cours de développement</div>
   <section class="panel">
     <div class="row" style="justify-content:space-between">
       <h2 style="margin:0">VSC adaptatif</h2>

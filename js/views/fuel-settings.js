@@ -155,7 +155,7 @@ function draw() {
     <button data-sub="ref" class="${sub === 'ref' ? 'on' : ''}">Paliers</button>
     <button data-sub="curve" class="${sub === 'curve' ? 'on' : ''}">Progressif</button>
   </div>
-  ${sub === 'general' ? generalHtml() : sub === 'conso' ? consoHtml() : sub === 'curve' ? '<div class="dev-banner">🚧 En cours de développement</div>' + curveIntro() + setupsHtml() + curveHtml(curveCtx()) : refIntro() + setupsHtml() + refHtml()}`;
+  ${sub === 'general' ? generalHtml() : sub === 'conso' ? consoHtml() : sub === 'curve' ? curveIntro() + setupsHtml() + curveHtml(curveCtx()) : refIntro() + setupsHtml() + refHtml()}`;
   $$('[data-sub]', el).forEach((b) => (b.onclick = async () => { sub = b.dataset.sub; await loadSetups(); draw(); }));
   if (sub === 'conso' || sub === 'general') bindConso();
   else if (sub === 'curve') bindCurve(curveCtx());

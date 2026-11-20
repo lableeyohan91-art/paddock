@@ -6,7 +6,7 @@
 import { esc, $, $$, toast, promptBox } from '../ui.js';
 import { vscSpeed } from '../performance.js';
 import { avatar } from './drivers.js';
-import { raceTyreCfg, lapAtHealth, F1_MIN_LAPS, COMPOUND_INFO } from '../tyres.js';
+import { raceTyreCfg, lapAtHealth, F1_MIN_LAPS, COMPOUND_INFO, TYRES_VISIBLE } from '../tyres.js';
 
 let app;
 let root;
@@ -59,7 +59,8 @@ const MODES = {
   qualifying: { title: '⏱️ Qualification', type: 'qualifying' },
   f1: { title: '🏎️ F1', type: 'race' },
 };
-const mode = () => MODES[app.quickMode || app.setup?.prepMode] || MODES.quick;
+// mode F1 caché (pneus mis de côté) : un ancien choix « F1 » retombe sur la course rapide
+const mode = () => { const m = MODES[app.quickMode || app.setup?.prepMode] || MODES.quick; return m === MODES.f1 && !TYRES_VISIBLE ? MODES.quick : m; };
 const title = () => mode().title;
 const isRace = () => mode().type === 'race';
 /** Course rapide : toujours aux tours, sans prise de tête (pas de course en durée). */
@@ -369,7 +370,7 @@ function bind() {
       return;
     }
     const pqLaps = !isRace() && prefs.pqByLaps;
-    await app.prepareQuickRace({ laps: pqLaps ? prefs.pqLaps : prefs.laps, fuelOn: prefs.fuelOn, tank15: tank15(), title: title(), type: mode().type, kind: app.quickMode || app.setup?.prepMode || 'quick', autoVsc: prefs.autoVsc, tyresOn: false /* pneus : en cours de développement */, minutes: isRace() ? (byTime() ? prefs.raceMinutes : 0) : pqLaps ? 0 : prefs.minutes });
+    await app.prepareQuickRace({ laps: pqLaps ? prefs.pqLaps : prefs.laps, fuelOn: prefs.fuelOn, tank15: tank15(), title: title(), type: mode().type, kind: Object.keys(MODES).find((k) => MODES[k] === mode()) || 'quick', autoVsc: prefs.autoVsc, tyresOn: false /* pneus : en cours de développement */, minutes: isRace() ? (byTime() ? prefs.raceMinutes : 0) : pqLaps ? 0 : prefs.minutes });
   };
 }
 

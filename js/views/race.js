@@ -7,7 +7,7 @@ import { SKY } from '../weather.js';
 import { MODE } from '../cu/protocol.js';
 import { avatar } from './drivers.js';
 import { live, startLive, pilotUrl, drawQr } from '../live.js';
-import { COMPOUNDS, COMPOUND_INFO, tyreState, tyreHealth } from '../tyres.js';
+import { COMPOUNDS, COMPOUND_INFO, tyreState, tyreHealth, TYRES_VISIBLE } from '../tyres.js';
 
 let app;
 let root;
@@ -115,7 +115,7 @@ function renderMenu() {
       <button class="menu-tile" data-go="qualifying"><span class="menu-ico">⏱️</span><span class="menu-name">Qualification</span></button>
       <button class="menu-tile" data-go="quick"><span class="menu-ico">⚡</span><span class="menu-name">Course rapide</span></button>
       <button class="menu-tile" data-go="race"><span class="menu-ico">🏁</span><span class="menu-name">Course</span></button>
-      <button class="menu-tile dev" data-go="f1"><span class="menu-ico">🏎️</span><span class="menu-name">F1</span><span class="menu-dev">En développement</span></button>
+      ${TYRES_VISIBLE ? '<button class="menu-tile dev" data-go="f1"><span class="menu-ico">🏎️</span><span class="menu-name">F1</span><span class="menu-dev">En développement</span></button>' : ''}
     </div>
     ${last ? '<button class="btn ghost" id="mLast" style="margin-top:16px">↩ Revoir la dernière session</button>' : ''}
   </div>`;

@@ -13,6 +13,10 @@
 
 import { vscSpeed } from './performance.js';
 
+// Pneus et mode F1 mis de côté (v1.99.7) : le code reste, mais rien n'apparaît dans l'appli
+// (ni la case F1 du menu, ni Réglages → Pneus). Passer à true pour les remettre.
+export const TYRES_VISIBLE = false;
+
 export const COMPOUNDS = ['soft', 'medium', 'hard'];
 export const COMPOUND_INFO = {
   soft: { label: 'Tendre', short: 'T', color: '#e10600' },
